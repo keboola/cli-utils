@@ -54,7 +54,7 @@ class MassDedup extends Command
 
         foreach($projects as $projectId) {
             $output->writeln("");
-            $output->writeln("Fixing project " . $projectId);
+            $output->writeln("Processing project " . $projectId);
             try {
                 $projectInfo = $manageClient->getProject($projectId);
             } catch (ClientException $e) {
@@ -99,19 +99,20 @@ class MassDedup extends Command
                             // detect dedup
                             $output->write("Dedup... ");
                             // TODO
-                            if (true) {
+                            if (false) {
                                 $output->writeln("not required");
                                 $csvFile->next();
                                 continue;
+                            } else {
+                                $output->writeln("required");
                             }
-                            $output->writeln("required");
-
-                            // snapshot
-                            $output->write("Snapshot... ");
-                            $client->createTableSnapshot($row[1], "Backup before deduplication");
-                            $output->writeln("created");
 
                             if (!$input->getOption("dry-run")) {
+                                // snapshot
+                                $output->write("Snapshot... ");
+                                $client->createTableSnapshot($row[1], "Backup before deduplication");
+                                $output->writeln("created");
+
                                 $output->write("Dedup job... ");
                                 //$this->dedupTable($client, $row['table'], $input, $output);
                                 $output->writeln("created");
