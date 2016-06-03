@@ -1,0 +1,7 @@
+.git
+vendor
+.kdev4
+*.kdev4
+*~
+.idea
+composer.phar

@@ -1,0 +1,20 @@
+{
+    "name": "keboola/cli-utils",
+    "require": {
+        "symfony/console": "^3.1",
+        "keboola/storage-api-client": "dev-master",
+        "keboola/kbc-manage-api-php-client": "^1.9"
+    },
+    "authors": [
+        {
+            "name": "Ondrej Hlavacek",
+            "email": "ondrej.hlavacek@keboola.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "autoload": {
+   		"psr-0": {
+   			"Keboola\\Console": "src/"
+   		}
+   	}
+}
