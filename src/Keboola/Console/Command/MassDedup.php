@@ -96,10 +96,11 @@ class MassDedup extends Command
                         }
                         try {
                             $output->writeln("Processing table " . $row[1]);
+
                             // detect dedup
                             $output->write("Dedup... ");
-                            // TODO
-                            if (false) {
+                            $duplicityResponse = $client->apiGet("storage/tables/{$row[1]}/duplicity");
+                            if ($duplicityResponse['maxDuplicity'] == 1) {
                                 $output->writeln("not required");
                                 $csvFile->next();
                                 continue;
@@ -113,8 +114,9 @@ class MassDedup extends Command
                                 $client->createTableSnapshot($row[1], "Backup before deduplication");
                                 $output->writeln("created");
 
+                                // dedup
                                 $output->write("Dedup job... ");
-                                //$this->dedupTable($client, $row['table'], $input, $output);
+                                $client->apiPost("storage/tables/{$row[1]}/dedupe");
                                 $output->writeln("created");
                             }
                         } catch (\Exception $e) {
