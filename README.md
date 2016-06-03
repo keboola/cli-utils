@@ -12,7 +12,7 @@ Loads project ids and tables from a CSV file and runs a dedup job on each table.
 php cli.php storage:mass-dedup MANAGETOKEN /usr/ondra/data.csv
 ```
 
-**CSV data**
+**CSV data sample**
 
 ```
 data.csv
