@@ -28,3 +28,11 @@ data.csv
 "232","out.c-rs-main.data"
 "232","in.c-main.data"
 ```
+
+## Redshift Deep Copy
+
+Performs a deep copy of a table in Redshift backend. Fails if there are any aliases based on this table. 
+
+```
+php cli.php storage:redshift-deep-copy PROJECTTOKEN in.c-main.buggy-table
+```
