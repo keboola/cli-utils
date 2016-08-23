@@ -1,5 +1,7 @@
 # CLI UTILS
 
+[![Build Status](https://travis-ci.org/keboola/cli-utils.svg?branch=master)](https://travis-ci.org/keboola/cli-utils)
+
 Assorted CLI utils
 
 ## Mass Dedup
