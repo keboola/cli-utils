@@ -41,7 +41,7 @@ class MassDedup extends Command
         $csvFile->rewind();
         $csvFile->next();
 
-        while($csvFile->valid()) {
+        while ($csvFile->valid()) {
             $row = $csvFile->current();
             $projects[] = $row[0];
             $csvFile->next();
@@ -52,7 +52,7 @@ class MassDedup extends Command
         $manageClient = new \Keboola\ManageApi\Client(["token" => $token]);
         $manageClient->verifyToken();
 
-        foreach($projects as $projectId) {
+        foreach ($projects as $projectId) {
             $output->writeln("");
             $output->writeln("Processing project " . $projectId);
             try {
@@ -67,7 +67,6 @@ class MassDedup extends Command
             if (isset($projectInfo["isDisabled"]) && $projectInfo["isDisabled"]) {
                 $output->writeln("Project disabled: " . $projectInfo["disabled"]["reason"]);
             } else {
-
                 $projectToken = $manageClient->createProjectStorageToken(
                     $projectId,
                     [
@@ -83,8 +82,7 @@ class MassDedup extends Command
                 $csvFile->rewind();
                 $csvFile->next();
 
-                while($csvFile->valid()) {
-
+                while ($csvFile->valid()) {
                     $row = $csvFile->current();
                     $projects[] = $row[0];
 

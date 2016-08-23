@@ -2,8 +2,11 @@
     "name": "keboola/cli-utils",
     "require": {
         "symfony/console": "^3.1",
-        "keboola/storage-api-client": "dev-master",
-        "keboola/kbc-manage-api-php-client": "^1.9"
+        "keboola/storage-api-client": "~4.14",
+        "keboola/kbc-manage-api-php-client": "~1.9"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "2.*"
     },
     "authors": [
         {

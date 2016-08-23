@@ -56,7 +56,7 @@ class RedshiftDeepCopy extends Command
                     $client->dropTable($tableId);
                     $client->createTableFromSnapshot($bucketId, $snapshotId, $tableName);
                     $output->writeln("Deep copy done");
-                } catch(\Keboola\StorageApi\ClientException $e) {
+                } catch (\Keboola\StorageApi\ClientException $e) {
                     $client->dropTable($tableId . "__stg");
                     throw $e;
                 }
