@@ -38,3 +38,19 @@ Performs a deep copy of a table in Redshift backend. Fails if there are any alia
 ```
 php cli.php storage:redshift-deep-copy PROJECTTOKEN in.c-main.buggy-table
 ```
+
+## Bulk Project Add Feature
+
+Adds a project feature to multiple projects
+
+```
+php cli.php storage:projects-add-feature MANAGETOKEN my-feature 1..100
+```
+
+## Bulk Project Remove Feature
+
+Removes a project feature from multiple projects
+
+```
+php cli.php storage:projects-remove-feature MANAGETOKEN my-feature 1..100
+```
