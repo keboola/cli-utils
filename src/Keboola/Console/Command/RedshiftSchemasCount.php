@@ -61,7 +61,7 @@ class RedshiftSchemasCount extends Command
             }
             // login and count schemas
             $backendConnection = null;
-            foreach($backends as $backend) {
+            foreach ($backends as $backend) {
                 if ($backend["id"] == $projectInfo["backends"]["redshift"]["id"]) {
                     $backendConnection = $backend;
                 }
