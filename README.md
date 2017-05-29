@@ -4,6 +4,10 @@
 
 Assorted CLI utils
 
+### Running in Docker
+
+`docker run --rm -it keboola/cli-utils php ./cli.php`
+
 ## Mass Dedup
 
 Loads project ids and tables from a CSV file and runs a dedup job on each table. 
