@@ -6,7 +6,7 @@ Assorted CLI utils
 
 ### Running in Docker
 
-`docker run --rm -it keboola/cli-utils php ./cli.php`
+`docker run --rm -it quay.io/keboola/cli-utils php ./cli.php`
 
 ## Mass Dedup
 
