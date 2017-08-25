@@ -10,6 +10,7 @@ use Keboola\Console\Command\ProjectsAddFeature;
 use Keboola\Console\Command\ProjectsRemoveFeature;
 use Keboola\Console\Command\RedshiftSchemasCount;
 use Keboola\Console\Command\RedshiftOrphanedWorkspaces;
+use Keboola\Console\Command\DeletedProjectsPurge;
 use Symfony\Component\Console\Application;
 
 $application = new Application();
@@ -19,4 +20,5 @@ $application->add(new ProjectsAddFeature());
 $application->add(new ProjectsRemoveFeature());
 $application->add(new RedshiftSchemasCount());
 $application->add(new RedshiftOrphanedWorkspaces());
+$application->add(new DeletedProjectsPurge());
 $application->run();
