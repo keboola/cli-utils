@@ -4,8 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "e2dca462648c8d36e4bdedf7bb2d6c70",
-    "content-hash": "5406db69fc8e2632a73d555b93319e1d",
+    "content-hash": "60c848e518c9ca2417ce5a53818b076d",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -85,7 +84,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2016-08-18 22:54:26"
+            "time": "2016-08-18T22:54:26+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",
@@ -147,7 +146,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2016-07-15 17:22:37"
+            "time": "2016-07-15T17:22:37+00:00"
         },
         {
             "name": "guzzlehttp/promises",
@@ -198,7 +197,7 @@
             "keywords": [
                 "promise"
             ],
-            "time": "2016-05-18 16:56:05"
+            "time": "2016-05-18T16:56:05+00:00"
         },
         {
             "name": "guzzlehttp/psr7",
@@ -256,7 +255,7 @@
                 "stream",
                 "uri"
             ],
-            "time": "2016-06-24 23:00:38"
+            "time": "2016-06-24T23:00:38+00:00"
         },
         {
             "name": "keboola/csv",
@@ -287,27 +286,27 @@
             ],
             "description": "Keboola CSV reader and writer",
             "homepage": "http://keboola.com",
-            "time": "2016-04-21 20:46:22"
+            "time": "2016-04-21T20:46:22+00:00"
         },
         {
             "name": "keboola/kbc-manage-api-php-client",
-            "version": "1.9.0",
+            "version": "1.13.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/kbc-manage-api-php-client.git",
-                "reference": "478153e815d7ce65c71d353ac23514a9052cc860"
+                "reference": "bb0a7d808b2004744f3b833502218f1f5dde599f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/kbc-manage-api-php-client/zipball/478153e815d7ce65c71d353ac23514a9052cc860",
-                "reference": "478153e815d7ce65c71d353ac23514a9052cc860",
+                "url": "https://api.github.com/repos/keboola/kbc-manage-api-php-client/zipball/bb0a7d808b2004744f3b833502218f1f5dde599f",
+                "reference": "bb0a7d808b2004744f3b833502218f1f5dde599f",
                 "shasum": ""
             },
             "require": {
                 "guzzlehttp/guzzle": "^6.1"
             },
             "require-dev": {
-                "keboola/storage-api-client": "^3.3",
+                "keboola/storage-api-client": "^7.0",
                 "phpunit/phpunit": "^5.0"
             },
             "type": "library",
@@ -324,7 +323,7 @@
                 }
             ],
             "description": "Keboola Management API Client",
-            "time": "2016-05-24 12:26:21"
+            "time": "2017-08-24T11:57:48+00:00"
         },
         {
             "name": "keboola/storage-api-client",
@@ -366,7 +365,7 @@
             ],
             "description": "Keboola Storage API PHP CLient",
             "homepage": "http://keboola.com",
-            "time": "2016-07-21 06:23:50"
+            "time": "2016-07-21T06:23:50+00:00"
         },
         {
             "name": "mtdowling/jmespath.php",
@@ -421,7 +420,7 @@
                 "json",
                 "jsonpath"
             ],
-            "time": "2016-01-05 18:25:05"
+            "time": "2016-01-05T18:25:05+00:00"
         },
         {
             "name": "psr/http-message",
@@ -471,7 +470,7 @@
                 "request",
                 "response"
             ],
-            "time": "2016-08-06 14:39:51"
+            "time": "2016-08-06T14:39:51+00:00"
         },
         {
             "name": "symfony/console",
@@ -531,7 +530,7 @@
             ],
             "description": "Symfony Console Component",
             "homepage": "https://symfony.com",
-            "time": "2016-07-26 08:04:17"
+            "time": "2016-07-26T08:04:17+00:00"
         },
         {
             "name": "symfony/filesystem",
@@ -580,7 +579,7 @@
             ],
             "description": "Symfony Filesystem Component",
             "homepage": "https://symfony.com",
-            "time": "2016-07-20 05:44:26"
+            "time": "2016-07-20T05:44:26+00:00"
         },
         {
             "name": "symfony/polyfill-mbstring",
@@ -639,7 +638,7 @@
                 "portable",
                 "shim"
             ],
-            "time": "2016-05-18 14:26:46"
+            "time": "2016-05-18T14:26:46+00:00"
         },
         {
             "name": "symfony/process",
@@ -688,7 +687,7 @@
             ],
             "description": "Symfony Process Component",
             "homepage": "https://symfony.com",
-            "time": "2016-07-28 11:13:48"
+            "time": "2016-07-28T11:13:48+00:00"
         }
     ],
     "packages-dev": [
@@ -768,7 +767,7 @@
                 "phpcs",
                 "standards"
             ],
-            "time": "2016-07-13 23:29:13"
+            "time": "2016-07-13T23:29:13+00:00"
         }
     ],
     "aliases": [],
