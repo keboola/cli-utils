@@ -77,7 +77,7 @@ class DeletedProjectsPurge extends Command
                 throw new \Exception("Project {$projectId} purge timeout.");
             }
             sleep(1);
-        } while($deletedProject['isPurged'] !== true);
+        } while ($deletedProject['isPurged'] !== true);
 
         $output->writeln(sprintf('Purge done %s (%d)', $projectName, $projectId));
     }
