@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "60c848e518c9ca2417ce5a53818b076d",
+    "content-hash": "eb4fa0c86213e28cfa64a3bf6e53da89",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -290,16 +290,16 @@
         },
         {
             "name": "keboola/kbc-manage-api-php-client",
-            "version": "1.13.0",
+            "version": "1.14.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/kbc-manage-api-php-client.git",
-                "reference": "bb0a7d808b2004744f3b833502218f1f5dde599f"
+                "reference": "cb87e468638bf1aae3e9e118c5c2b2933cc792e9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/kbc-manage-api-php-client/zipball/bb0a7d808b2004744f3b833502218f1f5dde599f",
-                "reference": "bb0a7d808b2004744f3b833502218f1f5dde599f",
+                "url": "https://api.github.com/repos/keboola/kbc-manage-api-php-client/zipball/cb87e468638bf1aae3e9e118c5c2b2933cc792e9",
+                "reference": "cb87e468638bf1aae3e9e118c5c2b2933cc792e9",
                 "shasum": ""
             },
             "require": {
@@ -323,7 +323,7 @@
                 }
             ],
             "description": "Keboola Management API Client",
-            "time": "2017-08-24T11:57:48+00:00"
+            "time": "2017-08-29T09:50:00+00:00"
         },
         {
             "name": "keboola/storage-api-client",

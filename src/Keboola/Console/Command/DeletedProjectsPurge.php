@@ -17,6 +17,7 @@ class DeletedProjectsPurge extends Command
             ->setName('storage:deleted-projects-purge')
             ->setDescription('Purge deleted projects.')
             ->addArgument('token', InputArgument::REQUIRED, 'manage api token')
+            ->addOption('ignore-backend-errors', null, InputOption::VALUE_NONE, "Ignore errors from backend and just delete buckets and workspaces metadata")
         ;
     }
 
@@ -30,6 +31,13 @@ class DeletedProjectsPurge extends Command
             throw new \Exception('Error on input read');
         }
 
+        $ignoreBackendErrors = (bool) $input->getOption('ignore-backend-errors');
+
+        $output->writeln(sprintf(
+            'Ignore backend errors %s',
+            $ignoreBackendErrors ? 'On' : 'Off'
+        ));
+
         $client = new Client([
             'token' => $token,
         ]);
@@ -42,6 +50,7 @@ class DeletedProjectsPurge extends Command
                 $this->purgeProject(
                     $client,
                     $output,
+                    $ignoreBackendErrors,
                     $row[0],
                     $row[1]
                 );
@@ -62,11 +71,13 @@ class DeletedProjectsPurge extends Command
         }
     }
 
-    private function purgeProject(Client $client, OutputInterface $output, $projectId, $projectName)
+    private function purgeProject(Client $client, OutputInterface $output, $ignoreBackendErrors, $projectId, $projectName)
     {
         $output->writeln(sprintf('Purge %s (%d)', $projectName, $projectId));
 
-        $response = $client->purgeDeletedProject($projectId);
+        $response = $client->purgeDeletedProject($projectId, [
+            'ignoreBackendErrors' => (bool) $ignoreBackendErrors,
+        ]);
         $output->writeln(" - execution id {$response['commandExecutionId']}");
 
         $startTime = time();
