@@ -75,6 +75,4 @@ class NotifyProjects extends Command
             'message' => $notificationMessage,
         ]);
     }
-
-
 }
