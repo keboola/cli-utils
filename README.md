@@ -58,3 +58,16 @@ Removes a project feature from multiple projects
 ```
 php cli.php storage:projects-remove-feature MANAGETOKEN my-feature 1..100
 ```
+
+## Notify Projects
+
+Prepare input `data.csv`:
+```
+"projectId","notificationTitle","notificationMessage"
+"9","Test notification","Test notification content"
+```
+
+Command execution:
+```
+cat data.csv |  php cli.php storage:notify-projects MANAGETOKEN
+```
