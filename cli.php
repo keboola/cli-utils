@@ -12,6 +12,7 @@ use Keboola\Console\Command\RedshiftSchemasCount;
 use Keboola\Console\Command\RedshiftOrphanedWorkspaces;
 use Keboola\Console\Command\DeletedProjectsPurge;
 use Keboola\Console\Command\TouchTables;
+use Keboola\Console\Command\NotifyProjects;
 use Symfony\Component\Console\Application;
 
 $application = new Application();
@@ -23,4 +24,5 @@ $application->add(new RedshiftSchemasCount());
 $application->add(new RedshiftOrphanedWorkspaces());
 $application->add(new DeletedProjectsPurge());
 $application->add(new TouchTables());
+$application->add(new NotifyProjects());
 $application->run();
