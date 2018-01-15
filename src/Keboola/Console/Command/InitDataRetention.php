@@ -26,7 +26,6 @@ class InitDataRetention extends Command
             ->setName('storage:set-data-retention')
             ->setDescription('Set Data Retention Time in Days for projects')
             ->addArgument('token', InputArgument::REQUIRED, 'manage api token')
-            ->addArgument('dataRetentionTimeInDays', InputArgument::REQUIRED, 'data retention time in days')
             ->addOption('url', null, InputOption::VALUE_REQUIRED, 'API URL', 'https://connection.keboola.com');
     }
 
@@ -36,8 +35,6 @@ class InitDataRetention extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $dataRetentionTimeInDays = $input->getArgument('dataRetentionTimeInDays');
-
         $client = new Client([
             'token' => $input->getArgument('token'),
             'url' => $input->getOption('url'),
@@ -49,11 +46,12 @@ class InitDataRetention extends Command
         }
 
         $lineNumber = 0;
-        while ($row = fgets($fh) !== false) {
+        while ($row = fgetcsv($fh)) {
             if ($lineNumber === 0) {
                 $this->validateHeader($row);
             } else {
-                $projectId = (int) trim($row);
+                $projectId = (int) trim($row[0]);
+                $dataRetentionTimeInDays = (int) trim($row[1]);
                 try {
                     $client->updateProject($projectId, ['dataRetentionTimeInDays' => $dataRetentionTimeInDays]);
                     $output->writeln("Updated project " . $projectId . " to data retention period " . $dataRetentionTimeInDays);
@@ -69,6 +67,6 @@ class InitDataRetention extends Command
 
     private function validateHeader($header)
     {
-        return (trim($header) === "projectId");
+        return (trim($header[0]) === "projectId" && trim($header[1] === "dataRetentionTimeInDays"));
     }
 }
