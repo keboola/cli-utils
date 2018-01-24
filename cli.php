@@ -14,6 +14,7 @@ use Keboola\Console\Command\DeletedProjectsPurge;
 use Keboola\Console\Command\TouchTables;
 use Keboola\Console\Command\NotifyProjects;
 use Symfony\Component\Console\Application;
+use Keboola\Console\Command\SetDataRetention;
 
 $application = new Application();
 $application->add(new MassDedup());
@@ -25,4 +26,5 @@ $application->add(new RedshiftOrphanedWorkspaces());
 $application->add(new DeletedProjectsPurge());
 $application->add(new TouchTables());
 $application->add(new NotifyProjects());
+$application->add(new SetDataRetention());
 $application->run();
