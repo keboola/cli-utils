@@ -67,6 +67,13 @@ class InitDataRetention extends Command
 
     private function validateHeader($header)
     {
-        return (trim($header[0]) === "projectId" && trim($header[1] === "dataRetentionTimeInDays"));
+        $expectedHeader = ['projectId', 'dataRetentionTimeInDays'];
+        if ($header !== $expectedHeader) {
+            throw new \Exception(sprintf(
+                'Invalid input header: %s Expected header: %s',
+                implode(',', $header),
+                implode(',', $expectedHeader)
+            ));
+        }
     }
 }
