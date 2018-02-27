@@ -15,6 +15,7 @@ use Keboola\Console\Command\TouchTables;
 use Keboola\Console\Command\NotifyProjects;
 use Symfony\Component\Console\Application;
 use Keboola\Console\Command\SetDataRetention;
+use Keboola\Console\Command\MaintainerCleanup;
 
 $application = new Application();
 $application->add(new MassDedup());
@@ -27,4 +28,5 @@ $application->add(new DeletedProjectsPurge());
 $application->add(new TouchTables());
 $application->add(new NotifyProjects());
 $application->add(new SetDataRetention());
+$application->add(new MaintainerCleanup());
 $application->run();
