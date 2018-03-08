@@ -21,6 +21,7 @@ class ProjectsAddFeature extends Command
             ->addArgument('token', InputArgument::REQUIRED, 'manage token')
             ->addArgument('feature', InputArgument::REQUIRED, 'feature')
             ->addArgument('projects', InputArgument::REQUIRED, 'single project id or range (eg 10..500)')
+            ->addOption('url', null, InputOption::VALUE_REQUIRED, 'API URL', 'https://connection.keboola.com')
         ;
     }
 
@@ -35,7 +36,10 @@ class ProjectsAddFeature extends Command
             $projects = [$input->getArgument('projects')];
         }
 
-        $manageClient = new \Keboola\ManageApi\Client(["token" => $token]);
+        $manageClient = new \Keboola\ManageApi\Client([
+            "token" => $token,
+            "url" => $input->getOption("url"),
+        ]);
 
         foreach ($projects as $projectId) {
             $output->writeln("Adding feature to project " . $projectId);
