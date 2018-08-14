@@ -80,26 +80,4 @@ class MigrateFiles extends Command
             sleep(5);
         }
     }
-
-    private function purgeProject(Client $client, OutputInterface $output, $ignoreBackendErrors, $projectId, $projectName)
-    {
-        $output->writeln(sprintf('Purge %s (%d)', $projectName, $projectId));
-
-        $response = $client->purgeDeletedProject($projectId, [
-            'ignoreBackendErrors' => (bool) $ignoreBackendErrors,
-        ]);
-        $output->writeln(" - execution id {$response['commandExecutionId']}");
-
-        $startTime = time();
-        $maxWaitTimeSeconds = 600;
-        do {
-            $deletedProject = $client->getDeletedProject($projectId);
-            if (time() - $startTime > $maxWaitTimeSeconds) {
-                throw new \Exception("Project {$projectId} purge timeout.");
-            }
-            sleep(1);
-        } while ($deletedProject['isPurged'] !== true);
-
-        $output->writeln(sprintf('Purge done %s (%d)', $projectName, $projectId));
-    }
 }
