@@ -17,6 +17,7 @@ class MigrateFiles extends Command
             ->setName('storage:migrate-files')
             ->setDescription('Migrate files metadata storage.')
             ->addArgument('token', InputArgument::REQUIRED, 'manage api token')
+            ->addArgument('projectId', InputArgument::REQUIRED, 'project id to migrate')
             ->addOption('url', null, InputOption::VALUE_REQUIRED, 'KBC URL', 'https://connection.keboola.com')
         ;
     }
@@ -24,43 +25,17 @@ class MigrateFiles extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $token = $input->getArgument('token');
-
-        $fh = fopen('php://stdin', 'r');
+        $projectId = (int) $input->getArgument('projectId');
 
         $client = new Client([
             'token' => $token,
             'url' => $input->getOption('url'),
         ]);
 
-        $lineNumber = 0;
-        while ($row = fgetcsv($fh)) {
-            if ($lineNumber === 0) {
-                $this->validateHeader($row);
-            } else {
-                $this->migrateProject($client, $output, (int) $row[0]);
-            }
-            $lineNumber++;
-        }
-    }
-
-    private function validateHeader($header)
-    {
-        $expectedHeader = ['id'];
-        if ($header !== $expectedHeader) {
-            throw new \Exception(sprintf(
-                'Invalid input header: %s Expected header: %s',
-                implode(',', $header),
-                implode(',', $expectedHeader)
-            ));
-        }
-    }
-
-    private function migrateProject(Client $client, OutputInterface $output, int $projectId)
-    {
         $output->writeln(sprintf('Migrate project %d - start', $projectId));
 
         $client->runCommand([
-           'command' => 'storage:project-files-migrate',
+            'command' => 'storage:project-files-migrate',
             'parameters' => [
                 (string) $projectId,
             ],
