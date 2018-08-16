@@ -73,7 +73,7 @@ class MigrateFiles extends Command
         sleep(10);
         while (1) {
             $project = $client->getDeletedProject($projectId);
-            if (!in_array('files-legacy-elastic', $project['features'])) {
+            if (!$project['isDisabled']) {
                 return;
             }
             sleep(5);
