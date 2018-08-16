@@ -43,10 +43,11 @@ class MigrateFiles extends Command
             $parameters[]= '--is-deleted';
         }
 
-        $client->runCommand([
+        $response = $client->runCommand([
             'command' => 'storage:project-files-migrate',
             'parameters' => $parameters,
         ]);
+        $output->writeln(sprintf(' - Command ID: %s', $response['commandExecutionId']));
         if ($isDeleted) {
             $this->waitUntilDeletedProjectMigrationIsDone($client, $projectId);
         } else {
