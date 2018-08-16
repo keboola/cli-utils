@@ -19,6 +19,7 @@ class MigrateFiles extends Command
             ->addArgument('token', InputArgument::REQUIRED, 'manage api token')
             ->addArgument('projectId', InputArgument::REQUIRED, 'project id to migrate')
             ->addOption('url', null, InputOption::VALUE_REQUIRED, 'KBC URL', 'https://connection.keboola.com')
+            ->addOption('is-deleted', null, InputOption::VALUE_NONE, 'migrate deleted project')
         ;
     }
 
@@ -26,6 +27,7 @@ class MigrateFiles extends Command
     {
         $token = $input->getArgument('token');
         $projectId = (int) $input->getArgument('projectId');
+        $isDeleted = $input->getOption('is-deleted');
 
         $client = new Client([
             'token' => $token,
@@ -34,13 +36,22 @@ class MigrateFiles extends Command
 
         $output->writeln(sprintf('Migrate project %d - start', $projectId));
 
+        $parameters = [
+            (string) $projectId,
+        ];
+        if ($isDeleted) {
+            $parameters[]= '--is-deleted';
+        }
+
         $client->runCommand([
             'command' => 'storage:project-files-migrate',
-            'parameters' => [
-                (string) $projectId,
-            ],
+            'parameters' => $parameters,
         ]);
-        $this->waitUntilMigrationIsDone($client, $projectId);
+        if ($isDeleted) {
+            $this->waitUntilDeletedProjectMigrationIsDone($client, $projectId);
+        } else {
+            $this->waitUntilMigrationIsDone($client, $projectId);
+        }
 
         $output->writeln(sprintf('Migrate project %d - end', $projectId));
     }
@@ -49,6 +60,18 @@ class MigrateFiles extends Command
     {
         while (1) {
             $project = $client->getProject($projectId);
+            if (!in_array('files-legacy-elastic', $project['features'])) {
+                return;
+            }
+            sleep(5);
+        }
+    }
+
+    private function waitUntilDeletedProjectMigrationIsDone(Client $client, int $projectId)
+    {
+        sleep(10);
+        while (1) {
+            $project = $client->getDeletedProject($projectId);
             if (!in_array('files-legacy-elastic', $project['features'])) {
                 return;
             }
