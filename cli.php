@@ -5,6 +5,7 @@
 require __DIR__.'/vendor/autoload.php';
 
 use Keboola\Console\Command\MassDedup;
+use Keboola\Console\Command\MigrateFiles;
 use Keboola\Console\Command\RedshiftDeepCopy;
 use Keboola\Console\Command\ProjectsAddFeature;
 use Keboola\Console\Command\ProjectsRemoveFeature;
@@ -27,4 +28,5 @@ $application->add(new DeletedProjectsPurge());
 $application->add(new TouchTables());
 $application->add(new NotifyProjects());
 $application->add(new SetDataRetention());
+$application->add(new MigrateFiles());
 $application->run();
