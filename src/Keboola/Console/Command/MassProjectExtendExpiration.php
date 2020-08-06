@@ -20,7 +20,7 @@ class MassProjectExtendExpiration extends Command
     protected function configure()
     {
         $this
-            ->setName('storage:mass-project-remove-expiration')
+            ->setName('manage:mass-project-remove-expiration')
             ->setDescription('Temporary solution for manual TryMode expiration from ZD#14161')
             ->addArgument(self::ARGUMENT_SOURCE_FILE, InputArgument::REQUIRED, 'source file')
             ->addArgument(self::ARGUMENT_EXPIRATION_DAYS, InputArgument::REQUIRED, 'number of days to extend, 0 to remove expiration completely')

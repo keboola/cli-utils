@@ -71,3 +71,23 @@ Command execution:
 ```
 cat data.csv |  php cli.php storage:notify-projects MANAGETOKEN
 ```
+
+## Mass project extend expiration:
+
+Prepare input file "extend.txt" from looker https://keboola.looker.com/explore/keboola_internal_reporting/usage_metric_values: 
+```
+123-EU
+579-US
+```
+
+Prepare env:
+```
+export KBC_MANAGE_TOKEN_US=XXXXX
+export KBC_MANAGE_TOKEN_EU=XXXXX
+```
+
+Run command:
+
+`php cli.php manage:mass-project-remove-expiration extend.txt 0`
+
+Use number of days or 0 as show to remove expiration completely. By default it's dry-run. Override with `-f` parameter.
