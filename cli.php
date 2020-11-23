@@ -4,6 +4,7 @@
 
 require __DIR__.'/vendor/autoload.php';
 
+use Keboola\Console\Command\DeleteGoodDataProjects;
 use Keboola\Console\Command\MassDedup;
 use Keboola\Console\Command\MassProjectExtendExpiration;
 use Keboola\Console\Command\MigrateFiles;
@@ -31,4 +32,5 @@ $application->add(new NotifyProjects());
 $application->add(new SetDataRetention());
 $application->add(new MigrateFiles());
 $application->add(new MassProjectExtendExpiration());
+$application->add(new DeleteGoodDataProjects());
 $application->run();

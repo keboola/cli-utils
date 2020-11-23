@@ -5,6 +5,7 @@ services:
 before_script:
   - docker -v
   - docker-compose -v
+  - cp .env.dist .env
   - docker-compose build app
 script:
   - docker-compose run --rm app ./vendor/bin/phpcs --standard=psr2 --ignore=vendor -n .
