@@ -51,7 +51,7 @@ class DeleteGoodDataProjects extends Command
         if (count($missing)) {
             throw new Exception(sprintf(
                 'Missing env variable: %s',
-                implode(array_keys($missing))
+                implode(', ', array_keys($missing))
             ));
         }
 
