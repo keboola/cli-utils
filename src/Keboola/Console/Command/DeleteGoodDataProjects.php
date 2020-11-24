@@ -23,7 +23,7 @@ class DeleteGoodDataProjects extends Command
         $this
             ->setName('gooddata:delete-projects')
             ->setDescription('Delete GoodData project in bulk')
-            ->addArgument(self::ARG_SOURCE_FILE, InputArgument::OPTIONAL, 'source CSV file', 'projects.csv')
+            ->addArgument(self::ARG_SOURCE_FILE, InputArgument::REQUIRED, 'source CSV file')
             ->addOption(self::OPTION_FORCE, 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run')
         ;
     }
