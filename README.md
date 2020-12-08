@@ -91,3 +91,24 @@ Run command:
 `php cli.php manage:mass-project-remove-expiration extend.txt 0`
 
 Use number of days or 0 as show to remove expiration completely. By default it's dry-run. Override with `-f` parameter.
+
+## Mass GD project drop:
+
+Prepare input file "projects.csv" with project IDs:
+
+```
+123abc123abc123abc123abc123abc123abc
+```
+
+Prepare `.env` file from `.env.dist`:
+```
+GOODDATA_URL=
+GOODDATA_LOGIN=
+GOODDATA_PASSWORD=
+```
+
+Run command:
+
+`php cli.php gooddata:delete-projects`
+
+To actually drop the projects add `-f` flag. Default is dry-run. 

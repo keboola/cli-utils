@@ -5,3 +5,5 @@ vendor
 *~
 .idea
 composer.phar
+/.env
+/projects.csv
