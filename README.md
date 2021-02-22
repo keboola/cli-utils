@@ -78,12 +78,14 @@ Prepare input file "extend.txt" from looker https://keboola.looker.com/explore/k
 ```
 123-EU
 579-US
+579-NE
 ```
 
 Prepare env:
 ```
 export KBC_MANAGE_TOKEN_US=XXXXX
 export KBC_MANAGE_TOKEN_EU=XXXXX
+export KBC_MANAGE_TOKEN_NE=XXXXX
 ```
 
 Run command:
