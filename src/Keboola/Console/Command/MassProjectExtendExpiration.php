@@ -44,12 +44,18 @@ class MassProjectExtendExpiration extends Command
 
         $manageTokenUs = getenv('KBC_MANAGE_TOKEN_US');
         $manageTokenEu = getenv('KBC_MANAGE_TOKEN_EU');
-        if (!($manageTokenEu && $manageTokenUs)) {
-            throw new \Exception('Missing token');
-        }
+        $manageTokenNe = getenv('KBC_MANAGE_TOKEN_NE');
 
-        $clients['US'] = new Client(['token' => $manageTokenUs, 'url' => 'https://connection.keboola.com']);
-        $clients['EU'] = new Client(['token' => $manageTokenEu, 'url' => 'https://connection.eu-central-1.keboola.com/']);
+        $clients = [];
+        if ($manageTokenUs) {
+            $clients['US'] = new Client(['token' => $manageTokenUs, 'url' => 'https://connection.keboola.com']);
+        }
+        if ($manageTokenEu) {
+            $clients['EU'] = new Client(['token' => $manageTokenEu, 'url' => 'https://connection.eu-central-1.keboola.com/']);
+        }
+        if ($manageTokenNe) {
+            $clients['NE'] = new Client(['token' => $manageTokenNe, 'url' => 'https://connection.north-europe.azure.keboola.com/']);
+        }
 
         if (!file_exists($sourceFile)) {
             throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
