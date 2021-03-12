@@ -82,20 +82,35 @@ class MassProjectExtendExpiration extends Command
                 $client = $clients[$project['region']];
                 $projectFromApi = $client->getProject($project['id']);
                 if ($force) {
-                    $client->updateProject($project['id'], ['expirationDays' => $expirationDays]);
+                    $updatedProjectFromApi = $client->updateProject($project['id'], ['expirationDays' =>
+                        $expirationDays]);
                     $output->writeln(sprintf(
-                        'Updated project "%s" in "%s"',
+                        'Updated project "%s" in "%s" with current expiration "%s" to new expiration "%s" (%s days) (%s - %s)',
                         $projectFromApi['id'],
-                        $project['region']
+                        $project['region'],
+                        $projectFromApi['expires'],
+                        $updatedProjectFromApi['expires'],
+                        $expirationDays,
+                        $projectFromApi['organization']['name'],
+                        $projectFromApi['name']
                     ));
                 } else {
                     $output->writeln(sprintf(
-                        'Would update project "%s" in "%s" with current expiration "%s"',
+                        'Would update project "%s" in "%s" with current expiration "%s" to new expiration days "%s" (%s - %s)',
                         $projectFromApi['id'],
                         $project['region'],
-                        $projectFromApi['expires']
+                        $projectFromApi['expires'],
+                        $expirationDays,
+                        $projectFromApi['organization']['name'],
+                        $projectFromApi['name']
                     ));
                 }
+            } else {
+                $output->writeln(sprintf(
+                    'Project "%s" is in "%s" for which there is no client set up',
+                    $project['id'],
+                    $project['region']
+                ));
             }
         }
     }
