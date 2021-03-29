@@ -92,7 +92,7 @@ Run command:
 
 `php cli.php manage:mass-project-remove-expiration extend.txt 0`
 
-Use number of days or 0 as show to remove expiration completely. By default it's dry-run. Override with `-f` parameter.
+Use number of days or 0 as show to remove expiration completely. By default, it's dry-run. Override with `-f` parameter.
 
 ## Mass GD project drop:
 
@@ -114,3 +114,17 @@ Run command:
 `php cli.php gooddata:delete-projects`
 
 To actually drop the projects add `-f` flag. Default is dry-run. 
+
+## Add a feature to project templates
+
+You can add a project feature to all the project templates available on the stack
+
+`php cli.php manage:add-feature-to-templates [-f|--force] <token> <url> <featureName> [<featureDesc>]`
+
+You can also define a CSV file with stacks/tokens and call it as a bulk operation.
+
+`php cli.php manage:add-feature-to-templates-from-csv [-f|--force] <csvFile> <featureName> [<featureDescription>]`
+
+Where `<csvFile>` is a path (relative/absolute) to a CSV file with content in form `<token>,<stack url>` without any header
+
+**Both commands supports dry-run. Add the `-f` flag if you want to submit the changes**
