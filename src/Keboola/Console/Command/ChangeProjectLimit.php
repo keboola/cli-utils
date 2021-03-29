@@ -13,6 +13,12 @@ class ChangeProjectLimit extends Command
 
     const ARGUMENT_SOURCE_FILE = 'source-file';
     const OPTION_FORCE = 'force';
+    const NEW_LIMITS = [
+        [
+            'name' => 'storage.jobsParallelism',
+            'value' => 50
+        ]
+    ];
 
     protected function configure()
     {
@@ -75,7 +81,7 @@ class ChangeProjectLimit extends Command
                     $output->writeln('Not found '.$project['id'].'-'.$project['region'].' '.$e->getMessage());
                 }
                 if ($force) {
-                    $client->setProjectLimits($project['id'], ['storage.jobsParallelism' => 50]);
+                    $client->setProjectLimits($project['id'], self::NEW_LIMITS);
                     $output->writeln(sprintf(
                         'Updated project "%s" in "%s"',
                         $projectFromApi['id'],
@@ -83,9 +89,10 @@ class ChangeProjectLimit extends Command
                     ));
                 } else {
                     $output->writeln(sprintf(
-                        'Would update project "%s" in "%s" with limit storage.jobsParallelism "50"',
+                        'Would update project "%s" in "%s" with limits %s',
                         $projectFromApi['id'],
-                        $project['region']
+                        $project['region'],
+                        json_encode(self::NEW_LIMITS)
                     ));
                 }
             }
