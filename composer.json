@@ -3,7 +3,7 @@
     "require": {
         "symfony/console": "^3.1",
         "keboola/storage-api-client": "^11",
-        "keboola/kbc-manage-api-php-client": "^1.14",
+        "keboola/kbc-manage-api-php-client": "^3.0",
         "keboola/gooddata-php-client": "^3.0"
     },
     "require-dev": {
