@@ -16,7 +16,7 @@ class ProjectsRemoveFeature extends Command
     protected function configure()
     {
         $this
-            ->setName('storage:projects-remove-feature')
+            ->setName('manage:projects-remove-feature')
             ->setDescription('Remove feature from multiple projects')
             ->addArgument('token', InputArgument::REQUIRED, 'manage token')
             ->addArgument('feature', InputArgument::REQUIRED, 'feature')
