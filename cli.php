@@ -5,7 +5,6 @@
 require __DIR__.'/vendor/autoload.php';
 
 use Keboola\Console\Command\AddFeature;
-use Keboola\Console\Command\AddFeatureFromCSV;
 use Keboola\Console\Command\AllStacksIterator;
 use Keboola\Console\Command\DeleteGoodDataProjects;
 use Keboola\Console\Command\MassDedup;
@@ -37,6 +36,5 @@ $application->add(new MigrateFiles());
 $application->add(new MassProjectExtendExpiration());
 $application->add(new DeleteGoodDataProjects());
 $application->add(new AddFeature());
-$application->add(new AddFeatureFromCSV());
 $application->add(new AllStacksIterator());
 $application->run();
