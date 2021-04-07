@@ -136,3 +136,15 @@ You can also define a CSV file with stacks/tokens and call it as a bulk operatio
 Where `<csvFile>` is a path (relative/absolute) to a CSV file with content in form `<token>,<stack url>` without any header
 
 **Both commands supports dry-run. Add the `-f` flag if you want to submit the changes**
+
+## Bulk operation on multiple stacks
+
+If you want to run your command on multiple stacks, you can predefine stacks and `manageTokens` in `http-client` files and then use `manage:call-on-stacks` command to run it on all the defined stack. How?
+1. make a copy of `http-client.env.json.dist` and `http-client.private.env.json.dist` and remove the `.dist` part.
+2. Fill stack URLs and corresponding `manageToken`
+3. Run the command in following form `php cli.php manage:call-on-stacks <target command> "<params of your commnand>"`
+    - `<target command>` has to support arguments `token` and `url` in this order 
+    - `"<params of your commnand>"` contain all the params for your target command but without `token` and `url` arguments. This part has to be quotet.
+      - E.g. I want to run `manage:add-feature-to-templates <token> <url> featureXX featureDesc -f`
+      - So I call `php cli.php manage:call-on-stacks manage:add-feature-to-templates "featureXX featureDesc -f"`
+4. The command iterates over the stacks and asks your confirmation if you want to run the `taget command` there. You can skip it
