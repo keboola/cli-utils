@@ -129,13 +129,8 @@ You can add a project feature to all the project templates available on the stac
 
 `php cli.php manage:add-feature-to-templates [-f|--force] <token> <url> <featureName> [<featureDesc>]`
 
-You can also define a CSV file with stacks/tokens and call it as a bulk operation.
 
-`php cli.php manage:add-feature-to-templates:from-csv [-f|--force] <csvFile> <featureName> [<featureDescription>]`
-
-Where `<csvFile>` is a path (relative/absolute) to a CSV file with content in form `<token>,<stack url>` without any header
-
-**Both commands supports dry-run. Add the `-f` flag if you want to submit the changes**
+**This command supports dry-run. Add the `-f` flag if you want to submit the changes**
 
 ## Bulk operation on multiple stacks
 
