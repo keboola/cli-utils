@@ -64,8 +64,13 @@ Note: the feature has to exist before calling, and it has to be type of `project
 Removes a project feature from multiple projects
 
 ```
-php cli.php storage:projects-remove-feature MANAGETOKEN my-feature 1..100
+php cli.php storage:projects-remove-feature [-f|--force] <token> <url> <featureName> <projects>
 ```
+By in argument `<projects>` you can
+- select projects to add the feature to by specifying project IDs  separated by a comma (e.g. `1,2,3,4`)
+    -  `manage:projects-remove-feature <token> <url> <featureName> 1,2,3`
+- OR run the script for ALL projects in the stack by passing `all` argument
+    -  `manage:projects-remove-feature <token> <url> <featureName> all`
 
 ## Notify Projects
 

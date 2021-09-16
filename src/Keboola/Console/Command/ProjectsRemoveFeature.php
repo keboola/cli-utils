@@ -1,9 +1,8 @@
 <?php
 namespace Keboola\Console\Command;
 
-use Keboola\Csv\CsvFile;
+use Keboola\ManageApi\Client;
 use Keboola\ManageApi\ClientException;
-use Keboola\StorageApi\Client;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -12,57 +11,172 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class ProjectsRemoveFeature extends Command
 {
+    /** @var int */
+    private $maintainersChecked = 0;
 
-    protected function configure()
+    /** @var int */
+    private $orgsChecked = 0;
+
+    /** @var int */
+    private $projectsDisabled = 0;
+
+    /** @var int */
+    private $projectsWithoutFeature = 0;
+
+    /** @var int */
+    private $projectsUpdated = 0;
+
+    protected function configure(): void
     {
         $this
             ->setName('manage:projects-remove-feature')
             ->setDescription('Remove feature from multiple projects')
             ->addArgument('token', InputArgument::REQUIRED, 'manage token')
-            ->addArgument('feature', InputArgument::REQUIRED, 'feature')
-            ->addArgument('projects', InputArgument::REQUIRED, 'single project id or range (eg 10..500)')
-            ->addOption('url', null, InputOption::VALUE_REQUIRED, 'API URL', 'https://connection.keboola.com')
+            ->addArgument('url', InputArgument::REQUIRED, 'Stack URL')
+            ->addArgument('feature', InputArgument::REQUIRED, 'feature name')
+            ->addArgument('projects', InputArgument::REQUIRED, 'list of IDs separated by comma ("1,7,146") or "ALL"')
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run')
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    public function execute(InputInterface $input, OutputInterface $output): ?int
     {
-        $token = $input->getArgument('token');
-        $feature = $input->getArgument('feature');
-        if (strpos($input->getArgument('projects'), '..')) {
-            list($start, $end) = explode('..', $input->getArgument('projects'));
-            $projects = range($start, $end);
-        } else {
-            $projects = [$input->getArgument('projects')];
+        $apiToken = $input->getArgument('token');
+        $apiUrl = $input->getArgument('url');
+        $featureName = $input->getArgument('feature');
+        $projects = $input->getArgument('projects');
+        $allProjects = strtolower($projects) === 'all';
+
+        $force = (bool) $input->getOption('force');
+
+        $client = $this->createClient($apiUrl, $apiToken);
+
+        if (!$this->featureExists($client, $featureName)) {
+            $output->writeln(sprintf('Feature %s does NOT exist', $featureName));
+            return 1;
         }
 
-        $manageClient = new \Keboola\ManageApi\Client([
-            "token" => $token,
-            "url" => $input->getOption("url"),
+        if ($allProjects) {
+            $this->removeFeatureFromAllProjects($client, $output, $featureName, $force);
+        } else {
+            $projectIds = array_filter(explode(',', $projects), 'is_numeric');
+            $this->removeFeatureFromSelectedProjects($client, $output, $featureName, $projectIds, $force);
+        }
+        $output->writeln('');
+
+        $output->writeln('DONE with following results:');
+        $this->printResult($output, $allProjects);
+
+        if (!$force) {
+            $output->writeln('');
+            $output->writeln('Command was run in <comment>dry-run</comment> mode. To actually apply changes run it with --force flag.');
+        }
+
+        return 0;
+    }
+
+    private function createClient(string $host, string $token): Client
+    {
+        return new Client([
+            'url' => $host,
+            'token' => $token,
         ]);
+    }
 
-        foreach ($projects as $projectId) {
-            $output->writeln("Removing feature from project " . $projectId);
-            try {
-                $projectInfo = $manageClient->getProject($projectId);
-            } catch (ClientException $e) {
-                $output->writeln($e->getMessage());
-                $output->write("\n");
-                continue;
-            }
+    private function removeFeatureFromAllProjects(
+        Client $client,
+        OutputInterface $output,
+        string $feature,
+        bool $force
+    ): void {
+        $maintainers = $client->listMaintainers();
+        foreach ($maintainers as $maintainer) {
+            $this->maintainersChecked++;
+            $organizations = $client->listMaintainerOrganizations($maintainer['id']);
+            foreach ($organizations as $organization) {
+                $this->orgsChecked++;
 
-            // Disabled projects
-            if (isset($projectInfo["isDisabled"]) && $projectInfo["isDisabled"]) {
-                $output->writeln("Project disabled: " . $projectInfo["disabled"]["reason"]);
-            } else {
-                if (!in_array($feature, $projectInfo["features"])) {
-                    $output->writeln("Feature '{$feature}' not found in the project.");
-                } else {
-                    $manageClient->removeProjectFeature($projectId, $feature);
-                    $output->writeln("Feature '{$feature}' successfully removed.");
+                $projects = $client->listOrganizationProjects($organization['id']);
+                foreach ($projects as $project) {
+                    $output->write(sprintf('Project <comment>%s</comment>: ', $project['id']));
+                    $this->removeFeatureFromProject($client, $output, $project, $feature, $force);
                 }
             }
-            $output->write("\n");
         }
+    }
+
+    private function removeFeatureFromSelectedProjects(
+        Client $client,
+        OutputInterface $output,
+        string $featureName,
+        array $projectIds,
+        bool $force
+    ): void {
+        foreach ($projectIds as $projectId) {
+            $output->write(sprintf('Project <comment>%s</comment>: ', $projectId));
+
+            try {
+                $project = $client->getProject($projectId);
+                $this->removeFeatureFromProject($client, $output, $project, $featureName, $force);
+            } catch (ClientException $e) {
+                if ($e->getCode() === 404) {
+                    $output->writeln('<error>not found</error>');
+                } else {
+                    $output->writeln(sprintf('<error>error</error>: %s', $e->getMessage()));
+                }
+            }
+        }
+    }
+
+    private function removeFeatureFromProject(
+        Client $client,
+        OutputInterface $output,
+        array $projectInfo,
+        string $featureName,
+        bool $force
+    ): void {
+        if (isset($projectInfo['isDisabled']) && $projectInfo['isDisabled']) {
+            $output->writeln('project is disabled, <comment>skipping</comment>');
+            $this->projectsDisabled++;
+
+            return;
+        }
+
+        if (!in_array($featureName, $projectInfo['features'], true)) {
+            $output->writeln('doesn\'t have the feature, <comment>skipping</comment>');
+            $this->projectsWithoutFeature++;
+
+            return;
+        }
+
+        if ($force) {
+            $client->removeProjectFeature($projectInfo['id'], $featureName);
+        }
+
+        $output->writeln('feature <info>removed</info>');
+        $this->projectsUpdated++;
+    }
+
+    private function featureExists(Client $client, string $featureName): bool
+    {
+        $projects = $client->listFeatures(['type' => 'project']);
+        foreach ($projects as $project) {
+            if ($project['name'] === $featureName) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function printResult(OutputInterface $output, bool $checkAll): void
+    {
+        if ($checkAll) {
+            $output->writeln(sprintf('  Checked %d maintainers', $this->maintainersChecked));
+            $output->writeln(sprintf('  Checked %d organizations', $this->orgsChecked));
+        }
+
+        $output->writeln(sprintf('  %d projects disabled', $this->projectsDisabled));
+        $output->writeln(sprintf('  %d projects already without the feature', $this->projectsWithoutFeature));
+        $output->writeln(sprintf('  %d projects updated', $this->projectsUpdated));
     }
 }
