@@ -4,10 +4,11 @@
         "symfony/console": "^3.1",
         "keboola/storage-api-client": "^11",
         "keboola/kbc-manage-api-php-client": "^3.0",
-        "keboola/gooddata-php-client": "^3.0"
+        "keboola/gooddata-php-client": "dev-miro-psr-log"
     },
     "require-dev": {
-        "squizlabs/php_codesniffer": "2.*"
+        "squizlabs/php_codesniffer": "2.*",
+        "keboola/job-queue-api-php-client": "^0.3.0"
     },
     "authors": [
         {
