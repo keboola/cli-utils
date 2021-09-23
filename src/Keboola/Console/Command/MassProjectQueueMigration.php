@@ -145,6 +145,8 @@ class MassProjectQueueMigration extends Command
                 $errorJob['jobId'],
                 $errorJob['projectId']
             ));
+
+            $manageClient->removeProjectFeature($errorJob['projectId'], self::FEATURE_QUEUE_V2);
         }
 
         $output->writeln(sprintf('"%s" migration jobs were terminated or cancelled:', count($terminatedJobs)));
