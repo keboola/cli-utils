@@ -50,7 +50,6 @@ class MassProjectQueueMigration extends Command
             'url' => $kbcUrl,
         ]);
 
-
         $logger = new ConsoleLogger($output);
         $queueApiUrl = str_replace('connection', 'queue', $kbcUrl);
 
