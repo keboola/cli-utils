@@ -25,6 +25,7 @@ class MassProjectQueueMigration extends Command
 
     const FEATURE_QUEUE_V2 = 'queuev2';
     const COMPONENT_QUEUE_MIGRATION_TOOL = 'keboola.queue-migration-tool';
+    const JOB_STATES_FINAL = ['success', 'error', 'terminated', 'cancelled'];
 
     protected function configure()
     {
@@ -54,8 +55,9 @@ class MassProjectQueueMigration extends Command
         $queueApiUrl = str_replace('connection', 'queue', $kbcUrl);
 
         $projects = $this->parseProjectIds($sourceFile);
-        $output->writeln(sprintf('Found "%s" projects', count($projects)));
+        $output->writeln(sprintf('Migrating "%s" projects', count($projects)));
 
+        $migrationJobs = [];
         foreach ($projects as $projectId) {
             // set queuev2 project feature
             $projectRes = $manageClient->getProject($projectId);
@@ -88,7 +90,16 @@ class MassProjectQueueMigration extends Command
                     $configuration['id']
                 );
                 $jobRes = $jobQueueClient->createJob($jobData);
-                $output->writeln(sprintf('Created migration job "%s"', $jobRes['id']));
+                $output->writeln(sprintf(
+                    'Created migration job "%s" for project "%s"',
+                    $jobRes['id'],
+                    $projectId
+                ));
+                $migrationJobs[$jobRes['id']] = [
+                    'jobId' => $jobRes['id'],
+                    'projectId' => $projectId,
+                    'jobQueueClient' => $jobQueueClient,
+                ];
             } catch (\Throwable $e) {
                 $componentClient->deleteConfiguration(
                     self::COMPONENT_QUEUE_MIGRATION_TOOL,
@@ -97,6 +108,54 @@ class MassProjectQueueMigration extends Command
 
                 throw $e;
             }
+        }
+
+        $output->writeln(sprintf('Created "%s" migration jobs in total', count($migrationJobs)));
+        $output->writeln('Waiting for the jobs to finish...');
+
+        // wait until all migration jobs are finished
+        $unfinishedJobs = $migrationJobs;
+
+        while (count($unfinishedJobs) > 0) {
+            foreach ($unfinishedJobs as $jobId => $data) {
+                /** @var JobQueueClient $jobQueueClient */
+                $jobQueueClient = $data['jobQueueClient'];
+                $jobRes = $jobQueueClient->getJob((string) $jobId);
+                if (in_array($jobRes['status'], self::JOB_STATES_FINAL)) {
+                    unset($unfinishedJobs[$jobId]);
+                    unset($migrationJobs[$jobId]['jobQueueClient']);
+                    $migrationJobs[$jobId]['status'] = $jobRes['status'];
+                }
+            }
+            sleep(2);
+        }
+
+        $successJobs = array_filter($migrationJobs, fn ($item) => $item['status'] === 'success');
+        $errorJobs = array_filter($migrationJobs, fn ($item) => $item['status'] === 'error');
+        $terminatedJobs = array_filter(
+            $migrationJobs,
+            fn ($item) => $item['status'] === 'terminated' || $item['status'] === 'cancelled'
+        );
+
+        $output->writeln(sprintf('"%s" migration jobs finished successfully', count($successJobs)));
+
+        $output->writeln(sprintf('"%s" migration jobs ended with error:', count($errorJobs)));
+        foreach ($errorJobs as $errorJob) {
+            $output->writeln(sprintf(
+                'Job "%s" of project "%s" ended with error',
+                $errorJob['jobId'],
+                $errorJob['projectId']
+            ));
+        }
+
+        $output->writeln(sprintf('"%s" migration jobs were terminated or cancelled:', count($terminatedJobs)));
+        foreach ($terminatedJobs as $terminatedJob) {
+            $output->writeln(sprintf(
+                'Job "%s" of project "%s" ended with "%s"',
+                $terminatedJob['jobId'],
+                $terminatedJob['projectId'],
+                $terminatedJob['status']
+            ));
         }
     }
 
