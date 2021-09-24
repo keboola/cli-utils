@@ -10,7 +10,6 @@ use Keboola\JobQueueClient\Exception\ClientException as JobQueueClientException;
 use Keboola\JobQueueClient\JobData;
 use Keboola\ManageApi\Client;
 use Keboola\ManageApi\ClientException as ManageClientException;
-use Keboola\StorageApi\Client as StorageClient;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
