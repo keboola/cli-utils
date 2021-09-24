@@ -6,11 +6,11 @@ namespace Keboola\Console\Command;
 
 
 use Keboola\JobQueueClient\Client as JobQueueClient;
+use Keboola\JobQueueClient\Exception\ClientException as JobQueueClientException;
 use Keboola\JobQueueClient\JobData;
 use Keboola\ManageApi\Client;
+use Keboola\ManageApi\ClientException as ManageClientException;
 use Keboola\StorageApi\Client as StorageClient;
-use Keboola\StorageApi\Components;
-use Keboola\StorageApi\Options\Components\Configuration;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -59,57 +59,60 @@ class MassProjectQueueMigration extends Command
         $migrationJobs = [];
         foreach ($projects as $projectId) {
             // set queuev2 project feature
-            $projectRes = $manageClient->getProject($projectId);
-            if (!in_array(self::FEATURE_QUEUE_V2, $projectRes['features'])) {
-                $manageClient->addProjectFeature($projectId, self::FEATURE_QUEUE_V2);
+            try {
+                $projectRes = $manageClient->getProject($projectId);
+                if (!in_array(self::FEATURE_QUEUE_V2, $projectRes['features'])) {
+                    $manageClient->addProjectFeature($projectId, self::FEATURE_QUEUE_V2);
+                }
+                $storageToken = $this->createStorageToken($manageClient, $projectId);
+            } catch (ManageClientException $e) {
+                $output->writeln(sprintf(
+                    'Exception occurred while accessing project %s: %s',
+                    $projectId,
+                    $e->getMessage()
+                ));
+
+                continue;
             }
 
-            $storageToken = $this->createStorageToken($manageClient, $projectId);
-            $storageClient = new StorageClient([
-                'token' => $storageToken,
-                'url' => $kbcUrl,
-            ]);
-            $componentClient = new Components($storageClient);
-            $configuration = new Configuration();
-            $configuration
-                ->setChangeDescription('Created configuration')
-                ->setComponentId(self::COMPONENT_QUEUE_MIGRATION_TOOL)
-                ->setName('Queue migration');
-
-            $configuration = $componentClient->addConfiguration($configuration);
+            $jobQueueClient = new JobQueueClient(
+                $logger,
+                $queueApiUrl,
+                $storageToken
+            );
+            $jobData = new JobData(
+                self::COMPONENT_QUEUE_MIGRATION_TOOL,
+                '',
+                [
+                    'parameters' => []
+                ]
+            );
 
             try {
-                $jobQueueClient = new JobQueueClient(
-                    $logger,
-                    $queueApiUrl,
-                    $storageToken
-                );
-                $jobData = new JobData(
-                    self::COMPONENT_QUEUE_MIGRATION_TOOL,
-                    $configuration['id']
-                );
                 $jobRes = $jobQueueClient->createJob($jobData);
+            } catch (JobQueueClientException $e) {
                 $output->writeln(sprintf(
-                    'Created migration job "%s" for project "%s"',
-                    $jobRes['id'],
-                    $projectId
+                    'Exception occurred while creating migration job in project %s: %s',
+                    $projectId,
+                    $e->getMessage()
                 ));
-                $migrationJobs[$jobRes['id']] = [
-                    'jobId' => $jobRes['id'],
-                    'projectId' => $projectId,
-                    'jobQueueClient' => $jobQueueClient,
-                ];
-            } catch (\Throwable $e) {
-                $componentClient->deleteConfiguration(
-                    self::COMPONENT_QUEUE_MIGRATION_TOOL,
-                    $configuration['id']
-                );
 
-                throw $e;
+                continue;
             }
+
+            $output->writeln(sprintf(
+                'Created migration job "%s" for project "%s"',
+                $jobRes['id'],
+                $projectId
+            ));
+            $migrationJobs[$jobRes['id']] = [
+                'jobId' => $jobRes['id'],
+                'projectId' => $projectId,
+                'jobQueueClient' => $jobQueueClient,
+            ];
         }
 
-        $output->writeln(sprintf('Created "%s" migration jobs in total', count($migrationJobs)));
+        $output->writeln(sprintf('Created %s migration jobs in total', count($migrationJobs)));
         $output->writeln('Waiting for the jobs to finish...');
 
         // wait until all migration jobs are finished
@@ -136,9 +139,9 @@ class MassProjectQueueMigration extends Command
             fn ($item) => $item['status'] === 'terminated' || $item['status'] === 'cancelled'
         );
 
-        $output->writeln(sprintf('"%s" migration jobs finished successfully', count($successJobs)));
+        $output->writeln(sprintf('%s migration jobs finished successfully', count($successJobs)));
 
-        $output->writeln(sprintf('"%s" migration jobs ended with error:', count($errorJobs)));
+        $output->writeln(sprintf('%s migration jobs ended with error:', count($errorJobs)));
         foreach ($errorJobs as $errorJob) {
             $output->writeln(sprintf(
                 'Job "%s" of project "%s" ended with error',
@@ -149,7 +152,7 @@ class MassProjectQueueMigration extends Command
             $manageClient->removeProjectFeature($errorJob['projectId'], self::FEATURE_QUEUE_V2);
         }
 
-        $output->writeln(sprintf('"%s" migration jobs were terminated or cancelled:', count($terminatedJobs)));
+        $output->writeln(sprintf('%s migration jobs were terminated or cancelled:', count($terminatedJobs)));
         foreach ($terminatedJobs as $terminatedJob) {
             $output->writeln(sprintf(
                 'Job "%s" of project "%s" ended with "%s"',

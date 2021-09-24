@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "aa3e6a1ab3dc114dbab8a4e241872a66",
+    "content-hash": "97dc10b9809ff50fb031ca656fa146b2",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -385,16 +385,16 @@
         },
         {
             "name": "keboola/job-queue-api-php-client",
-            "version": "dev-miro-ps-2550",
+            "version": "0.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/job-queue-api-php-client.git",
-                "reference": "fcdfa4cb08d4ad5c79c0a919b181d9c60f3fd1e0"
+                "reference": "d3e6b82cd0299e73d9085e5ef32ce3660366848b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client/zipball/fcdfa4cb08d4ad5c79c0a919b181d9c60f3fd1e0",
-                "reference": "fcdfa4cb08d4ad5c79c0a919b181d9c60f3fd1e0",
+                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client/zipball/d3e6b82cd0299e73d9085e5ef32ce3660366848b",
+                "reference": "d3e6b82cd0299e73d9085e5ef32ce3660366848b",
                 "shasum": ""
             },
             "require": {
@@ -437,9 +437,9 @@
             ],
             "support": {
                 "issues": "https://github.com/keboola/job-queue-api-php-client/issues",
-                "source": "https://github.com/keboola/job-queue-api-php-client/tree/miro-ps-2550"
+                "source": "https://github.com/keboola/job-queue-api-php-client/tree/0.4.0"
             },
-            "time": "2021-09-23T15:04:57+00:00"
+            "time": "2021-09-24T07:46:14+00:00"
         },
         {
             "name": "keboola/kbc-manage-api-php-client",
@@ -2192,9 +2192,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "keboola/job-queue-api-php-client": 20
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": [],
