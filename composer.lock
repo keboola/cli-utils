@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "97dc10b9809ff50fb031ca656fa146b2",
+    "content-hash": "0e7e07bf72ca8b82d0d6ae45246b21d6",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -58,16 +58,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.194.3",
+            "version": "3.195.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "3a5d4a7e050094701da6234fa0e15490964e8118"
+                "reference": "7df429b9cae05b52991ae266e0f7f6756a9e7b4d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/3a5d4a7e050094701da6234fa0e15490964e8118",
-                "reference": "3a5d4a7e050094701da6234fa0e15490964e8118",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/7df429b9cae05b52991ae266e0f7f6756a9e7b4d",
+                "reference": "7df429b9cae05b52991ae266e0f7f6756a9e7b4d",
                 "shasum": ""
             },
             "require": {
@@ -143,9 +143,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.194.3"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.195.1"
             },
-            "time": "2021-09-22T18:14:43+00:00"
+            "time": "2021-09-28T18:16:45+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",
@@ -385,16 +385,16 @@
         },
         {
             "name": "keboola/job-queue-api-php-client",
-            "version": "0.4.0",
+            "version": "0.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/job-queue-api-php-client.git",
-                "reference": "d3e6b82cd0299e73d9085e5ef32ce3660366848b"
+                "reference": "67370e81c67b8f2523888bb8b168d03c68950b76"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client/zipball/d3e6b82cd0299e73d9085e5ef32ce3660366848b",
-                "reference": "d3e6b82cd0299e73d9085e5ef32ce3660366848b",
+                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client/zipball/67370e81c67b8f2523888bb8b168d03c68950b76",
+                "reference": "67370e81c67b8f2523888bb8b168d03c68950b76",
                 "shasum": ""
             },
             "require": {
@@ -408,6 +408,7 @@
             "require-dev": {
                 "infection/infection": "^0.18.2|^0.21.2",
                 "keboola/coding-standard": ">=11.0.0",
+                "keboola/storage-api-client": "^12.0",
                 "php-parallel-lint/php-parallel-lint": "^1.2",
                 "phpstan/phpstan": "^0.12.80",
                 "phpunit/phpunit": "^9.5"
@@ -437,9 +438,9 @@
             ],
             "support": {
                 "issues": "https://github.com/keboola/job-queue-api-php-client/issues",
-                "source": "https://github.com/keboola/job-queue-api-php-client/tree/0.4.0"
+                "source": "https://github.com/keboola/job-queue-api-php-client/tree/0.4.1"
             },
-            "time": "2021-09-24T07:46:14+00:00"
+            "time": "2021-09-24T20:05:05+00:00"
         },
         {
             "name": "keboola/kbc-manage-api-php-client",
@@ -1011,16 +1012,16 @@
         },
         {
             "name": "symfony/debug",
-            "version": "v4.4.27",
+            "version": "v4.4.31",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/debug.git",
-                "reference": "2f9160e92eb64c95da7368c867b663a8e34e980c"
+                "reference": "43ede438d4cb52cd589ae5dc070e9323866ba8e0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/debug/zipball/2f9160e92eb64c95da7368c867b663a8e34e980c",
-                "reference": "2f9160e92eb64c95da7368c867b663a8e34e980c",
+                "url": "https://api.github.com/repos/symfony/debug/zipball/43ede438d4cb52cd589ae5dc070e9323866ba8e0",
+                "reference": "43ede438d4cb52cd589ae5dc070e9323866ba8e0",
                 "shasum": ""
             },
             "require": {
@@ -1059,7 +1060,7 @@
             "description": "Provides tools to ease debugging PHP code",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/debug/tree/v4.4.27"
+                "source": "https://github.com/symfony/debug/tree/v4.4.31"
             },
             "funding": [
                 {
@@ -1075,7 +1076,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2021-07-22T07:21:39+00:00"
+            "time": "2021-09-24T13:30:14+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
@@ -1996,16 +1997,16 @@
         },
         {
             "name": "symfony/validator",
-            "version": "v5.3.7",
+            "version": "v5.3.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/validator.git",
-                "reference": "916a7c6cf3ede36eb0e4097500e0a12dcff520a7"
+                "reference": "3a773f6f03ef2846c280e4f5b5f34cf950ead127"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/validator/zipball/916a7c6cf3ede36eb0e4097500e0a12dcff520a7",
-                "reference": "916a7c6cf3ede36eb0e4097500e0a12dcff520a7",
+                "url": "https://api.github.com/repos/symfony/validator/zipball/3a773f6f03ef2846c280e4f5b5f34cf950ead127",
+                "reference": "3a773f6f03ef2846c280e4f5b5f34cf950ead127",
                 "shasum": ""
             },
             "require": {
@@ -2086,7 +2087,7 @@
             "description": "Provides tools to validate values",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/validator/tree/v5.3.7"
+                "source": "https://github.com/symfony/validator/tree/v5.3.8"
             },
             "funding": [
                 {
@@ -2102,7 +2103,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2021-08-26T08:22:53+00:00"
+            "time": "2021-09-21T20:52:44+00:00"
         }
     ],
     "packages-dev": [
@@ -2195,7 +2196,9 @@
     "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": [],
+    "platform": {
+        "php": "^7.4"
+    },
     "platform-dev": [],
-    "plugin-api-version": "2.0.0"
+    "plugin-api-version": "2.1.0"
 }
