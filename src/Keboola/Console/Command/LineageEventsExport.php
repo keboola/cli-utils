@@ -38,7 +38,7 @@ class LineageEventsExport extends Command
         $index = $client->indexAction((new IndexOptions())->setExclude(['components']));
 
         $queueUrl = null;
-        foreach($index['services'] as $service) {
+        foreach ($index['services'] as $service) {
             if ($service['id'] === 'queue') {
                 $queueUrl = $service['url'];
             }
