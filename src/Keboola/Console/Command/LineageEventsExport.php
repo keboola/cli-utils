@@ -62,7 +62,7 @@ class LineageEventsExport extends Command
             'base_uri' => $input->getArgument('marquezUrl'),
         ]);
 
-        $response = $queueGuzzle->request('GET', '/jobs?createdTimeFrom=-20%20days', $requestOptions);
+        $response = $queueGuzzle->request('GET', '/jobs?createdTimeFrom=-20%20days&sortOrder=asc', $requestOptions);
 
         foreach ($this->decodeResponse($response) as $job) {
             if (!isset($job['result']['input'])) {
