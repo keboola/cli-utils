@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Command;
 
-
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\Exception\ClientException as JobQueueClientException;
 use Keboola\JobQueueClient\JobData;
@@ -131,11 +130,11 @@ class MassProjectQueueMigration extends Command
             sleep(2);
         }
 
-        $successJobs = array_filter($migrationJobs, fn ($item) => $item['status'] === 'success');
-        $errorJobs = array_filter($migrationJobs, fn ($item) => $item['status'] === 'error');
+        $successJobs = array_filter($migrationJobs, fn($item) => $item['status'] === 'success');
+        $errorJobs = array_filter($migrationJobs, fn($item) => $item['status'] === 'error');
         $terminatedJobs = array_filter(
             $migrationJobs,
-            fn ($item) => $item['status'] === 'terminated' || $item['status'] === 'cancelled'
+            fn($item) => $item['status'] === 'terminated' || $item['status'] === 'cancelled'
         );
 
         $output->writeln(sprintf('%s migration jobs finished successfully', count($successJobs)));

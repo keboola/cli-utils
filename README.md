@@ -148,3 +148,14 @@ If you want to run your command on multiple stacks, you can predefine stacks and
       - E.g. I want to run `manage:add-feature-to-templates <token> <url> featureXX featureDesc -f`
       - So I call `php cli.php manage:call-on-stacks manage:add-feature-to-templates "featureXX featureDesc -f"`
 4. The command iterates over the stacks and asks your confirmation if you want to run the `taget command` there. You can skip it
+
+## Load Queue Jobs Lineage events into Marqueez
+
+```
+export STORAGE_API_TOKEN=<token>
+php cli.php storage:lineage-events-export <marquezUrl> [<connectionUrl>] [--limit=100] [--job-names-configurations]
+```
+
+Loads last N _(default 100)_ jobs into Marquez tool. Export has two modes:
+- default - jobs are identified by job IDs
+- with `--job-names-configurations` option - job are identified by component and configuration IDs

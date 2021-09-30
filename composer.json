@@ -1,6 +1,7 @@
 {
     "name": "keboola/cli-utils",
     "require": {
+        "php": "^7.4",
         "symfony/console": "^3.1",
         "keboola/storage-api-client": "^11",
         "keboola/kbc-manage-api-php-client": "^3.0",
