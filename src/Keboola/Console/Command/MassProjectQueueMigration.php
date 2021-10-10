@@ -6,6 +6,7 @@ namespace Keboola\Console\Command;
 
 use Exception;
 use GuzzleHttp\Client as OrchestratorClient;
+use GuzzleHttp\Exception\ClientException as GuzzleClientException;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\Exception\ClientException as JobQueueClientException;
 use Keboola\JobQueueClient\JobData;
@@ -170,12 +171,22 @@ class MassProjectQueueMigration extends Command
 
         // Disable orchestrations in successfully migrated projects
         foreach ($successJobs as $successJob) {
-            $disabled = $this->disableLegacyOrchestrations($kbcUrl, $successJob['storageToken']);
-            $output->writeln(sprintf(
-                'Disabled %s legacy orchestrations of project "%s"',
-                count($disabled),
-                $successJob['projectId']
-            ));
+            try {
+                $disabled = $this->disableLegacyOrchestrations($kbcUrl, $successJob['storageToken']);
+                $output->writeln(sprintf(
+                    'Disabled %s legacy orchestrations of project "%s"',
+                    count($disabled),
+                    $successJob['projectId']
+                ));
+            } catch (GuzzleClientException $e) {
+                $output->writeln(sprintf(
+                    'Exception occurred while deactivating legacy orchestrations in project %s: %s',
+                    $successJob['projectId'],
+                    $e->getMessage()
+                ));
+
+                continue;
+            }
         }
     }
 
