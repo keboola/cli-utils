@@ -5,16 +5,14 @@ declare(strict_types=1);
 namespace Keboola\Console\Command;
 
 use Exception;
-use GuzzleHttp\Client as OrchestratorClient;
 use GuzzleHttp\Exception\ClientException as GuzzleClientException;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\Exception\ClientException as JobQueueClientException;
 use Keboola\JobQueueClient\JobData;
 use Keboola\ManageApi\Client;
 use Keboola\ManageApi\ClientException as ManageClientException;
+use Keboola\Orchestrator\Client as OrchestratorClient;
 use Keboola\StorageApi\Client as StorageClient;
-use Keboola\StorageApi\Components;
-use Keboola\StorageApi\Options\Components\ListComponentConfigurationsOptions;
 use Keboola\StorageApi\Options\IndexOptions;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -31,7 +29,6 @@ class MassProjectQueueMigration extends Command
     const FEATURE_QUEUE_V2 = 'queuev2';
     const COMPONENT_QUEUE_MIGRATION_TOOL = 'keboola.queue-migration-tool';
     const JOB_STATES_FINAL = ['success', 'error', 'terminated', 'cancelled'];
-    const LEGACY_ORCHESTRATOR_COMPONENT = 'orchestrator';
 
     protected function configure()
     {
@@ -218,46 +215,28 @@ class MassProjectQueueMigration extends Command
     private function disableLegacyOrchestrations(string $kbcUrl, string $storageToken): array
     {
         $storageClient = new StorageClient([
-            'token' => $storageToken,
             'url' => $kbcUrl,
+            'token' => $storageToken,
         ]);
 
-        $componentsClient = new Components($storageClient);
-        $orchestratorClient = $this->createLegacyOrchestratorClient(
-            $this->findOrchestratorServiceUrl($storageClient)
-        );
+        $orchestratorClient = OrchestratorClient::factory([
+            'url' => $this->findOrchestratorServiceUrl($storageClient),
+            'token' => $storageToken,
+        ]);
 
-        $options = new ListComponentConfigurationsOptions();
-        $options->setComponentId(self::LEGACY_ORCHESTRATOR_COMPONENT);
-        $configurations = $componentsClient->listComponentConfigurations($options);
+        $orchestrations = $orchestratorClient->getOrchestrations();
 
-        $updatedConfigurations = [];
-        foreach ($configurations as $configuration) {
-            $result = $orchestratorClient->put(
-                sprintf('orchestrations/%s', $configuration['id']),
+        $updatedOrchestrations = [];
+        foreach ($orchestrations as $orchestration) {
+            $updatedOrchestrations[] = $orchestratorClient->updateOrchestration(
+                $orchestration['id'],
                 [
-                    'headers' => [
-                        'X-StorageApi-Token' => $storageToken,
-                    ],
-                    'json' => [
-                        'active' => false,
-                    ],
+                    'active' => false,
                 ]
             );
-            $updatedConfigurations[] = $result->getBody()->getContents();
         }
 
-        return $updatedConfigurations;
-    }
-
-    private function createLegacyOrchestratorClient(string $orchestratorUrl): OrchestratorClient
-    {
-        return new OrchestratorClient([
-            'base_uri' => $orchestratorUrl,
-            'headers' => [
-                'Content-Type' => 'application/json',
-            ],
-        ]);
+        return $updatedOrchestrations;
     }
 
     private function findOrchestratorServiceUrl(StorageClient $storageClient): string
