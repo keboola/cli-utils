@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Command;
 
+use Exception;
+use GuzzleHttp\Exception\ClientException as GuzzleClientException;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\Exception\ClientException as JobQueueClientException;
 use Keboola\JobQueueClient\JobData;
 use Keboola\ManageApi\Client;
 use Keboola\ManageApi\ClientException as ManageClientException;
+use Keboola\Orchestrator\Client as OrchestratorClient;
+use Keboola\StorageApi\Client as StorageClient;
+use Keboola\StorageApi\Options\IndexOptions;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -107,6 +112,7 @@ class MassProjectQueueMigration extends Command
                 'jobId' => $jobRes['id'],
                 'projectId' => $projectId,
                 'jobQueueClient' => $jobQueueClient,
+                'storageToken' => $storageToken,
             ];
         }
 
@@ -159,6 +165,26 @@ class MassProjectQueueMigration extends Command
                 $terminatedJob['status']
             ));
         }
+
+        // Disable orchestrations in successfully migrated projects
+        foreach ($successJobs as $successJob) {
+            try {
+                $disabled = $this->disableLegacyOrchestrations($kbcUrl, $successJob['storageToken']);
+                $output->writeln(sprintf(
+                    'Disabled %s legacy orchestrations of project "%s"',
+                    count($disabled),
+                    $successJob['projectId']
+                ));
+            } catch (GuzzleClientException $e) {
+                $output->writeln(sprintf(
+                    'Exception occurred while deactivating legacy orchestrations in project %s: %s',
+                    $successJob['projectId'],
+                    $e->getMessage()
+                ));
+
+                continue;
+            }
+        }
     }
 
     private function createStorageToken(Client $client, string $projectId): string
@@ -184,5 +210,49 @@ class MassProjectQueueMigration extends Command
         }
 
         return explode(PHP_EOL, $projectsText);
+    }
+
+    private function disableLegacyOrchestrations(string $kbcUrl, string $storageToken): array
+    {
+        $storageClient = new StorageClient([
+            'url' => $kbcUrl,
+            'token' => $storageToken,
+        ]);
+
+        $orchestratorClient = OrchestratorClient::factory([
+            'url' => $this->findOrchestratorServiceUrl($storageClient),
+            'token' => $storageToken,
+        ]);
+
+        $orchestrations = $orchestratorClient->getOrchestrations();
+
+        $updatedOrchestrations = [];
+        foreach ($orchestrations as $orchestration) {
+            $updatedOrchestrations[] = $orchestratorClient->updateOrchestration(
+                $orchestration['id'],
+                [
+                    'active' => false,
+                ]
+            );
+        }
+
+        return $updatedOrchestrations;
+    }
+
+    private function findOrchestratorServiceUrl(StorageClient $storageClient): string
+    {
+        $index = $storageClient->indexAction((new IndexOptions())->setExclude(['components']));
+        $serviceUrl = null;
+        foreach ($index['services'] as $service) {
+            if ($service['id'] === 'syrup') {
+                $serviceUrl = $service['url'];
+            }
+        }
+
+        if (!$serviceUrl) {
+            throw new Exception('Legacy Orchestrator url not found in the services list.');
+        }
+
+        return $serviceUrl . '/orchestrator/';
     }
 }
