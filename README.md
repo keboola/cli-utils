@@ -159,3 +159,25 @@ php cli.php storage:lineage-events-export <marquezUrl> [<connectionUrl>] [--limi
 Loads last N _(default 100)_ jobs into Marquez tool. Export has two modes:
 - default - jobs are identified by job IDs
 - with `--job-names-configurations` option - job are identified by component and configuration IDs
+
+## Mass Project Queue Migration
+
+- Create a manage token.
+- Prepare input file (e.g. "projects") with ids of the projects to migrate to new Queue.
+    ```
+    1234
+    5678
+    9012
+    3456
+    ```
+
+- Run the mass migration command 
+    ```
+    php cli.php manage:mass-project-queue-migration <manage_token> <kbc_url> <file_with_projects>
+    ```
+
+The command will do the following for every projectId in the source file:
+- add project feature `queuev2`
+- create and run configuration of `keboola.queue-migration-tool` component
+- if a job was successful, it will disable legacy orchestrations in the project
+- if a job ended with error, it will remove the `queuev2` feature from the project
