@@ -179,5 +179,5 @@ Loads last N _(default 100)_ jobs into Marquez tool. Export has two modes:
 The command will do the following for every projectId in the source file:
 - add project feature `queuev2`
 - create and run configuration of `keboola.queue-migration-tool` component
-- if a job were successful, it will disable legacy orchestrations in the project
+- if a job was successful, it will disable legacy orchestrations in the project
 - if a job ended with error, it will remove the `queuev2` feature from the project
