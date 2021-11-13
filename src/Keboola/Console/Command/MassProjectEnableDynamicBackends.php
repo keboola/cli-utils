@@ -61,7 +61,7 @@ class MassProjectEnableDynamicBackends extends Command
                 }
 
                 if (!in_array(self::FEATURE_NEW_TRANSFORMATIONS_ONLY, $projectRes['features'], true)) {
-                    $output->writeln(sprintf(' - Feature "%s" is missing, project "%s" is not migrated to new queue.', self::FEATURE_NEW_TRANSFORMATIONS_ONLY, $projectId));
+                    $output->writeln(sprintf(' - Feature "%s" is missing for project "%s".', self::FEATURE_NEW_TRANSFORMATIONS_ONLY, $projectId));
                     $helper = $this->getHelper('question');
                     $question = new ConfirmationQuestion(
                         ' - Do you want to add this feature (y/n)?',
