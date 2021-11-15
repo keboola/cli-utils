@@ -163,12 +163,12 @@ Loads last N _(default 100)_ jobs into Marquez tool. Export has two modes:
 ## Mass Project Queue Migration
 
 - Create a manage token.
-- Prepare input file (e.g. "projects") with ids of the projects to migrate to new Queue.
+- Prepare input file (e.g. "projects") with storage tokens of the projects to migrate to new Queue.
     ```
-    1234
-    5678
-    9012
-    3456
+    1234-<token_id>-<hash>
+    5678-<token_id>-<hash>
+    9012-<token_id>-<hash>
+    3456-<token_id>-<hash>
     ```
 
 - Run the mass migration command 

@@ -56,18 +56,22 @@ class MassProjectQueueMigration extends Command
         $logger = new ConsoleLogger($output);
         $queueApiUrl = str_replace('connection', 'queue', $kbcUrl);
 
-        $projects = $this->parseProjectIds($sourceFile);
-        $output->writeln(sprintf('Migrating "%s" projects', count($projects)));
+        $projectsTokens = $this->parseProjectTokens($sourceFile);
+        $output->writeln(sprintf('Migrating "%s" projects', count($projectsTokens)));
 
         $migrationJobs = [];
-        foreach ($projects as $projectId) {
+        foreach ($projectsTokens as $storageToken) {
+            $projectId = (new \Keboola\StorageApi\Client([
+                'token' => $storageToken,
+                'url' => $kbcUrl,
+            ]))->verifyToken()['owner']['id'];
+
             // set queuev2 project feature
             try {
                 $projectRes = $manageClient->getProject($projectId);
                 if (!in_array(self::FEATURE_QUEUE_V2, $projectRes['features'])) {
                     $manageClient->addProjectFeature($projectId, self::FEATURE_QUEUE_V2);
                 }
-                $storageToken = $this->createStorageToken($manageClient, $projectId);
             } catch (ManageClientException $e) {
                 $output->writeln(sprintf(
                     'Exception occurred while accessing project %s: %s',
@@ -199,7 +203,7 @@ class MassProjectQueueMigration extends Command
         return $response['token'];
     }
 
-    private function parseProjectIds(string $sourceFile): array
+    private function parseProjectTokens(string $sourceFile): array
     {
         if (!file_exists($sourceFile)) {
             throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
