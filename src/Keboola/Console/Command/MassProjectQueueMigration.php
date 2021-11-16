@@ -87,7 +87,9 @@ class MassProjectQueueMigration extends Command
                 self::COMPONENT_QUEUE_MIGRATION_TOOL,
                 '',
                 [
-                    'parameters' => []
+                    'parameters' => [
+                        'kill_processing_jobs' => true,
+                    ],
                 ]
             );
 
