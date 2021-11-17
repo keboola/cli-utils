@@ -17,6 +17,7 @@ use Keboola\StorageApi\Options\IndexOptions;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -25,6 +26,7 @@ class MassProjectQueueMigration extends Command
     const ARGUMENT_MANAGE_TOKEN = 'manage-token';
     const ARGUMENT_CONNECTION_URL = 'connection-url';
     const ARGUMENT_SOURCE_FILE = 'source-file';
+    const OPTION_BATCH_SIZE = 'batch-size';
 
     const FEATURE_QUEUE_V2 = 'queuev2';
     const COMPONENT_QUEUE_MIGRATION_TOOL = 'keboola.queue-migration-tool';
@@ -38,6 +40,7 @@ class MassProjectQueueMigration extends Command
             ->addArgument(self::ARGUMENT_MANAGE_TOKEN, InputArgument::REQUIRED, 'Manage token')
             ->addArgument(self::ARGUMENT_CONNECTION_URL, InputArgument::REQUIRED, 'Connection url')
             ->addArgument(self::ARGUMENT_SOURCE_FILE, InputArgument::REQUIRED, 'Source file with project ids')
+            ->addOption(self::OPTION_BATCH_SIZE, 'b', InputOption::VALUE_OPTIONAL, 'Batch size')
         ;
     }
 
@@ -46,6 +49,7 @@ class MassProjectQueueMigration extends Command
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
         $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        $batchSize = $input->getOption(self::OPTION_BATCH_SIZE) ?? 200;
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
 
         $manageClient = new Client([
@@ -89,6 +93,7 @@ class MassProjectQueueMigration extends Command
                 [
                     'parameters' => [
                         'kill_processing_jobs' => true,
+                        'batch_size' => $batchSize,
                     ],
                 ]
             );
