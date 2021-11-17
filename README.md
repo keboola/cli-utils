@@ -173,8 +173,10 @@ Loads last N _(default 100)_ jobs into Marquez tool. Export has two modes:
 
 - Run the mass migration command 
     ```
-    php cli.php manage:mass-project-queue-migration <manage_token> <kbc_url> <file_with_projects>
+    php cli.php manage:mass-project-queue-migration <manage_token> <kbc_url> <file_with_projects> [--batch-size=500]
     ```
+
+- You can set batch size with optional arguments "batch_size". Default is 200.
 
 The command will do the following for every projectId in the source file:
 - add project feature `queuev2`
