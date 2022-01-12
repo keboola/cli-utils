@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2365859723c2e035751632e6941cd0d0",
+    "content-hash": "7149b1d7419deb275ad49ae54a8c1631",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -550,12 +550,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/job-queue-api-php-client.git",
-                "reference": "67370e81c67b8f2523888bb8b168d03c68950b76"
+                "reference": "96c9e97d68ae4c8f69cdf8eb48db8253f99d6d74"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client/zipball/67370e81c67b8f2523888bb8b168d03c68950b76",
-                "reference": "67370e81c67b8f2523888bb8b168d03c68950b76",
+                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client/zipball/96c9e97d68ae4c8f69cdf8eb48db8253f99d6d74",
+                "reference": "96c9e97d68ae4c8f69cdf8eb48db8253f99d6d74",
                 "shasum": ""
             },
             "require": {
@@ -598,7 +598,6 @@
                 "queue"
             ],
             "support": {
-                "issues": "https://github.com/keboola/job-queue-api-php-client/issues",
                 "source": "https://github.com/keboola/job-queue-api-php-client/tree/0.4.1"
             },
             "time": "2021-09-24T20:05:05+00:00"
@@ -2464,5 +2463,5 @@
         "php": "^7.4"
     },
     "platform-dev": [],
-    "plugin-api-version": "2.0.0"
+    "plugin-api-version": "2.1.0"
 }
