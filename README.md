@@ -197,9 +197,9 @@ Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/En
 
 - Run the mass migration command
     ```
-    php cli.php manage:mass-project-enable-dynamic-backends <manage_token> <kbc_url> <file_with_projects>
+    php cli.php manage:mass-project-enable-dynamic-backends [--force-new-trans -f] <manage_token> <kbc_url> <file_with_projects> 
     ```
 The command will do the following for every projectId in the source file:
 - check if the project has project feature `queuev2`. If not, project migration fails
-- check if the project has project feature `new-transformations-only`. If not, it offers to add it
+- check if the project has project feature `new-transformations-only`. If not, it offers to add it. If the `--force-new-trans` is provided, it won't ask, but it will do it automatically
 - run `storage:tmp:enable-workspace-snowflake-dynamic-backend-size` storage command on the stack for the selected project. It reports error if it fails.
