@@ -181,3 +181,25 @@ The command will do the following for every projectId in the source file:
 - create and run configuration of `keboola.queue-migration-tool` component
 - if a job was successful, it will disable legacy orchestrations in the project
 - if a job ended with error, it will remove the `queuev2` feature from the project
+
+
+## Mass project enable dynamic backends
+Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/Enable+Dynamic+Backends#Enable-for-project 
+
+- Create a manage token.
+- Prepare input file (e.g. "projects") with ID of the projects you want to enable dynamic backends for.
+    ```
+    1234
+    5678
+    9012
+    3456
+    ```
+
+- Run the mass migration command
+    ```
+    php cli.php manage:mass-project-enable-dynamic-backends <manage_token> <kbc_url> <file_with_projects>
+    ```
+The command will do the following for every projectId in the source file:
+- check if the project has project feature `queuev2`. If not, project migration fails
+- check if the project has project feature `new-transformations-only`. If not, it offers to add it
+- run `storage:tmp:enable-workspace-snowflake-dynamic-backend-size` storage command on the stack for the selected project. It reports error if it fails.
