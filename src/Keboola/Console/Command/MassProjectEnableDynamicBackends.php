@@ -10,6 +10,7 @@ use Keboola\ManageApi\ClientException as ManageClientException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
@@ -18,6 +19,7 @@ class MassProjectEnableDynamicBackends extends Command
     private const ARGUMENT_MANAGE_TOKEN = 'manage-token';
     private const ARGUMENT_CONNECTION_URL = 'connection-url';
     private const ARGUMENT_SOURCE_FILE = 'source-file';
+    private const OPTION_FORCE_NEW_TRANSFORMATION = 'force-new-trans';
     private const FEATURE_QUEUE_V2 = 'queuev2';
     private const FEATURE_NEW_TRANSFORMATIONS_ONLY = 'new-transformations-only';
     private const FEATURE_DYNAMIC_BACKEND_SIZE = 'workspace-snowflake-dynamic-backend-size';
@@ -29,7 +31,9 @@ class MassProjectEnableDynamicBackends extends Command
             ->setDescription('Mass project enable dynamic backends')
             ->addArgument(self::ARGUMENT_MANAGE_TOKEN, InputArgument::REQUIRED, 'Manage token')
             ->addArgument(self::ARGUMENT_CONNECTION_URL, InputArgument::REQUIRED, 'Connection url')
-            ->addArgument(self::ARGUMENT_SOURCE_FILE, InputArgument::REQUIRED, 'Source file with project ids');
+            ->addArgument(self::ARGUMENT_SOURCE_FILE, InputArgument::REQUIRED, 'Source file with project ids')
+            ->addOption(self::OPTION_FORCE_NEW_TRANSFORMATION, 'f', InputOption::VALUE_NONE, 'Forces to add feature new-transformations-only if not available')
+        ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -38,6 +42,7 @@ class MassProjectEnableDynamicBackends extends Command
         $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
+        $forceNT = $input->getOption(self::OPTION_FORCE_NEW_TRANSFORMATION);
 
         $manageClient = new Client([
             'token' => $manageToken,
@@ -62,14 +67,17 @@ class MassProjectEnableDynamicBackends extends Command
 
                 if (!in_array(self::FEATURE_NEW_TRANSFORMATIONS_ONLY, $projectRes['features'], true)) {
                     $output->writeln(sprintf(' - Feature "%s" is missing for project "%s".', self::FEATURE_NEW_TRANSFORMATIONS_ONLY, $projectId));
-                    $helper = $this->getHelper('question');
-                    $question = new ConfirmationQuestion(
-                        ' - Do you want to add this feature (y/n)?',
-                        false,
-                        '/^(y|j)/i'
-                    );
-                    if (!$helper->ask($input, $output, $question)) {
-                        return;
+                    // don't ask when force option is on
+                    if (!$forceNT) {
+                        $helper = $this->getHelper('question');
+                        $question = new ConfirmationQuestion(
+                            ' - Do you want to add this feature (y/n)?',
+                            false,
+                            '/^(y|j)/i'
+                        );
+                        if (!$helper->ask($input, $output, $question)) {
+                            return;
+                        }
                     }
                     $manageClient->addProjectFeature($projectId, self::FEATURE_NEW_TRANSFORMATIONS_ONLY);
                     $output->writeln(sprintf(' - Feature "%s" assigned to project "%s".', self::FEATURE_NEW_TRANSFORMATIONS_ONLY, $projectId));
