@@ -88,7 +88,10 @@ class LineageEventsExport extends Command
             'limit' => $input->getOption('limit'),
         ]));
 
-        foreach (array_reverse($this->decodeResponse($jobsResponse)) as $job) {
+        $jobsToExport = $this->decodeResponse($jobsResponse);
+        $output->writeln(sprintf('There are %s jobs to export.', count($jobsToExport)));
+
+        foreach (array_reverse($jobsToExport) as $job) {
             if (!isset($job['result']['input'])) {
                 $output->writeln(sprintf('Skipping older job "%s" without I/O in the result.', $job['id']));
                 continue;
