@@ -6,6 +6,7 @@ require __DIR__.'/vendor/autoload.php';
 
 use Keboola\Console\Command\AddFeature;
 use Keboola\Console\Command\AllStacksIterator;
+use Keboola\Console\Command\CheckProjectBeforeQueueMigration;
 use Keboola\Console\Command\LineageEventsExport;
 use Keboola\Console\Command\MassDedup;
 use Keboola\Console\Command\MassProjectEnableDynamicBackends;
@@ -41,4 +42,5 @@ $application->add(new AddFeature());
 $application->add(new AllStacksIterator());
 $application->add(new MassProjectQueueMigration());
 $application->add(new LineageEventsExport());
+$application->add(new CheckProjectBeforeQueueMigration());
 $application->run();
