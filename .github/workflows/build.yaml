@@ -3,6 +3,10 @@ name: Build
 on:
   push
 
+env:
+  QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+  QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,3 +22,14 @@ jobs:
 
     - name: Run tests
       run: docker-compose run --rm app ./vendor/bin/phpcs --standard=psr2 --ignore=vendor -n .
+
+    - name: Push
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        docker login -u="$QUAY_USERNAME" -p="$QUAY_PASSWORD" quay.io
+        docker tag keboola/cli-utils quay.io/keboola/cli-utils:$GITHUB_REF_NAME
+        docker tag keboola/cli-utils quay.io/keboola/cli-utils:latest
+        docker images
+        docker push quay.io/keboola/cli-utils:$GITHUB_REF_NAME
+        docker push quay.io/keboola/cli-utils:latest
+
