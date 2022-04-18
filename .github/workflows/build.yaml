@@ -23,7 +23,7 @@ jobs:
       run: docker-compose run --rm app ./vendor/bin/phpcs --standard=psr2 --ignore=vendor -n .
 
     - name: Push
-      if: startsWith(github.ref, 'refs/tags/')
+      #if: startsWith(github.ref, 'refs/tags/')
       run: |
         docker login -u=keboolabot -p="$DOCKERHUB_TOKEN"
         docker tag keboola/cli-utils keboola/cli-utils:$GITHUB_REF_NAME
