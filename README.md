@@ -1,12 +1,12 @@
 # CLI UTILS
 
-[![Build Status](https://travis-ci.org/keboola/cli-utils.svg?branch=master)](https://travis-ci.org/keboola/cli-utils)
+[![Build](https://github.com/keboola/cli-utils/actions/workflows/build.yaml/badge.svg)](https://github.com/keboola/cli-utils/actions/workflows/build.yaml)
 
 Assorted CLI utils
 
 ### Running in Docker
 
-`docker run --rm -it quay.io/keboola/cli-utils php ./cli.php`
+`docker run --rm -it keboola/cli-utils php ./cli.php`
 
 ## Mass Dedup
 
