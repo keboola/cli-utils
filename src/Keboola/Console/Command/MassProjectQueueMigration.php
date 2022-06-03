@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Command;
 
+use GuzzleHttp\Client as GuzzleClient;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\Exception\ClientException as JobQueueClientException;
 use Keboola\JobQueueClient\JobData;
 use Keboola\ManageApi\Client;
 use Keboola\ManageApi\ClientException as ManageClientException;
+use Keboola\StorageApi\Client as StorageClient;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -76,17 +78,27 @@ class MassProjectQueueMigration extends Command
                 continue;
             }
 
-            $jobQueueClient = new JobQueueClient(
-                $logger,
-                $queueApiUrl,
-                $storageToken
-            );
+            $storageClient = new StorageClient([
+                'url' => $kbcUrl,
+                'token' => $storageToken,
+            ]);
+            $encryptionUrl = $storageClient->getServiceUrl('encryption');
+            $encryptedManageToken = $this->encrypt($encryptionUrl, $manageToken);
+
             $jobData = new JobData(
                 self::COMPONENT_QUEUE_MIGRATION_TOOL,
                 '',
                 [
-                    'parameters' => []
+                    'parameters' => [
+                        '#manageToken' => $encryptedManageToken
+                    ],
                 ]
+            );
+
+            $jobQueueClient = new JobQueueClient(
+                $logger,
+                $queueApiUrl,
+                $storageToken
             );
 
             try {
@@ -195,5 +207,23 @@ class MassProjectQueueMigration extends Command
         }
 
         return explode(PHP_EOL, $projectsText);
+    }
+
+    private function encrypt(
+        string $encryptionApiUrl,
+        string $value
+    ): string {
+        $client = new GuzzleClient();
+        $response = $client->post(
+            sprintf('%s/encrypt?componentId=%s', $encryptionApiUrl, self::COMPONENT_QUEUE_MIGRATION_TOOL),
+            [
+                'body' => $value,
+                'headers' => [
+                    'Content-Type' => 'text/plain'
+                ],
+            ]
+        );
+
+        return $response->getBody()->getContents();
     }
 }
