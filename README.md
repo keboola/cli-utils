@@ -203,3 +203,7 @@ The command will do the following for every projectId in the source file:
 - check if the project has project feature `queuev2`. If not, project migration fails
 - check if the project has project feature `new-transformations-only`. If not, it offers to add it. If the `--force-new-trans` is provided, it won't ask, but it will do it automatically
 - run `storage:tmp:enable-workspace-snowflake-dynamic-backend-size` storage command on the stack for the selected project. It reports error if it fails.
+
+## License
+
+MIT licensed, see [LICENSE](./LICENSE) file.
