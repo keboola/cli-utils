@@ -90,7 +90,7 @@ class MassProjectQueueMigration extends Command
                 '',
                 [
                     'parameters' => [
-                        '#manageToken' => $encryptedManageToken
+                        '#manage_token' => $encryptedManageToken
                     ],
                 ]
             );
