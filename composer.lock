@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0a9537364b54de769f97b3c951361715",
+    "content-hash": "66235e40e387e20cac0a167e0e521d77",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -507,32 +507,32 @@
         },
         {
             "name": "keboola/job-queue-api-php-client",
-            "version": "0.4.1",
+            "version": "dev-miro-list-jobs",
             "source": {
                 "type": "git",
-                "url": "https://github.com/keboola/job-queue-api-php-client-original.git",
-                "reference": "67370e81c67b8f2523888bb8b168d03c68950b76"
+                "url": "https://github.com/keboola/job-queue-api-php-client.git",
+                "reference": "6530bb4fc265b2a7eb65e7cb334be1de9e0eaca8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client-original/zipball/67370e81c67b8f2523888bb8b168d03c68950b76",
-                "reference": "67370e81c67b8f2523888bb8b168d03c68950b76",
+                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client/zipball/6530bb4fc265b2a7eb65e7cb334be1de9e0eaca8",
+                "reference": "6530bb4fc265b2a7eb65e7cb334be1de9e0eaca8",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
                 "guzzlehttp/guzzle": "^6.3|^7.2",
-                "php": "^7.3",
+                "php": "^7.4|^8.0",
                 "psr/log": "^1.1",
                 "symfony/config": "^4.4|^5.2",
-                "symfony/validator": "^4.4|^5.2"
+                "symfony/validator": "^4.4|^5.2  !=4.4.33 !=4.4.34  !=5.3.10 !=5.3.11"
             },
             "require-dev": {
                 "infection/infection": "^0.18.2|^0.21.2",
-                "keboola/coding-standard": ">=11.0.0",
+                "keboola/coding-standard": "^13.0",
                 "keboola/storage-api-client": "^12.0",
                 "php-parallel-lint/php-parallel-lint": "^1.2",
-                "phpstan/phpstan": "^0.12.80",
+                "phpstan/phpstan": "^1.4",
                 "phpunit/phpunit": "^9.5"
             },
             "type": "library",
@@ -559,10 +559,9 @@
                 "queue"
             ],
             "support": {
-                "issues": "https://github.com/keboola/job-queue-api-php-client-original/issues",
-                "source": "https://github.com/keboola/job-queue-api-php-client-original/tree/0.4.1"
+                "source": "https://github.com/keboola/job-queue-api-php-client/tree/dev-miro-list-jobs-4"
             },
-            "time": "2021-09-24T20:05:05+00:00"
+            "time": "2022-08-15T13:17:16+00:00"
         },
         {
             "name": "keboola/kbc-manage-api-php-client",
@@ -1084,16 +1083,16 @@
         },
         {
             "name": "symfony/config",
-            "version": "v5.4.9",
+            "version": "v5.4.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/config.git",
-                "reference": "8f551fe22672ac7ab2c95fe46d899f960ed4d979"
+                "reference": "ec79e03125c1d2477e43dde8528535d90cc78379"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/config/zipball/8f551fe22672ac7ab2c95fe46d899f960ed4d979",
-                "reference": "8f551fe22672ac7ab2c95fe46d899f960ed4d979",
+                "url": "https://api.github.com/repos/symfony/config/zipball/ec79e03125c1d2477e43dde8528535d90cc78379",
+                "reference": "ec79e03125c1d2477e43dde8528535d90cc78379",
                 "shasum": ""
             },
             "require": {
@@ -1143,7 +1142,7 @@
             "description": "Helps you find, load, combine, autofill and validate configuration values of any kind",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/config/tree/v5.4.9"
+                "source": "https://github.com/symfony/config/tree/v5.4.11"
             },
             "funding": [
                 {
@@ -1159,7 +1158,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-05-17T10:39:36+00:00"
+            "time": "2022-07-20T13:00:38+00:00"
         },
         {
             "name": "symfony/console",
@@ -1980,16 +1979,16 @@
         },
         {
             "name": "symfony/translation-contracts",
-            "version": "v2.5.1",
+            "version": "v2.5.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/translation-contracts.git",
-                "reference": "1211df0afa701e45a04253110e959d4af4ef0f07"
+                "reference": "136b19dd05cdf0709db6537d058bcab6dd6e2dbe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/translation-contracts/zipball/1211df0afa701e45a04253110e959d4af4ef0f07",
-                "reference": "1211df0afa701e45a04253110e959d4af4ef0f07",
+                "url": "https://api.github.com/repos/symfony/translation-contracts/zipball/136b19dd05cdf0709db6537d058bcab6dd6e2dbe",
+                "reference": "136b19dd05cdf0709db6537d058bcab6dd6e2dbe",
                 "shasum": ""
             },
             "require": {
@@ -2038,7 +2037,7 @@
                 "standards"
             ],
             "support": {
-                "source": "https://github.com/symfony/translation-contracts/tree/v2.5.1"
+                "source": "https://github.com/symfony/translation-contracts/tree/v2.5.2"
             },
             "funding": [
                 {
@@ -2054,20 +2053,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-01-02T09:53:40+00:00"
+            "time": "2022-06-27T16:58:25+00:00"
         },
         {
             "name": "symfony/validator",
-            "version": "v5.4.8",
+            "version": "v5.4.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/validator.git",
-                "reference": "bdc6d04ba95c73ccbf906b4ad9b8775c738d83ad"
+                "reference": "d6457034ba8a4ea6703e5607829a337b66a53ce8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/validator/zipball/bdc6d04ba95c73ccbf906b4ad9b8775c738d83ad",
-                "reference": "bdc6d04ba95c73ccbf906b4ad9b8775c738d83ad",
+                "url": "https://api.github.com/repos/symfony/validator/zipball/d6457034ba8a4ea6703e5607829a337b66a53ce8",
+                "reference": "d6457034ba8a4ea6703e5607829a337b66a53ce8",
                 "shasum": ""
             },
             "require": {
@@ -2151,7 +2150,7 @@
             "description": "Provides tools to validate values",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/validator/tree/v5.4.8"
+                "source": "https://github.com/symfony/validator/tree/v5.4.11"
             },
             "funding": [
                 {
@@ -2167,7 +2166,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-04-15T08:07:45+00:00"
+            "time": "2022-07-20T13:00:38+00:00"
         }
     ],
     "packages-dev": [
@@ -2257,7 +2256,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "keboola/job-queue-api-php-client": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
