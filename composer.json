@@ -6,7 +6,7 @@
         "keboola/storage-api-client": "^13",
         "keboola/kbc-manage-api-php-client": "^3.0",
         "symfony/event-dispatcher": "4.1.*",
-        "keboola/job-queue-api-php-client": "dev-miro-list-jobs"
+        "keboola/job-queue-api-php-client": "^2.2"
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "2.*"

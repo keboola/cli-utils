@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Command;
 
-use GuzzleHttp\Client as GuzzleClient;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\ListJobsOptions;
-use Keboola\ManageApi\Client;
 use Keboola\StorageApi\Client as StorageClient;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -73,48 +71,5 @@ class QueueMassTerminateJobs extends Command
 
         $output->writeln(sprintf('Terminated %s jobs', count($terminatedJobsIds)));
         $output->writeln(PHP_EOL);
-    }
-
-    private function createStorageToken(Client $client, string $projectId): string
-    {
-        $response = $client->createProjectStorageToken($projectId, [
-            'description' => 'Cli utils - mass queue migration',
-            'canManageBuckets' => true,
-            'canReadAllFileUploads' => true,
-            'canManageTokens' => true,
-        ]);
-
-        return $response['token'];
-    }
-
-    private function parseProjectIds(string $sourceFile): array
-    {
-        if (!file_exists($sourceFile)) {
-            throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
-        }
-        $projectsText = trim(file_get_contents($sourceFile));
-        if (!$projectsText) {
-            return [];
-        }
-
-        return explode(PHP_EOL, $projectsText);
-    }
-
-    private function encrypt(
-        string $encryptionApiUrl,
-        string $value
-    ): string {
-        $client = new GuzzleClient();
-        $response = $client->post(
-            sprintf('%s/encrypt?componentId=%s', $encryptionApiUrl, self::COMPONENT_QUEUE_MIGRATION_TOOL),
-            [
-                'body' => $value,
-                'headers' => [
-                    'Content-Type' => 'text/plain'
-                ],
-            ]
-        );
-
-        return $response->getBody()->getContents();
     }
 }
