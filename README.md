@@ -211,7 +211,7 @@ This command can be used to terminate all jobs in a project in specified state (
 
 - Run the command
     ```
-    php ./cli.php queue:terminate-jobs <storage-token> <connection-url> <job-status>
+    php ./cli.php queue:terminate-project-jobs <storage-token> <connection-url> <job-status>
     ```
 
 ## License

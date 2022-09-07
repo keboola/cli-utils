@@ -15,6 +15,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class QueueMassTerminateJobs extends Command
 {
+    protected static $defaultName = 'queue:terminate-project-jobs';
+
     const ARGUMENT_STORAGE_TOKEN = 'storage-token';
     const ARGUMENT_CONNECTION_URL = 'connection-url';
     const ARGUMENT_JOB_STATUS = 'job-status';
@@ -22,7 +24,6 @@ class QueueMassTerminateJobs extends Command
     protected function configure()
     {
         $this
-            ->setName('queue:terminate-jobs')
             ->setDescription('Terminated all jobs in project')
             ->addArgument(self::ARGUMENT_STORAGE_TOKEN, InputArgument::REQUIRED, 'Storage token')
             ->addArgument(self::ARGUMENT_CONNECTION_URL, InputArgument::REQUIRED, 'Connection url')
