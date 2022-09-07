@@ -205,7 +205,7 @@ The command will do the following for every projectId in the source file:
 - run `storage:tmp:enable-workspace-snowflake-dynamic-backend-size` storage command on the stack for the selected project. It reports error if it fails.
 
 ## Mass job termination command
-This command can be used to terminate all jobs in a project in specified state (e.g. `waiting`).
+This command can be used to terminate all jobs in a project in specified state (`created`, `waiting` or `processing`).
 
 - Create a Storage token
 
@@ -213,7 +213,6 @@ This command can be used to terminate all jobs in a project in specified state (
     ```
     php ./cli.php queue:terminate-jobs <storage-token> <connection-url> <job-status>
     ```
-
 
 ## License
 

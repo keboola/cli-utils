@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Command;
 
+use Exception;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\ListJobsOptions;
 use Keboola\StorageApi\Client as StorageClient;
@@ -35,6 +36,10 @@ class QueueMassTerminateJobs extends Command
         $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
         $status = $input->getArgument(self::ARGUMENT_JOB_STATUS);
 
+        if (!in_array($status, ['created', 'waiting', 'processing'])) {
+            throw new Exception('Status must be either "created", "waiting" or "processing"!');
+        }
+
         $storageClient = new StorageClient([
             'token' => $storageToken,
             'url' => $kbcUrl,
@@ -43,7 +48,11 @@ class QueueMassTerminateJobs extends Command
         $tokenRes = $storageClient->verifyToken();
 
         $projectId = $tokenRes['owner']['id'];
-        $output->writeln(sprintf('Terminating jobs with status "%s" in project "%s"', $projectId, $status));
+        $output->writeln(sprintf(
+            'Terminating jobs with status "%s" in project "%s"',
+            $status,
+            $projectId
+        ));
         $output->writeln(PHP_EOL);
 
         $queueApiUrl = str_replace('connection', 'queue', $kbcUrl);
@@ -55,7 +64,7 @@ class QueueMassTerminateJobs extends Command
 
         $jobs = $jobQueueClient->listJobs(
             (new ListJobsOptions())
-                ->setStatuses(['waiting'])
+                ->setStatuses([$status])
                 ->setLimit(3000)
         );
 
@@ -63,6 +72,7 @@ class QueueMassTerminateJobs extends Command
         foreach ($jobs as $job) {
             try {
                 $jobQueueClient->terminateJob($job['id']);
+                $output->writeln(sprintf('Terminating job "%s"', $job['id']));
                 $terminatedJobsIds[] = $job['id'];
             } catch (\Throwable $e) {
                 $output->writeln($e->getMessage());
