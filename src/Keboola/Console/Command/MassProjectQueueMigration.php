@@ -14,7 +14,6 @@ use Keboola\StorageApi\Client as StorageClient;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class MassProjectQueueMigration extends Command
@@ -50,7 +49,6 @@ class MassProjectQueueMigration extends Command
             'url' => $kbcUrl,
         ]);
 
-        $logger = new ConsoleLogger($output);
         $queueApiUrl = str_replace('connection', 'queue', $kbcUrl);
 
         $projects = $this->parseProjectIds($sourceFile);
@@ -96,7 +94,6 @@ class MassProjectQueueMigration extends Command
             );
 
             $jobQueueClient = new JobQueueClient(
-                $logger,
                 $queueApiUrl,
                 $storageToken
             );

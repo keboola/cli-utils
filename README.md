@@ -207,6 +207,16 @@ The command will do the following for every projectId in the source file:
 - check if the project has project feature `new-transformations-only`. If not, it offers to add it. If the `--force-new-trans` is provided, it won't ask, but it will do it automatically
 - run `storage:tmp:enable-workspace-snowflake-dynamic-backend-size` storage command on the stack for the selected project. It reports error if it fails.
 
+## Mass job termination command
+This command can be used to terminate all jobs in a project in specified state (`created`, `waiting` or `processing`).
+
+- Create a Storage token
+
+- Run the command
+    ```
+    php ./cli.php queue:terminate-project-jobs <storage-token> <connection-url> <job-status>
+    ```
+
 ## License
 
 MIT licensed, see [LICENSE](./LICENSE) file.
