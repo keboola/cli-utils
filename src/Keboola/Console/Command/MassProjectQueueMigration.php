@@ -37,12 +37,46 @@ class MassProjectQueueMigration extends Command
         ;
     }
 
+    private function getProjectIdsForMigration(
+        string $sourceFile,
+        Client $manageClient,
+        OutputInterface $output
+    ): array {
+        $projectIds = [];
+        $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
+        $projects = $this->parseProjectIds($sourceFile);
+        $output->writeln(sprintf('Migrating "%s" projects', count($projects)));
+
+        foreach ($projects as $projectId) {
+            try {
+                $projectRes = $manageClient->getProject($projectId);
+                if (in_array(self::FEATURE_QUEUE_V2, $projectRes['features'])) {
+                    // don't migrate project with feature already set
+                    $output->writeln(sprintf('Project "%s" is already on Queue v2', $projectId));
+                    continue;
+                }
+
+                $projectIds[] = $projectId;
+            } catch (ManageClientException $e) {
+                $output->writeln(sprintf(
+                    'Exception occurred while accessing project %s: %s',
+                    $projectId,
+                    $e->getMessage()
+                ));
+
+                continue;
+            }
+        }
+
+        return array_unique($projectIds);
+    }
+
+
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
         $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
-        $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
 
         $manageClient = new Client([
             'token' => $manageToken,
@@ -51,19 +85,12 @@ class MassProjectQueueMigration extends Command
 
         $queueApiUrl = str_replace('connection', 'queue', $kbcUrl);
 
-        $projects = $this->parseProjectIds($sourceFile);
-        $output->writeln(sprintf('Migrating "%s" projects', count($projects)));
 
+        $projects = $this->getProjectIdsForMigration($sourceFile, $manageClient, $output);
         $migrationJobs = [];
         foreach ($projects as $projectId) {
             // set queuev2 project feature
             try {
-                $projectRes = $manageClient->getProject($projectId);
-                if (in_array(self::FEATURE_QUEUE_V2, $projectRes['features'])) {
-                    // don't migrate project with feature already set
-                    $output->writeln(sprintf('Project "%s" is already on Queue v2', $projectId));
-                    continue;
-                }
                 $manageClient->addProjectFeature($projectId, self::FEATURE_QUEUE_V2);
                 $storageToken = $this->createStorageToken($manageClient, $projectId);
             } catch (ManageClientException $e) {
