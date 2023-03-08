@@ -74,7 +74,6 @@ class MassProjectQueueMigration extends Command
     private function createMigrationJob(
         string $projectId,
         string $kbcUrl,
-        string $queueApiUrl,
         string $manageToken,
         Client $manageClient,
         OutputInterface $output
@@ -97,8 +96,11 @@ class MassProjectQueueMigration extends Command
             'url' => $kbcUrl,
             'token' => $storageToken,
         ]);
-        $encryptionUrl = $storageClient->getServiceUrl('encryption');
-        $encryptedManageToken = $this->encrypt($encryptionUrl, $manageToken);
+
+        $encryptedManageToken = $this->encrypt(
+            $storageClient->getServiceUrl('encryption'),
+            $manageToken
+        );
 
         $jobData = new JobData(
             self::COMPONENT_QUEUE_MIGRATION_TOOL,
@@ -111,7 +113,7 @@ class MassProjectQueueMigration extends Command
         );
 
         $jobQueueClient = new JobQueueClient(
-            $queueApiUrl,
+            $storageClient->getServiceUrl('queue'),
             $storageToken
         );
 
@@ -153,16 +155,12 @@ class MassProjectQueueMigration extends Command
             'url' => $kbcUrl,
         ]);
 
-        $queueApiUrl = str_replace('connection', 'queue', $kbcUrl);
-
-
         $projects = $this->getProjectIdsForMigration($sourceFile, $manageClient, $output);
         $migrationJobs = [];
         foreach ($projects as $projectId) {
             $migrationJob = $this->createMigrationJob(
                 $projectId,
                 $kbcUrl,
-                $queueApiUrl,
                 $manageToken,
                 $manageClient,
                 $output
