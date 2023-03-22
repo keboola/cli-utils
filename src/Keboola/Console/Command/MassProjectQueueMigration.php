@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Command;
 
+use Exception;
 use GuzzleHttp\Client as GuzzleClient;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\Exception\ClientException as JobQueueClientException;
@@ -242,11 +243,20 @@ class MassProjectQueueMigration extends Command
     private function parseProjectIds(string $sourceFile): array
     {
         if (!file_exists($sourceFile)) {
-            throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
+            throw new Exception(sprintf('Cannot open "%s"', $sourceFile));
         }
         $projectsText = trim(file_get_contents($sourceFile));
         if (!$projectsText) {
             return [];
+        }
+
+        $projectIds = explode(PHP_EOL, $projectsText);
+        if (count($projectIds) > 10) {
+            throw new Exception(sprintf(
+                'Due prevent overload of our internal API, it is only possible to '
+                    . 'migrate a maximum of 10 projects at once. You have %s projects waiting for migrations.',
+                count($projectIds)
+            ));
         }
 
         return explode(PHP_EOL, $projectsText);
