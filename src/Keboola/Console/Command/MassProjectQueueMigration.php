@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Command;
 
+use Exception;
 use GuzzleHttp\Client as GuzzleClient;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\Exception\ClientException as JobQueueClientException;
@@ -37,26 +38,17 @@ class MassProjectQueueMigration extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
-    {
-        $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
-        $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
-        $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+    private function getProjectIdsForMigration(
+        string $sourceFile,
+        Client $manageClient,
+        OutputInterface $output
+    ): array {
+        $projectIds = [];
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
-
-        $manageClient = new Client([
-            'token' => $manageToken,
-            'url' => $kbcUrl,
-        ]);
-
-        $queueApiUrl = str_replace('connection', 'queue', $kbcUrl);
-
         $projects = $this->parseProjectIds($sourceFile);
         $output->writeln(sprintf('Migrating "%s" projects', count($projects)));
 
-        $migrationJobs = [];
         foreach ($projects as $projectId) {
-            // set queuev2 project feature
             try {
                 $projectRes = $manageClient->getProject($projectId);
                 if (in_array(self::FEATURE_QUEUE_V2, $projectRes['features'])) {
@@ -64,8 +56,8 @@ class MassProjectQueueMigration extends Command
                     $output->writeln(sprintf('Project "%s" is already on Queue v2', $projectId));
                     continue;
                 }
-                $manageClient->addProjectFeature($projectId, self::FEATURE_QUEUE_V2);
-                $storageToken = $this->createStorageToken($manageClient, $projectId);
+
+                $projectIds[] = $projectId;
             } catch (ManageClientException $e) {
                 $output->writeln(sprintf(
                     'Exception occurred while accessing project %s: %s',
@@ -75,52 +67,107 @@ class MassProjectQueueMigration extends Command
 
                 continue;
             }
+        }
 
-            $storageClient = new StorageClient([
-                'url' => $kbcUrl,
-                'token' => $storageToken,
-            ]);
-            $encryptionUrl = $storageClient->getServiceUrl('encryption');
-            $encryptedManageToken = $this->encrypt($encryptionUrl, $manageToken);
+        return array_unique($projectIds);
+    }
 
-            $jobData = new JobData(
-                self::COMPONENT_QUEUE_MIGRATION_TOOL,
-                '',
-                [
-                    'parameters' => [
-                        '#manage_token' => $encryptedManageToken
-                    ],
-                ]
-            );
-
-            $jobQueueClient = new JobQueueClient(
-                $queueApiUrl,
-                $storageToken
-            );
-
-            try {
-                $jobRes = $jobQueueClient->createJob($jobData);
-            } catch (JobQueueClientException $e) {
-                $output->writeln(sprintf(
-                    'Exception occurred while creating migration job in project %s: %s',
-                    $projectId,
-                    $e->getMessage()
-                ));
-
-                continue;
-            }
-
+    private function createMigrationJob(
+        string $projectId,
+        string $kbcUrl,
+        string $manageToken,
+        Client $manageClient,
+        OutputInterface $output
+    ): ?array {
+        // set queuev2 project feature
+        try {
+            $manageClient->addProjectFeature($projectId, self::FEATURE_QUEUE_V2);
+            $storageToken = $this->createStorageToken($manageClient, $projectId);
+        } catch (ManageClientException $e) {
             $output->writeln(sprintf(
-                'Created migration job "%s" for project "%s"',
-                $jobRes['id'],
-                $projectId
+                'Exception occurred while accessing project %s: %s',
+                $projectId,
+                $e->getMessage()
             ));
-            $migrationJobs[$jobRes['id']] = [
-                'jobId' => $jobRes['id'],
-                'projectId' => $projectId,
-                'jobQueueClient' => $jobQueueClient,
-                'storageToken' => $storageToken,
-            ];
+
+            return null;
+        }
+
+        $storageClient = new StorageClient([
+            'url' => $kbcUrl,
+            'token' => $storageToken,
+        ]);
+
+        $encryptedManageToken = $this->encrypt(
+            $storageClient->getServiceUrl('encryption'),
+            $manageToken
+        );
+
+        $jobData = new JobData(
+            self::COMPONENT_QUEUE_MIGRATION_TOOL,
+            '',
+            [
+                'parameters' => [
+                    '#manage_token' => $encryptedManageToken
+                ],
+            ]
+        );
+
+        $jobQueueClient = new JobQueueClient(
+            $storageClient->getServiceUrl('queue'),
+            $storageToken
+        );
+
+        try {
+            $jobRes = $jobQueueClient->createJob($jobData);
+        } catch (JobQueueClientException $e) {
+            $output->writeln(sprintf(
+                'Exception occurred while creating migration job in project %s: %s',
+                $projectId,
+                $e->getMessage()
+            ));
+
+            return null;
+        }
+
+        $output->writeln(sprintf(
+            'Created migration job "%s" for project "%s"',
+            $jobRes['id'],
+            $projectId
+        ));
+
+        return [
+            'jobId' => $jobRes['id'],
+            'projectId' => $projectId,
+            'jobQueueClient' => $jobQueueClient,
+            'storageToken' => $storageToken,
+        ];
+    }
+
+
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+        $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
+        $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+
+        $manageClient = new Client([
+            'token' => $manageToken,
+            'url' => $kbcUrl,
+        ]);
+
+        $projects = $this->getProjectIdsForMigration($sourceFile, $manageClient, $output);
+        $migrationJobs = [];
+        foreach ($projects as $projectId) {
+            $migrationJob = $this->createMigrationJob(
+                $projectId,
+                $kbcUrl,
+                $manageToken,
+                $manageClient,
+                $output
+            );
+
+            $migrationJobs[$migrationJob['jobId']] = $migrationJob;
         }
 
         if (empty($migrationJobs)) {
@@ -196,11 +243,20 @@ class MassProjectQueueMigration extends Command
     private function parseProjectIds(string $sourceFile): array
     {
         if (!file_exists($sourceFile)) {
-            throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
+            throw new Exception(sprintf('Cannot open "%s"', $sourceFile));
         }
         $projectsText = trim(file_get_contents($sourceFile));
         if (!$projectsText) {
             return [];
+        }
+
+        $projectIds = explode(PHP_EOL, $projectsText);
+        if (count($projectIds) > 10) {
+            throw new Exception(sprintf(
+                'Due prevent overload of our internal API, it is only possible to '
+                    . 'migrate a maximum of 10 projects at once. You have %s projects waiting for migrations.',
+                count($projectIds)
+            ));
         }
 
         return explode(PHP_EOL, $projectsText);
