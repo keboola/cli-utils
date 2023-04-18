@@ -132,7 +132,7 @@ To actually drop the projects add `-f` flag. Default is dry-run.
 
 You can add a project feature to all the project templates available on the stack
 
-`php cli.php manage:add-feature-to-templates [-f|--force] <token> <url> <featureName> [<featureDesc>]`
+`php cli.php manage:add-feature-to-templates [-f|--force] <token> <url> <featureName> <featureTitle> [<featureDesc>]`
 
 
 **This command supports dry-run. Add the `-f` flag if you want to submit the changes**
@@ -145,8 +145,8 @@ If you want to run your command on multiple stacks, you can predefine stacks and
 3. Run the command in following form `php cli.php manage:call-on-stacks <target command> "<params of your commnand>"`
     - `<target command>` has to support arguments `token` and `url` in this order 
     - `"<params of your commnand>"` contain all the params for your target command but without `token` and `url` arguments. This part has to be quotet.
-      - E.g. I want to run `manage:add-feature-to-templates <token> <url> featureXX featureDesc -f`
-      - So I call `php cli.php manage:call-on-stacks manage:add-feature-to-templates "featureXX featureDesc -f"`
+      - E.g. I want to run `manage:add-feature-to-templates <token> <url> featureXX featureTitle featureDesc -f`
+      - So I call `php cli.php manage:call-on-stacks manage:add-feature-to-templates "featureXX featureTitle featureDesc -f"`
 4. The command iterates over the stacks and asks your confirmation if you want to run the `taget command` there. You can skip it
 
 ## Load Queue Jobs Lineage events into Marqueez

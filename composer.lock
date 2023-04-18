@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "190e670edffb2095fa74e45971897179",
+    "content-hash": "41111f4b573998f10f8a980b39138c3f",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -975,26 +975,27 @@
         },
         {
             "name": "keboola/kbc-manage-api-php-client",
-            "version": "3.4.0",
+            "version": "7.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/kbc-manage-api-php-client.git",
-                "reference": "2f00bd69b45ccd85eacb171709448ae22a868728"
+                "reference": "6b0fb97407a5d8caa0e31a35d0d2b328a07cf75d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/kbc-manage-api-php-client/zipball/2f00bd69b45ccd85eacb171709448ae22a868728",
-                "reference": "2f00bd69b45ccd85eacb171709448ae22a868728",
+                "url": "https://api.github.com/repos/keboola/kbc-manage-api-php-client/zipball/6b0fb97407a5d8caa0e31a35d0d2b328a07cf75d",
+                "reference": "6b0fb97407a5d8caa0e31a35d0d2b328a07cf75d",
                 "shasum": ""
             },
             "require": {
                 "guzzlehttp/guzzle": "^7.0|^6.1",
-                "php": "^7.1|^8.0"
+                "php": "^7.4|^8.0"
             },
             "require-dev": {
-                "bshaffer/phpunit-retry-annotations": "dev-master",
                 "keboola/coding-standard": "^13.0",
+                "keboola/phpunit-retry-annotations": "^0.3.0",
                 "keboola/storage-api-client": "^12.0",
+                "phpstan/phpdoc-parser": "1.5.1",
                 "phpstan/phpstan": "^0.12.94",
                 "phpstan/phpstan-phpunit": "^0.12.22",
                 "phpunit/phpunit": "^7.0|^8.0"
@@ -1006,6 +1007,9 @@
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
             "authors": [
                 {
                     "name": "Martin Halamicek",
@@ -1015,9 +1019,9 @@
             "description": "Keboola Management API Client",
             "support": {
                 "issues": "https://github.com/keboola/kbc-manage-api-php-client/issues",
-                "source": "https://github.com/keboola/kbc-manage-api-php-client/tree/3.4.0"
+                "source": "https://github.com/keboola/kbc-manage-api-php-client/tree/7.0.0"
             },
-            "time": "2022-04-13T13:09:19+00:00"
+            "time": "2023-04-18T09:18:56+00:00"
         },
         {
             "name": "keboola/storage-api-client",

@@ -14,6 +14,7 @@ class AddFeature extends Command
 {
     public const OPT_FORCE = 'force';
     public const ARG_FEATURE_NAME = 'featureName';
+    public const ARG_FEATURE_TITLE = 'featureTitle';
     public const ARG_FEATURE_DESC = 'featureDesc';
     public const ARG_TOKEN = 'token';
     public const ARG_URL = 'url';
@@ -26,6 +27,7 @@ class AddFeature extends Command
             ->addArgument(self::ARG_TOKEN, InputArgument::REQUIRED, 'manage api token')
             ->addArgument(self::ARG_URL, InputArgument::REQUIRED, 'API URL')
             ->addArgument(self::ARG_FEATURE_NAME, InputArgument::REQUIRED, 'feature name')
+            ->addArgument(self::ARG_FEATURE_TITLE, InputArgument::REQUIRED, 'feature title')
             ->addArgument(self::ARG_FEATURE_DESC, InputArgument::OPTIONAL, 'feature description', '')
             ->addOption(self::OPT_FORCE, 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run');
     }
@@ -54,7 +56,7 @@ class AddFeature extends Command
                         $client->addProjectTemplateFeature($templateId['id'], $featureName);
                         $output->writeln('...Success');
                     } catch (Exception $e) {
-                        $output->writeln(sprintf('...Error: %', $e->getMessage()));
+                        $output->writeln(sprintf('...Error: %s', $e->getMessage()));
                     }
                 } else {
                     $output->writeln(sprintf('Feature "%s" DOES NOT exist in template "%s" yet. Enable force mode with -f option', $featureName, $templateId['id']));
@@ -71,7 +73,7 @@ class AddFeature extends Command
         ]);
     }
 
-    protected function createFeature(Client $client, string $featureName, string $featureDesc, bool $force, OutputInterface $output): void
+    protected function createFeature(Client $client, string $featureName, string $featureTitle, string $featureDesc, bool $force, OutputInterface $output): void
     {
         $features = $client->listFeatures(['type' => 'project']);
 
@@ -89,10 +91,10 @@ class AddFeature extends Command
             if ($force) {
                 $output->writeln(sprintf('Feature "%s" DOES NOT exist yet. Adding...', $featureName));
                 try {
-                    $client->createFeature($featureName, 'project', $featureDesc);
+                    $client->createFeature($featureName, 'project', $featureTitle, $featureDesc);
                     $output->writeln('...Success');
                 } catch (Exception $e) {
-                    $output->writeln(sprintf('...Error: %', $e->getMessage()));
+                    $output->writeln(sprintf('...Error: %s', $e->getMessage()));
                 }
             } else {
                 $output->writeln(sprintf('Feature "%s" DOES NOT exist yet. Enable force mode with -f option', $featureName));
@@ -106,7 +108,7 @@ class AddFeature extends Command
         $force = $input->getOption(self::OPT_FORCE);
 
         $client = $this->createClient($args[self::ARG_URL], $args[self::ARG_TOKEN]);
-        $this->createFeature($client, $args[self::ARG_FEATURE_NAME], $args[self::ARG_FEATURE_DESC], $force, $output);
+        $this->createFeature($client, $args[self::ARG_FEATURE_NAME], $args[self::ARG_FEATURE_TITLE], $args[self::ARG_FEATURE_DESC], $force, $output);
         $this->addFeature($client, $args[self::ARG_FEATURE_NAME], $force, $output);
 
         return 0;
