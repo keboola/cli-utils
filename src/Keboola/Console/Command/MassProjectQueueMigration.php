@@ -24,6 +24,7 @@ class MassProjectQueueMigration extends Command
     const ARGUMENT_SOURCE_FILE = 'source-file';
 
     const FEATURE_QUEUE_V2 = 'queuev2';
+    const FEATURE_ALTERNAT = 'alternat';
     const COMPONENT_QUEUE_MIGRATION_TOOL = 'keboola.queue-migration-tool';
     const JOB_STATES_FINAL = ['success', 'error', 'terminated', 'cancelled'];
 
@@ -79,9 +80,10 @@ class MassProjectQueueMigration extends Command
         Client $manageClient,
         OutputInterface $output
     ): ?array {
-        // set queuev2 project feature
+        // set queuev2 and alternat project feature
         try {
             $manageClient->addProjectFeature($projectId, self::FEATURE_QUEUE_V2);
+            $manageClient->addProjectFeature($projectId, self::FEATURE_ALTERNAT);
             $storageToken = $this->createStorageToken($manageClient, $projectId);
         } catch (ManageClientException $e) {
             $output->writeln(sprintf(
@@ -214,6 +216,7 @@ class MassProjectQueueMigration extends Command
             ));
 
             $manageClient->removeProjectFeature($errorJob['projectId'], self::FEATURE_QUEUE_V2);
+            $manageClient->removeProjectFeature($errorJob['projectId'], self::FEATURE_ALTERNAT);
         }
 
         $output->writeln(sprintf('%s migration jobs were terminated or cancelled:', count($terminatedJobs)));
