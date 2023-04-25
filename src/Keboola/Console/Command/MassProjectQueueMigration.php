@@ -80,7 +80,7 @@ class MassProjectQueueMigration extends Command
         Client $manageClient,
         OutputInterface $output
     ): ?array {
-        // set queuev2 and alternat project feature
+        // set queuev2 and alternat project features
         try {
             $manageClient->addProjectFeature($projectId, self::FEATURE_QUEUE_V2);
             $manageClient->addProjectFeature($projectId, self::FEATURE_ALTERNAT);
