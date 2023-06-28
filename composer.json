@@ -3,7 +3,7 @@
     "require": {
         "php": "^7.4",
         "symfony/console": "^3.1",
-        "keboola/storage-api-client": "^13",
+        "keboola/storage-api-client": "^14",
         "keboola/kbc-manage-api-php-client": "^7",
         "symfony/event-dispatcher": "4.1.*",
         "keboola/job-queue-api-php-client": "^2.2"
