@@ -44,7 +44,8 @@ class DeleteOrphanedWorkspaces extends Command
                 InputArgument::OPTIONAL,
                 'Keboola Connection Hostname Suffix',
                 'keboola.com'
-            );
+            )
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): void
@@ -58,12 +59,17 @@ class DeleteOrphanedWorkspaces extends Command
         $devBranches = new DevBranches($storageClient);
         $branchesList = $devBranches->listBranches();
 
+        if ($input->getOption('force')) {
+            $output->writeln('Force option is set, doing it for real');
+        } else {
+            $output->writeln('This is just a dry-run, nothing will be actually deleted');
+        }
         foreach ($branchesList as $branch) {
             $branchId = $branch['id'];
             $branchStorageClient = new BranchAwareClient($branchId);
             $workspacesClient = new Workspaces($branchStorageClient);
             $workspaceList = $workspacesClient->listWorkspaces();
-
+            $output->writeln('Fetching workspaces for branch ' . $branch['name']);
             foreach ($workspaceList as $workspace) {
                 $shouldDropWorkspace = $this->isWorkspaceOrphaned(
                     $workspace,
@@ -73,7 +79,9 @@ class DeleteOrphanedWorkspaces extends Command
                 if ($shouldDropWorkspace) {
                     $output->writeln('Deleting orphaned workspace ' . $workspace['id']);
                     $output->writeln('It was created on ' . $workspace['created']);
-                    $workspacesClient->deleteWorkspace($workspace['id']);
+                    if ($input->getOption('force')) {
+                        $workspacesClient->deleteWorkspace($workspace['id']);
+                    }
                 } else {
                     $output->writeln('Skipping workspace ' . $workspace['id']);
                     $output->writeln('It was created on ' . $workspace['created']);
