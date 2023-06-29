@@ -23,8 +23,22 @@ class DeleteOrphanedWorkspaces extends Command
         $this
             ->setName('storage:delete-orphaned-workspaces')
             ->setDescription('Bulk delete orphaned workspaces of this project.')
-            ->addArgument('hostnameSuffix', InputArgument::OPTIONAL, 'Keboola Connection Hostname Suffix', 'keboola.com')
-            ->addArgument('orphanComponents', InputArgument::IS_ARRAY, 'Array list of components that qualify for orphanage.');
+            ->addArgument(
+                'hostnameSuffix',
+                InputArgument::OPTIONAL,
+                'Keboola Connection Hostname Suffix',
+                'keboola.com'
+            )
+            ->addArgument(
+                'orphanComponents',
+                InputArgument::IS_ARRAY, 'Array list of components that qualify for orphanage.'
+            )
+            ->addArgument(
+                'expirationTime',
+                InputArgument::OPTIONAL,
+                'String representation of date: default: \'-1 month\'',
+                '-1 month'
+            );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): void
@@ -48,16 +62,19 @@ class DeleteOrphanedWorkspaces extends Command
             $workspaceList = $workspacesClient->listWorkspaces();
 
             foreach ($workspaceList as $workspace) {
-                if ($this->isWorkspaceOrphaned($workspace, $input->getArgument('orphanComponents'), new DateTime(now()))) {
-                    if (new \DateTime($workspace['created']) < new \DateTime('2 weeks ago')) {
-                        echo 'Deleting orphaned workspace ' . $workspace['id']  . "\n";
-                        echo 'It was created on ' . $workspace['created'] . "\n";
-                        $workspacesClient->deleteWorkspace($workspace['id']);
-                    } else {
-                        echo 'Skipping workspace ' . $workspace['id']  . "\n";
-                        echo 'It was created on ' . $workspace['created'] . "\n";
-                        echo 'It is of type ' . $workspace['component'] . "\n";
-                    }
+                $shouldDropWorkspace = $this->isWorkspaceOrphaned(
+                    $workspace,
+                    $input->getArgument('orphanComponents'),
+                    strtotime($input->getArgument('expirationDate'))
+                );
+                if ($shouldDropWorkspace) {
+                    echo 'Deleting orphaned workspace ' . $workspace['id']  . "\n";
+                    echo 'It was created on ' . $workspace['created'] . "\n";
+                    $workspacesClient->deleteWorkspace($workspace['id']);
+                } else {
+                    echo 'Skipping workspace ' . $workspace['id']  . "\n";
+                    echo 'It was created on ' . $workspace['created'] . "\n";
+                    echo 'It is of type ' . $workspace['component'] . "\n";
                 }
             }
         }
@@ -65,6 +82,6 @@ class DeleteOrphanedWorkspaces extends Command
 
     private function isWorkspaceOrphaned(array $workspace, array $components, string $expirationDate): bool
     {
-        return (in_array($workspace['component'], $components) && $workspace['created'] < $expirationDate);
+        return (in_array($workspace['component'], $components) && strtotime($workspace['created']) < $expirationDate);
     }
 }
