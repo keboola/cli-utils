@@ -24,29 +24,32 @@ class DeleteOrphanedWorkspaces extends Command
             ->setName('storage:delete-orphaned-workspaces')
             ->setDescription('Bulk delete orphaned workspaces of this project.')
             ->addArgument(
-                'hostnameSuffix',
-                InputArgument::OPTIONAL,
-                'Keboola Connection Hostname Suffix',
-                'keboola.com'
+                'storageToken',
+                InputArgument::REQUIRED,
+                'Keboola Storage API token to use'
             )
             ->addArgument(
                 'orphanComponents',
-                InputArgument::IS_ARRAY, 'Array list of components that qualify for orphanage.'
+                InputArgument::IS_ARRAY,
+                'Array list of components that qualify for orphanage.'
             )
             ->addArgument(
                 'expirationTime',
                 InputArgument::OPTIONAL,
                 'String representation of date: default: \'-1 month\'',
                 '-1 month'
+            )
+            ->addArgument(
+                'hostnameSuffix',
+                InputArgument::OPTIONAL,
+                'Keboola Connection Hostname Suffix',
+                'keboola.com'
             );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): void
     {
-        $token = getenv('STORAGE_API_TOKEN');
-        if (!$token) {
-            throw new Exception('Environment variable "STORAGE_API_TOKEN" missing.');
-        }
+        $token = $input->getArgument('storageToken');
 
         $storageClient = new StorageApiClient([
             'token' => $token,
