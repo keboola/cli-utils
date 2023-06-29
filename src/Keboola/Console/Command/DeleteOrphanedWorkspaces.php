@@ -1,15 +1,10 @@
 <?php
 namespace Keboola\Console\Command;
 
-use Exception;
-use DateTime;
-use GuzzleHttp\Client;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\DevBranches;
-use Keboola\StorageApi\Options\IndexOptions;
 use Keboola\StorageApi\Workspaces;
-use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
