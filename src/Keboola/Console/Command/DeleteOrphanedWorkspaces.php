@@ -68,13 +68,13 @@ class DeleteOrphanedWorkspaces extends Command
                     strtotime($input->getArgument('expirationDate'))
                 );
                 if ($shouldDropWorkspace) {
-                    echo 'Deleting orphaned workspace ' . $workspace['id']  . "\n";
-                    echo 'It was created on ' . $workspace['created'] . "\n";
+                    $output->writeln('Deleting orphaned workspace ' . $workspace['id']);
+                    $output->writeln('It was created on ' . $workspace['created']);
                     $workspacesClient->deleteWorkspace($workspace['id']);
                 } else {
-                    echo 'Skipping workspace ' . $workspace['id']  . "\n";
-                    echo 'It was created on ' . $workspace['created'] . "\n";
-                    echo 'It is of type ' . $workspace['component'] . "\n";
+                    $output->writeln('Skipping workspace ' . $workspace['id']);
+                    $output->writeln('It was created on ' . $workspace['created']);
+                    $output->writeln('It is of type ' . $workspace['component']);
                 }
             }
         }
