@@ -18,21 +18,16 @@ class DeleteOrphanedWorkspaces extends Command
         $this
             ->setName('storage:delete-orphaned-workspaces')
             ->setDescription('Bulk delete orphaned workspaces of this project.')
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.')
             ->addArgument(
                 'storageToken',
                 InputArgument::REQUIRED,
                 'Keboola Storage API token to use'
             )
             ->addArgument(
-                'orphanComponents',
-                InputArgument::IS_ARRAY,
+                'orphanComponent',
+                InputArgument::REQUIRED,
                 'Array list of components that qualify for orphanage.'
-            )
-            ->addArgument(
-                'expirationTime',
-                InputArgument::OPTIONAL,
-                'String representation of date: default: \'-1 month\'',
-                '-1 month'
             )
             ->addArgument(
                 'hostnameSuffix',
@@ -40,16 +35,23 @@ class DeleteOrphanedWorkspaces extends Command
                 'Keboola Connection Hostname Suffix',
                 'keboola.com'
             )
-            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.');
+            ->addArgument(
+                'untilDate',
+                InputArgument::OPTIONAL,
+                'String representation of date: default: \'-1 month\'',
+                '-1 month'
+            );
+
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): void
     {
         $token = $input->getArgument('storageToken');
+        $url = 'https://connection.' . $input->getArgument('hostnameSuffix');
 
         $storageClient = new StorageApiClient([
             'token' => $token,
-            'url' => 'https://connection.' . $input->getArgument('hostnameSuffix'),
+            'url' => $url,
         ]);
         $devBranches = new DevBranches($storageClient);
         $branchesList = $devBranches->listBranches();
@@ -59,21 +61,28 @@ class DeleteOrphanedWorkspaces extends Command
         } else {
             $output->writeln('This is just a dry-run, nothing will be actually deleted');
         }
+        $totalWorkspaces = 0;
+        $totalDeletedWorkspaces = 0;
         foreach ($branchesList as $branch) {
             $branchId = $branch['id'];
-            $branchStorageClient = new BranchAwareClient($branchId);
+            $branchStorageClient = new BranchAwareClient($branchId, [
+                'token' => $token,
+                'url' => $url,
+            ]);
             $workspacesClient = new Workspaces($branchStorageClient);
             $workspaceList = $workspacesClient->listWorkspaces();
-            $output->writeln('Fetching workspaces for branch ' . $branch['name']);
+            $output->writeln('Found ' . count($workspaceList) . ' workspaces in branch ' . $branch['name']);
+            $totalWorkspaces += count($workspaceList);
             foreach ($workspaceList as $workspace) {
                 $shouldDropWorkspace = $this->isWorkspaceOrphaned(
                     $workspace,
-                    $input->getArgument('orphanComponents'),
-                    strtotime($input->getArgument('expirationDate'))
+                    $input->getArgument('orphanComponent'),
+                    strtotime($input->getArgument('untilDate'))
                 );
                 if ($shouldDropWorkspace) {
                     $output->writeln('Deleting orphaned workspace ' . $workspace['id']);
                     $output->writeln('It was created on ' . $workspace['created']);
+                    $totalDeletedWorkspaces ++;
                     if ($input->getOption('force')) {
                         $workspacesClient->deleteWorkspace($workspace['id']);
                     }
@@ -84,10 +93,15 @@ class DeleteOrphanedWorkspaces extends Command
                 }
             }
         }
+        $output->writeln(sprintf(
+            'Of %d total workspaces found, %d were deleted.',
+            $totalWorkspaces,
+            $totalDeletedWorkspaces
+        ));
     }
 
-    private function isWorkspaceOrphaned(array $workspace, array $components, string $expirationDate): bool
+    private function isWorkspaceOrphaned(array $workspace, string $component, int $untilDate): bool
     {
-        return (in_array($workspace['component'], $components) && strtotime($workspace['created']) < $expirationDate);
+        return ($workspace['component'] === $component) && strtotime($workspace['created']) < $untilDate;
     }
 }
