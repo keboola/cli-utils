@@ -217,6 +217,19 @@ This command can be used to terminate all jobs in a project in specified state (
     php ./cli.php queue:terminate-project-jobs <storage-token> <connection-url> <job-status>
     ```
 
+## Delete Orphaned Workspaces command
+This command can be used to delete all workspace in a project that were made for componentIds in the `component-list` argument
+and that were created before the `until-date` argument.
+The usecase for this command is to remove workspaces that were not cleaned after transformation failures.
+It will perform a dry run unleass the `--force/-f` option is applied.
+
+- Create a Storage token
+
+- Run the command
+    ```
+    php ./cli.php storage:delete-orphaned=workspaces [--force/-f] <storage-token> <component-list> <untile-date> <hostname-suffix> 
+    ```
+
 ## License
 
 MIT licensed, see [LICENSE](./LICENSE) file.
