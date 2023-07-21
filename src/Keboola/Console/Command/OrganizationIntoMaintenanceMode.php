@@ -1,13 +1,15 @@
 <?php
 
+namespace Keboola\Console\Command;
 
 use Keboola\ManageApi\Client;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class OrganizationIntoMaintenanceMode extends \Symfony\Component\Console\Command\Command
+class OrganizationIntoMaintenanceMode extends Command
 {
     const ARGUMENT_ORGANIZATION_ID = 'organizationId';
     const ARGUMENT_MAINTENANCE_MODE = 'maintenanceMode';
@@ -56,7 +58,7 @@ class OrganizationIntoMaintenanceMode extends \Symfony\Component\Console\Command
     {
         $maintenanceMode = $input->getArgument(self::ARGUMENT_MAINTENANCE_MODE);
         if (!in_array($maintenanceMode, ['on', 'off'])) {
-            throw new Exception(sprintf(
+            throw new \Exception(sprintf(
                 'The argument "%s" must be either "on" or "off", not "%s"',
                 self::ARGUMENT_MAINTENANCE_MODE,
                 $maintenanceMode
