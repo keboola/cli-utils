@@ -41,7 +41,6 @@ class DeleteOrphanedWorkspaces extends Command
                 'String representation of date: default: \'-1 month\'',
                 '-1 month'
             );
-
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): void
