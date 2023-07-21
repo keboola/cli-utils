@@ -11,16 +11,37 @@ class OrganizationIntoMaintenanceMode extends \Symfony\Component\Console\Command
 {
     const ARGUMENT_ORGANIZATION_ID = 'organizationId';
     const ARGUMENT_MAINTENANCE_MODE = 'maintenanceMode';
+    const ARGUMENT_REASON = 'disableReason';
+    const ARGUMENT_ESTIMATED_END_TIME = 'estimatedEndTime';
     const ARGUMENT_HOSTNAME_SUFFIX = 'hostnameSuffix';
-
+    const OPTION_FORCE = 'force';
     protected function configure()
     {
         $this
-            ->setName('manage:mass-project-remove-expiration')
+            ->setName('manage:set-organization-maintenance-mode')
             ->setDescription('Set maintenance mode for all projects in an organization')
-            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.')
+            ->addOption(
+                self::OPTION_FORCE,
+                'f',
+                InputOption::VALUE_NONE,
+                'Use [--force, -f] to do it for real.'
+            )
             ->addArgument(self::ARGUMENT_ORGANIZATION_ID, InputArgument::REQUIRED, 'Organization Id')
-            ->addArgument(self::ARGUMENT_MAINTENANCE_MODE, InputArgument::REQUIRED, 'use "on" to turn on maintenance mode, and "off" to turn it off')
+            ->addArgument(
+                self::ARGUMENT_MAINTENANCE_MODE,
+                InputArgument::REQUIRED,
+                'use "on" to turn on maintenance mode, and "off" to turn it off'
+            )
+            ->addArgument(
+                self::ARGUMENT_REASON,
+                InputArgument::REQUIRED,
+                'Reason for maintenance (ex Migration)'
+            )
+            ->addArgument(
+                self::ARGUMENT_ESTIMATED_END_TIME,
+                InputArgument::OPTIONAL,
+                'Estimated time of maintenance (ex + 5 hours)'
+            )
             ->addArgument(
                 self::ARGUMENT_HOSTNAME_SUFFIX,
                 InputArgument::OPTIONAL,
@@ -36,99 +57,58 @@ class OrganizationIntoMaintenanceMode extends \Symfony\Component\Console\Command
         $maintenanceMode = $input->getArgument(self::ARGUMENT_MAINTENANCE_MODE);
         if (!in_array($maintenanceMode, ['on', 'off'])) {
             throw new Exception(sprintf(
-                'The argument "%s" must be either "on" or "off", not "%s"'
+                'The argument "%s" must be either "on" or "off", not "%s"',
+                self::ARGUMENT_MAINTENANCE_MODE,
+                $maintenanceMode
             ));
         }
+        $reason = $input->getArgument(self::ARGUMENT_REASON);
+        $estimatedEndTime = $input->getArgument(self::ARGUMENT_ESTIMATED_END_TIME);
         $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
         $kbcUrl = sprintf('https://connection.%s', $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX));
         $manageToken = getenv('KBC_MANAGE_TOKEN');
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
 
-        $organizationDelail = $manageClient->getOrganization($organizationId);
-
+        $organization = $manageClient->getOrganization($organizationId);
+        $projects = $organization['projects'];
 
         $output->writeln(
             sprintf(
                 'Will put "%d" projects "%s" maintenance mode',
-                count($sourceFile),
+                count($projects),
                 $maintenanceMode
             )
         );
-        $output->writeln(sprintf('Expiration days "%s"', $expirationDays));
         $force = $input->getOption(self::OPTION_FORCE);
         $output->writeln($force ? 'FORCE MODE' : 'DRY RUN');
-
-        if ($force) {
-            sleep(1);
+        $params = [];
+        if ($reason) {
+            $params[self::ARGUMENT_REASON] = $reason;
         }
-
-
-        $clients = [];
-        if ($manageTokenUs) {
-            $clients['US'] = new Client(['token' => $manageTokenUs, 'url' => 'https://connection.keboola.com']);
+        if ($estimatedEndTime) {
+            $params[self::ARGUMENT_ESTIMATED_END_TIME] = $estimatedEndTime;
         }
-        if ($manageTokenEu) {
-            $clients['EU'] = new Client(['token' => $manageTokenEu, 'url' => 'https://connection.eu-central-1.keboola.com/']);
-        }
-        if ($manageTokenNe) {
-            $clients['NE'] = new Client(['token' => $manageTokenNe, 'url' => 'https://connection.north-europe.azure.keboola.com/']);
-        }
-
-        if (!file_exists($sourceFile)) {
-            throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
-        }
-        $projectsText = trim(file_get_contents($sourceFile));
-        if (!$projectsText) {
-            return;
-        }
-
-        $projects = [];
-        foreach (explode(PHP_EOL, $projectsText) as $projectRow) {
-            $project = [];
-            $parts = explode('-', $projectRow);
-
-            [$project['id'], $project['region']] = $parts;
-            $projects[$project['id']] = $project;
-        }
-
-        $output->writeln(sprintf('Found "%s" projects', count($projects)));
-
         foreach ($projects as $project) {
-            if (array_key_exists($project['region'], $clients)) {
-                /** @var Client $client */
-                $client = $clients[$project['region']];
-                $projectFromApi = $client->getProject($project['id']);
-                if ($force) {
-                    $updatedProjectFromApi = $client->updateProject($project['id'], ['expirationDays' =>
-                        $expirationDays]);
-                    $output->writeln(sprintf(
-                        'Updated project "%s" in "%s" with current expiration "%s" to new expiration "%s" (%s days) (%s - %s)',
-                        $projectFromApi['id'],
-                        $project['region'],
-                        $projectFromApi['expires'],
-                        $updatedProjectFromApi['expires'],
-                        $expirationDays,
-                        $projectFromApi['organization']['name'],
-                        $projectFromApi['name']
-                    ));
-                } else {
-                    $output->writeln(sprintf(
-                        'Would update project "%s" in "%s" with current expiration "%s" to new expiration days "%s" (%s - %s)',
-                        $projectFromApi['id'],
-                        $project['region'],
-                        $projectFromApi['expires'],
-                        $expirationDays,
-                        $projectFromApi['organization']['name'],
-                        $projectFromApi['name']
-                    ));
-                }
-            } else {
-                $output->writeln(sprintf(
-                    'Project "%s" is in "%s" for which there is no client set up',
+            $output->writeln(
+                sprintf(
+                    'Putting project %s %s maintenance mode',
                     $project['id'],
-                    $project['region']
-                ));
+                    $maintenanceMode
+                )
+            );
+            if ($force) {
+                if ($maintenanceMode === 'on') {
+                    $manageClient->disableProject(
+                        $project['id'],
+                        $params
+                    );
+                } elseif ($maintenanceMode === 'off') {
+                    $manageClient->enableProject(
+                        $project['id']
+                    );
+                }
             }
         }
+        $output->writeln('All done.');
     }
 }
