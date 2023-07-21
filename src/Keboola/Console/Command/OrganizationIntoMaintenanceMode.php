@@ -11,6 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class OrganizationIntoMaintenanceMode extends Command
 {
+    const ARGUMENT_MANAGE_TOKEN = 'manageToken';
     const ARGUMENT_ORGANIZATION_ID = 'organizationId';
     const ARGUMENT_MAINTENANCE_MODE = 'maintenanceMode';
     const ARGUMENT_REASON = 'disableReason';
@@ -28,6 +29,7 @@ class OrganizationIntoMaintenanceMode extends Command
                 InputOption::VALUE_NONE,
                 'Use [--force, -f] to do it for real.'
             )
+            ->addArgument(self::ARGUMENT_MANAGE_TOKEN, InputArgument::REQUIRED, 'Maname Api Token')
             ->addArgument(self::ARGUMENT_ORGANIZATION_ID, InputArgument::REQUIRED, 'Organization Id')
             ->addArgument(
                 self::ARGUMENT_MAINTENANCE_MODE,
@@ -35,20 +37,20 @@ class OrganizationIntoMaintenanceMode extends Command
                 'use "on" to turn on maintenance mode, and "off" to turn it off'
             )
             ->addArgument(
+                self::ARGUMENT_HOSTNAME_SUFFIX,
+                InputArgument::OPTIONAL,
+                'Keboola Connection Hostname Suffix',
+                'keboola.com'
+            )
+            ->addArgument(
                 self::ARGUMENT_REASON,
-                InputArgument::REQUIRED,
+                InputArgument::OPTIONAL,
                 'Reason for maintenance (ex Migration)'
             )
             ->addArgument(
                 self::ARGUMENT_ESTIMATED_END_TIME,
                 InputArgument::OPTIONAL,
                 'Estimated time of maintenance (ex + 5 hours)'
-            )
-            ->addArgument(
-                self::ARGUMENT_HOSTNAME_SUFFIX,
-                InputArgument::OPTIONAL,
-                'Keboola Connection Hostname Suffix',
-                'keboola.com'
             )
         ;
     }
@@ -64,11 +66,12 @@ class OrganizationIntoMaintenanceMode extends Command
                 $maintenanceMode
             ));
         }
+        $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
         $reason = $input->getArgument(self::ARGUMENT_REASON);
         $estimatedEndTime = $input->getArgument(self::ARGUMENT_ESTIMATED_END_TIME);
         $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
         $kbcUrl = sprintf('https://connection.%s', $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX));
-        $manageToken = getenv('KBC_MANAGE_TOKEN');
+
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
 
         $organization = $manageClient->getOrganization($organizationId);
