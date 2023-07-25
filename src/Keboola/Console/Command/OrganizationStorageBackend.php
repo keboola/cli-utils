@@ -73,7 +73,13 @@ class OrganizationStorageBackend extends Command
                     $storageBackendId
                 )
             );
+            $params = [$project['id'], $storageBackendId];
             if ($force) {
+                $params[] = '--force';
+                $manageClient->runCommand([
+                    'command' => 'manage:switch-storage-backend',
+                    'parameters' => $params
+                ]);
                 $manageClient->assignProjectStorageBackend($project['id'], $storageBackendId);
             }
         }
