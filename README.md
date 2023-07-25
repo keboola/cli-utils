@@ -254,7 +254,7 @@ Arguments:
 
 - Run the command
     ```
-    php ./cli.php manage: [--force/-f] <manage-token> <organization Id> <on/off> <hostname-suffix> <reason> <estimatedEndTime> 
+    php ./cli.php manage:set-organization-maintenance-mode [--force/-f] <manage-token> <organization Id> <on/off> <hostname-suffix> <reason> <estimatedEndTime> 
     ```
 
 ## License
