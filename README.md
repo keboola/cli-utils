@@ -239,6 +239,24 @@ You can use it to set all projects of an organization to use a storage backend.
     php ./cli.php manage:set-organization-storage-backend [--force/-f] <manage-token> <organization-id> <storage-backend-id> <hostname-suffix> 
     ```
 
+## Set maintenance mode for organization
+This command can be used to enable/disable all projects in an organization
+The usecase for this command is to set all projects into maintenance at once for byodb migration.
+It will perform a dry run unleass the `--force/-f` option is applied.
+
+Arguments:
+- Manage Token *required*
+- OrganizationId *required*
+- Maintenance Mode *required* (on or off)
+- Hostname sUffix *optional* (default: keboola.com)
+- Disable reason *optional* 
+- Estimated end time *optional*
+
+- Run the command
+    ```
+    php ./cli.php manage: [--force/-f] <manage-token> <organization Id> <on/off> <hostname-suffix> <reason> <estimatedEndTime> 
+    ```
+
 ## License
 
 MIT licensed, see [LICENSE](./LICENSE) file.
