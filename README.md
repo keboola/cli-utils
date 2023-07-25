@@ -230,6 +230,15 @@ It will perform a dry run unleass the `--force/-f` option is applied.
     php ./cli.php storage:delete-orphaned=workspaces [--force/-f] <storage-token> <component-list> <untile-date> <hostname-suffix> 
     ```
 
+## Set Storage Backend for Orjanization
+This commaand is rather specific to BYODB snowflake backend migration.
+You can use it to set all projects of an organization to use a storage backend.
+
+- Run the command
+    ```
+    php ./cli.php manage:set-organization-storage-backend [--force/-f] <manage-token> <organization-id> <storage-backend-id> <hostname-suffix> 
+    ```
+
 ## License
 
 MIT licensed, see [LICENSE](./LICENSE) file.
