@@ -47,7 +47,7 @@ class DeleteOwnerlessWorkspaces extends Command
         $url = 'https://connection.' . $input->getArgument('hostnameSuffix');
         $sandboxesUrl = 'https://sandboxes.' . $input->getArgument('hostnameSuffix');
         $includeShared = (bool) $input->getOption('includeShared');
-        $force = (bool) $input->getOption('force')
+        $force = (bool) $input->getOption('force');
 
         $storageClient = new StorageApiClient([
             'token' => $token,
@@ -73,47 +73,41 @@ class DeleteOwnerlessWorkspaces extends Command
                 $tokensClient->getToken($sandbox->getTokenId());
                 continue; // token exists so no need to do anything
             } catch (ClientException $exception) {
-                if ($exception->getCode() === 404) {
-                    // sandbox is owned by inactive token
-                    if ($this->shouldDeleteSandbox($sandbox, $includeShared)) {
-                        if (!in_array($sandbox->getType(), Sandbox::CONTAINER_TYPES)) {
-                            // it is a database workspace
-                            $output->writeln('Deleting inactive storage workspace ' . $sandbox->getPhysicalId());
-                            $totalDeletedStorageWorkspaces++;
-                            if ($force) {
-                                $workspacesClient->deleteWorkspace($sandbox->getPhysicalId());
-                            }
-                        } else {
-                            if (!empty($sandbox->getStagingWorkspaceId())) {
-                                $output->writeln(
-                                    'Deleting inactive staging storage workspace ' . $sandbox->getPhysicalId()
-                                );
-                                $totalDeletedStorageWorkspaces++;
-                                if ($force) {
-                                    $workspacesClient->deleteWorkspace($sandbox->getStagingWorkspaceId(), [], true);
-                                }
-                            }
-                        }
-                        $totalDeletedSandboxes++;
-                        if ($force) {
-                            $sandboxesClient->delete($sandbox->getId());
-                        }
-                    }
+                if ($exception->getCode() !== 404) {
+                    throw $e;
                 }
             }
+
+            // sandbox is owned by inactive token
+            if (!$includeShared && !$sandbox->getShared()) {
+                continue;
+            }
+
+            if (!in_array($sandbox->getType(), Sandbox::CONTAINER_TYPES)) {
+                // it is a database workspace
+                $output->writeln('Deleting inactive storage workspace ' . $sandbox->getPhysicalId());
+                $totalDeletedStorageWorkspaces++;
+                if ($force) {
+                    $workspacesClient->deleteWorkspace($sandbox->getPhysicalId());
+                }
+            } elseif (!empty($sandbox->getStagingWorkspaceId())) {
+                $output->writeln('Deleting inactive staging storage workspace ' . $sandbox->getPhysicalId());
+                $totalDeletedStorageWorkspaces++;
+                if ($force) {
+                    $workspacesClient->deleteWorkspace($sandbox->getStagingWorkspaceId(), [], true);
+                }
+            }
+
+            $totalDeletedSandboxes++;
+            if ($force) {
+                $sandboxesClient->delete($sandbox->getId());
+            }
         }
+
         $output->writeln(sprintf(
             '%d sandboxes deleted and %d storage workspaces deleted',
             $totalDeletedSandboxes,
             $totalDeletedStorageWorkspaces
         ));
-    }
-
-    private function shouldDeleteSandbox(Sandbox $sandbox, bool $includeShared): bool
-    {
-        if ($includeShared) {
-            return true;
-        }
-        return !$sandbox->getShared();
     }
 }
