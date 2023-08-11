@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ffca42e568228cd4e34ae7e15d8d41d0",
+    "content-hash": "87d565ff4970d63e9b93a535ab589930",
     "packages": [
         {
             "name": "aws/aws-crt-php",
-            "version": "v1.2.1",
+            "version": "v1.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/awslabs/aws-crt-php.git",
-                "reference": "1926277fc71d253dfa820271ac5987bdb193ccf5"
+                "reference": "2f1dc7b7eda080498be96a4a6d683a41583030e9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/awslabs/aws-crt-php/zipball/1926277fc71d253dfa820271ac5987bdb193ccf5",
-                "reference": "1926277fc71d253dfa820271ac5987bdb193ccf5",
+                "url": "https://api.github.com/repos/awslabs/aws-crt-php/zipball/2f1dc7b7eda080498be96a4a6d683a41583030e9",
+                "reference": "2f1dc7b7eda080498be96a4a6d683a41583030e9",
                 "shasum": ""
             },
             "require": {
@@ -56,22 +56,22 @@
             ],
             "support": {
                 "issues": "https://github.com/awslabs/aws-crt-php/issues",
-                "source": "https://github.com/awslabs/aws-crt-php/tree/v1.2.1"
+                "source": "https://github.com/awslabs/aws-crt-php/tree/v1.2.2"
             },
-            "time": "2023-03-24T20:22:19+00:00"
+            "time": "2023-07-20T16:49:55+00:00"
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.276.2",
+            "version": "3.269.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "78c9510280512121e8fdaa9538b744778ab48bf9"
+                "reference": "6d759ef9f24f0c7f271baf8014f41fc0cfdfbf78"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/78c9510280512121e8fdaa9538b744778ab48bf9",
-                "reference": "78c9510280512121e8fdaa9538b744778ab48bf9",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/6d759ef9f24f0c7f271baf8014f41fc0cfdfbf78",
+                "reference": "6d759ef9f24f0c7f271baf8014f41fc0cfdfbf78",
                 "shasum": ""
             },
             "require": {
@@ -83,8 +83,7 @@
                 "guzzlehttp/promises": "^1.4.0",
                 "guzzlehttp/psr7": "^1.9.1 || ^2.4.5",
                 "mtdowling/jmespath.php": "^2.6",
-                "php": ">=5.5",
-                "psr/http-message": "^1.0"
+                "php": ">=5.5"
             },
             "require-dev": {
                 "andrewsville/php-token-reflection": "^1.4",
@@ -101,6 +100,7 @@
                 "paragonie/random_compat": ">= 2",
                 "phpunit/phpunit": "^4.8.35 || ^5.6.3 || ^9.5",
                 "psr/cache": "^1.0",
+                "psr/http-message": "^1.0",
                 "psr/simple-cache": "^1.0",
                 "sebastian/comparator": "^1.2.3 || ^4.0",
                 "yoast/phpunit-polyfills": "^1.0"
@@ -151,9 +151,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.276.2"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.269.0"
             },
-            "time": "2023-07-20T18:16:37+00:00"
+            "time": "2023-04-26T18:21:04+00:00"
         },
         {
             "name": "brick/math",
@@ -710,16 +710,16 @@
         },
         {
             "name": "guzzlehttp/psr7",
-            "version": "2.5.0",
+            "version": "2.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/psr7.git",
-                "reference": "b635f279edd83fc275f822a1188157ffea568ff6"
+                "reference": "8bd7c33a0734ae1c5d074360512beb716bef3f77"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/psr7/zipball/b635f279edd83fc275f822a1188157ffea568ff6",
-                "reference": "b635f279edd83fc275f822a1188157ffea568ff6",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/8bd7c33a0734ae1c5d074360512beb716bef3f77",
+                "reference": "8bd7c33a0734ae1c5d074360512beb716bef3f77",
                 "shasum": ""
             },
             "require": {
@@ -806,7 +806,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/psr7/issues",
-                "source": "https://github.com/guzzle/psr7/tree/2.5.0"
+                "source": "https://github.com/guzzle/psr7/tree/2.6.0"
             },
             "funding": [
                 {
@@ -822,7 +822,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-04-17T16:11:26+00:00"
+            "time": "2023-08-03T15:06:02+00:00"
         },
         {
             "name": "keboola/csv",
@@ -1029,17 +1029,75 @@
             "time": "2023-03-03T15:00:55+00:00"
         },
         {
-            "name": "keboola/storage-api-client",
-            "version": "v14.11.0",
+            "name": "keboola/sandboxes-api-php-client",
+            "version": "6.25.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/keboola/storage-api-php-client.git",
-                "reference": "b2ad449c270ae8b06bbd2927c5d04aa1ca757320"
+                "url": "https://github.com/keboola/sandboxes-api-php-client.git",
+                "reference": "bf8f0a4e26f019314c3fbdcc63900a23d4ec66e8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/storage-api-php-client/zipball/b2ad449c270ae8b06bbd2927c5d04aa1ca757320",
-                "reference": "b2ad449c270ae8b06bbd2927c5d04aa1ca757320",
+                "url": "https://api.github.com/repos/keboola/sandboxes-api-php-client/zipball/bf8f0a4e26f019314c3fbdcc63900a23d4ec66e8",
+                "reference": "bf8f0a4e26f019314c3fbdcc63900a23d4ec66e8",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "guzzlehttp/guzzle": "~6.0|~7.0",
+                "php": ">=7.4",
+                "psr/log": "^1.1",
+                "symfony/validator": "^4.2 !=4.4.33|^5.4|^6.0"
+            },
+            "require-dev": {
+                "keboola/coding-standard": "^13.0.0",
+                "keboola/kbc-manage-api-php-client": "^7.0",
+                "keboola/storage-api-client": "^10.6.0",
+                "php-parallel-lint/php-parallel-lint": "^1.2",
+                "phpstan/phpstan": "^1.5.0",
+                "phpstan/phpstan-phpunit": "^1.0.0",
+                "phpunit/phpunit": "^9.0",
+                "squizlabs/php_codesniffer": "^3.0",
+                "vlucas/phpdotenv": "^4.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Keboola\\Sandboxes\\Api\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jakub Matějka",
+                    "email": "jakub@keboola.com"
+                }
+            ],
+            "description": "PHP Client for Keboola Sandboxes API",
+            "keywords": [
+                "keboola",
+                "sandboxes"
+            ],
+            "support": {
+                "source": "https://github.com/keboola/sandboxes-api-php-client/tree/6.25.0"
+            },
+            "time": "2023-08-07T14:39:54+00:00"
+        },
+        {
+            "name": "keboola/storage-api-client",
+            "version": "v14.11.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/keboola/storage-api-php-client.git",
+                "reference": "d399a49aba1b333fc890853034846057c2d632ab"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/keboola/storage-api-php-client/zipball/d399a49aba1b333fc890853034846057c2d632ab",
+                "reference": "d399a49aba1b333fc890853034846057c2d632ab",
                 "shasum": ""
             },
             "require": {
@@ -1088,9 +1146,9 @@
             "homepage": "http://keboola.com",
             "support": {
                 "issues": "https://github.com/keboola/storage-api-php-client/issues",
-                "source": "https://github.com/keboola/storage-api-php-client/tree/v14.11.0"
+                "source": "https://github.com/keboola/storage-api-php-client/tree/v14.11.1"
             },
-            "time": "2023-07-14T06:14:51+00:00"
+            "time": "2023-08-02T11:55:55+00:00"
         },
         {
             "name": "microsoft/azure-storage-blob",
@@ -1509,16 +1567,16 @@
         },
         {
             "name": "psr/http-message",
-            "version": "1.1",
+            "version": "2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-fig/http-message.git",
-                "reference": "cb6ce4845ce34a8ad9e68117c10ee90a29919eba"
+                "reference": "402d35bcb92c70c026d1a6a9883f06b2ead23d71"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-fig/http-message/zipball/cb6ce4845ce34a8ad9e68117c10ee90a29919eba",
-                "reference": "cb6ce4845ce34a8ad9e68117c10ee90a29919eba",
+                "url": "https://api.github.com/repos/php-fig/http-message/zipball/402d35bcb92c70c026d1a6a9883f06b2ead23d71",
+                "reference": "402d35bcb92c70c026d1a6a9883f06b2ead23d71",
                 "shasum": ""
             },
             "require": {
@@ -1527,7 +1585,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.1.x-dev"
+                    "dev-master": "2.0.x-dev"
                 }
             },
             "autoload": {
@@ -1542,7 +1600,7 @@
             "authors": [
                 {
                     "name": "PHP-FIG",
-                    "homepage": "http://www.php-fig.org/"
+                    "homepage": "https://www.php-fig.org/"
                 }
             ],
             "description": "Common interface for HTTP messages",
@@ -1556,9 +1614,9 @@
                 "response"
             ],
             "support": {
-                "source": "https://github.com/php-fig/http-message/tree/1.1"
+                "source": "https://github.com/php-fig/http-message/tree/2.0"
             },
-            "time": "2023-04-04T09:50:52+00:00"
+            "time": "2023-04-04T09:54:51+00:00"
         },
         {
             "name": "psr/log",
@@ -1906,16 +1964,16 @@
         },
         {
             "name": "symfony/config",
-            "version": "v5.4.21",
+            "version": "v5.4.26",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/config.git",
-                "reference": "2a6b1111d038adfa15d52c0871e540f3b352d1e4"
+                "reference": "8109892f27beed9252bd1f1c1880aeb4ad842650"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/config/zipball/2a6b1111d038adfa15d52c0871e540f3b352d1e4",
-                "reference": "2a6b1111d038adfa15d52c0871e540f3b352d1e4",
+                "url": "https://api.github.com/repos/symfony/config/zipball/8109892f27beed9252bd1f1c1880aeb4ad842650",
+                "reference": "8109892f27beed9252bd1f1c1880aeb4ad842650",
                 "shasum": ""
             },
             "require": {
@@ -1965,7 +2023,7 @@
             "description": "Helps you find, load, combine, autofill and validate configuration values of any kind",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/config/tree/v5.4.21"
+                "source": "https://github.com/symfony/config/tree/v5.4.26"
             },
             "funding": [
                 {
@@ -1981,7 +2039,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-02-14T08:03:56+00:00"
+            "time": "2023-07-19T20:21:11+00:00"
         },
         {
             "name": "symfony/console",
@@ -2741,16 +2799,16 @@
         },
         {
             "name": "symfony/process",
-            "version": "v5.4.24",
+            "version": "v5.4.26",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/process.git",
-                "reference": "e3c46cc5689c8782944274bb30702106ecbe3b64"
+                "reference": "1a44dc377ec86a50fab40d066cd061e28a6b482f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/process/zipball/e3c46cc5689c8782944274bb30702106ecbe3b64",
-                "reference": "e3c46cc5689c8782944274bb30702106ecbe3b64",
+                "url": "https://api.github.com/repos/symfony/process/zipball/1a44dc377ec86a50fab40d066cd061e28a6b482f",
+                "reference": "1a44dc377ec86a50fab40d066cd061e28a6b482f",
                 "shasum": ""
             },
             "require": {
@@ -2783,7 +2841,7 @@
             "description": "Executes commands in sub-processes",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/process/tree/v5.4.24"
+                "source": "https://github.com/symfony/process/tree/v5.4.26"
             },
             "funding": [
                 {
@@ -2799,7 +2857,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-05-17T11:26:05+00:00"
+            "time": "2023-07-12T15:44:31+00:00"
         },
         {
             "name": "symfony/translation-contracts",
@@ -2881,16 +2939,16 @@
         },
         {
             "name": "symfony/validator",
-            "version": "v5.4.25",
+            "version": "v5.4.26",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/validator.git",
-                "reference": "62b6cd0a2da0553db0400c3f13899afbdeefaa77"
+                "reference": "77533f12c6dd5c766f1e1689de4ef4d1eac4af71"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/validator/zipball/62b6cd0a2da0553db0400c3f13899afbdeefaa77",
-                "reference": "62b6cd0a2da0553db0400c3f13899afbdeefaa77",
+                "url": "https://api.github.com/repos/symfony/validator/zipball/77533f12c6dd5c766f1e1689de4ef4d1eac4af71",
+                "reference": "77533f12c6dd5c766f1e1689de4ef4d1eac4af71",
                 "shasum": ""
             },
             "require": {
@@ -2973,7 +3031,7 @@
             "description": "Provides tools to validate values",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/validator/tree/v5.4.25"
+                "source": "https://github.com/symfony/validator/tree/v5.4.26"
             },
             "funding": [
                 {
@@ -2989,7 +3047,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-06-21T09:57:24+00:00"
+            "time": "2023-07-26T15:05:40+00:00"
         }
     ],
     "packages-dev": [

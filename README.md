@@ -257,6 +257,24 @@ Arguments:
     php ./cli.php manage:set-organization-maintenance-mode [--force/-f] <manage-token> <organization Id> <on/off> <hostname-suffix> <reason> <estimatedEndTime> 
     ```
 
+## Delete Sandboxes/Workspaces that were created by no longer active token id
+This command can be used to delete all sandboxes and workspaces in a project that were create with a token that is no longer active in the project
+To also delete shared workspaces created by inactive tokens use the `--includeShared` option.
+It will perform a dry run unleass the `--force/-f` option is applied.
+
+Arguments:
+- Storage Token *required*
+- Hostname sUffix *optional* (default: keboola.com)
+
+Options:
+- `--force/-f` 
+- `--includeShared`
+
+- Run the command
+    ```
+    php ./cli.php manage:delete-ownerless-workspaces [--force/-f] [--includeShared] <storage-token> <hostname-suffix> 
+    ```
+
 ## License
 
 MIT licensed, see [LICENSE](./LICENSE) file.
