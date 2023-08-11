@@ -79,7 +79,7 @@ class DeleteOwnerlessWorkspaces extends Command
             }
 
             // sandbox is owned by inactive token
-            if (!$includeShared && !$sandbox->getShared()) {
+            if (!$includeShared && $sandbox->getShared()) {
                 continue;
             }
 
