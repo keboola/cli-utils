@@ -6,6 +6,7 @@ require __DIR__.'/vendor/autoload.php';
 
 use Keboola\Console\Command\AddFeature;
 use Keboola\Console\Command\AllStacksIterator;
+use Keboola\Console\Command\DeleteOrganizationOrphanedWorkspaces;
 use Keboola\Console\Command\DeleteOrphanedWorkspaces;
 use Keboola\Console\Command\DeleteOwnerlessWorkspaces;
 use Keboola\Console\Command\LineageEventsExport;
@@ -46,6 +47,7 @@ $application->add(new MassProjectQueueMigration());
 $application->add(new LineageEventsExport());
 $application->add(new QueueMassTerminateJobs());
 $application->add(new DeleteOrphanedWorkspaces());
+$application->add(new DeleteOrganizationOrphanedWorkspaces());
 $application->add(new OrganizationIntoMaintenanceMode());
 $application->add(new OrganizationStorageBackend());
 $application->add(new DeleteOwnerlessWorkspaces());
