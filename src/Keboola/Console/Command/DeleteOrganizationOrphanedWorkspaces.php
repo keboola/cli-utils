@@ -68,6 +68,13 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
 
         $storageUrl = 'https://connection.' . $input->getArgument('hostnameSuffix');
 
+        $force = $input->getOption('force');
+        if ($force) {
+            $output->writeln('Force option is set, doing it for real');
+        } else {
+            $output->writeln('This is just a dry-run, nothing will be actually deleted');
+        }
+
         $totalWorkspaces = 0;
         $totalDeletedWorkspaces = 0;
 
@@ -82,13 +89,6 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             ]);
             $devBranches = new DevBranches($storageClient);
             $branchesList = $devBranches->listBranches();
-
-            $force = $input->getOption('force');
-            if ($force) {
-                $output->writeln('Force option is set, doing it for real');
-            } else {
-                $output->writeln('This is just a dry-run, nothing will be actually deleted');
-            }
 
             $output->writeln(
                 sprintf(
@@ -139,6 +139,9 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             );
             $tokensClient = new Tokens($storageClient);
             $tokensClient->dropToken($storageToken['id']);
+
+            $totalWorkspaces += $totalProjectWorkspaces;
+            $totalDeletedWorkspaces += $totalProjectDeletedWorkspaces;
         }
         $output->writeln(
             sprintf(
