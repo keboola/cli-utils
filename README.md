@@ -230,6 +230,19 @@ It will perform a dry run unleass the `--force/-f` option is applied.
     php ./cli.php storage:delete-orphaned=workspaces [--force/-f] <storage-token> <component-list> <untile-date> <hostname-suffix> 
     ```
 
+## Delete Orphaned Workspaces in Organization command
+This command can be used to delete all workspace in an organization that were made for componentIds in the `component` argument
+and that were created before the `until-date` argument.
+The usecase for this command is to remove workspaces that were not cleaned after transformation failures.
+It will perform a dry run unleass the `--force/-f` option is applied.
+
+- Create a Storage token
+
+- Run the command
+    ```
+    php ./cli.php manage:delete-organization-workspaces [--force/-f] <manage-token> <organization-id> <component> <untile-date> <hostname-suffix> 
+    ```
+
 ## Set Storage Backend for Orjanization
 This commaand is rather specific to BYODB snowflake backend migration.
 You can use it to set all projects of an organization to use a storage backend.
@@ -272,7 +285,7 @@ Options:
 
 - Run the command
     ```
-    php ./cli.php manage:delete-ownerless-workspaces [--force/-f] [--includeShared] <storage-token> <hostname-suffix> 
+    php ./cli.php storage:delete-ownerless-workspaces [--force/-f] [--includeShared] <storage-token> <hostname-suffix> 
     ```
 
 ## License
