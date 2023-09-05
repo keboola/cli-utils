@@ -11,6 +11,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\Output;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class OrganizationIntoMaintenanceMode extends Command
@@ -23,6 +24,7 @@ class OrganizationIntoMaintenanceMode extends Command
     const ARGUMENT_HOSTNAME_SUFFIX = 'hostnameSuffix';
     const OPTION_FORCE = 'force';
     const OPTION_TERMINATE_JOBS = 'terminateJobs';
+
     protected function configure()
     {
         $this
@@ -62,8 +64,7 @@ class OrganizationIntoMaintenanceMode extends Command
                 self::ARGUMENT_ESTIMATED_END_TIME,
                 InputArgument::OPTIONAL,
                 'Estimated time of maintenance (ex + 5 hours)'
-            )
-        ;
+            );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -105,11 +106,19 @@ class OrganizationIntoMaintenanceMode extends Command
         }
         foreach ($projects as $project) {
             if ($input->getOption(self::OPTION_TERMINATE_JOBS)) {
-                $this->terminateRunningJobs(
-                    $manageClient,
-                    $project['id'],
-                    $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX)
-                );
+                if ($maintenanceMode === 'on') {
+                    $this->terminateRunningJobs(
+                        $manageClient,
+                        $project['id'],
+                        $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX),
+                        $output,
+                        $force
+                    );
+                } else {
+                    $output->writeln(
+                        'Skipping job termination if not turning on maintenance mode',
+                    );
+                }
             }
 
             $output->writeln(
@@ -136,19 +145,19 @@ class OrganizationIntoMaintenanceMode extends Command
     }
 
     private function terminateRunningJobs(
-        ManageClient $manageClient,
-        $projectId,
-        $hostnameSuffix
-    ): void {
+        ManageClient    $manageClient,
+        string          $projectId,
+        string          $hostnameSuffix,
+        OutputInterface $output,
+        bool            $force
+    ): void
+    {
         // We need to create a storage token in order to use the Jobs API
+        $output->writeln('Creating temporary storage token');
         $storageToken = $manageClient->createProjectStorageToken(
             $projectId,
             ['description' => 'Maintenance: Terminating Jobs prior to disabling projects']
         );
-        $storageClient = new StorageClient([
-            'token' => $storageToken['token'],
-            'url' => sprintf('https://queue.%s', $hostnameSuffix),
-        ]);
         $jobsClient = new QueueClient(
             sprintf('https://queue.%s', $hostnameSuffix),
             $storageToken['token']
@@ -161,10 +170,30 @@ class OrganizationIntoMaintenanceMode extends Command
             ListJobsOptions::STATUS_PROCESSING,
             ListJobsOptions::STATUS_TERMINATING
         ]);
+        $output->writeln(
+            sprintf(
+                'Gathering running jobs for Project %s',
+                $projectId
+            )
+        );
         $runningJobs = $jobsClient->listJobs($runningJobsListOptions);
+        $output->writeln(
+            sprintf(
+                'Found %d running jobs',
+                count($runningJobs)
+            )
+        );
+
         $terminatingJobs = [];
         foreach ($runningJobs as $runningJob) {
             if ($runningJob['status'] !== ListJobsOptions::STATUS_TERMINATING) {
+                $output->writeln(
+                    sprintf(
+                        'Terminating job %s that had status %s',
+                        $runningJob['id'],
+                        $runningJob['status']
+                    )
+                );
                 $jobsClient->terminateJob($runningJob['id']);
             }
             $terminatingJobs[] = $runningJob;
@@ -173,6 +202,13 @@ class OrganizationIntoMaintenanceMode extends Command
             sleep(2);
             foreach ($terminatingJobs as $key => $terminatingJob) {
                 $jobDetails = $jobsClient->getJob($terminatingJob['id']);
+                $output->writeln(
+                    sprintf(
+                        'Checking whether termination is complete job %s that had status %s',
+                        $terminatingJob['id'],
+                        $terminatingJob['status']
+                    )
+                );
                 if ($jobDetails['status'] === ListJobsOptions::STATUS_TERMINATED) {
                     unset($terminatingJobs[$key]);
                 }
@@ -185,6 +221,7 @@ class OrganizationIntoMaintenanceMode extends Command
                 'url' => sprintf('https://queue.%s', $hostnameSuffix),
             ])
         );
+        $output->writeln('Deleting temporary storage token');
         $tokensClient->dropToken($storageToken['id']);
     }
 }
