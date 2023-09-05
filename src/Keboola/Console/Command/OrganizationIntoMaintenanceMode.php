@@ -150,8 +150,8 @@ class OrganizationIntoMaintenanceMode extends Command
         string          $hostnameSuffix,
         OutputInterface $output,
         bool            $force
-    ): void
-    {
+    ): void {
+    
         // We need to create a storage token in order to use the Jobs API
         $output->writeln('Creating temporary storage token');
         $storageToken = $manageClient->createProjectStorageToken(
@@ -183,7 +183,12 @@ class OrganizationIntoMaintenanceMode extends Command
                 count($runningJobs)
             )
         );
-
+        if (!$force) {
+            $output->writeln('Skipping job terminations because --forrce option not provided');
+            $output->writeln('Deleting temporary storage token');
+            $this->dropToken($storageToken, $hostnameSuffix);
+            return;
+        }
         $terminatingJobs = [];
         foreach ($runningJobs as $runningJob) {
             if ($runningJob['status'] !== ListJobsOptions::STATUS_TERMINATING) {
@@ -215,13 +220,18 @@ class OrganizationIntoMaintenanceMode extends Command
             }
         }
         // Don't need the storage token anymore
+        $output->writeln('Deleting temporary storage token');
+        $this->dropToken($storageToken, $hostnameSuffix);
+    }
+
+    private function dropToken(array $token, string $hostnameSuffix)
+    {
         $tokensClient = new Tokens(
             new StorageClient([
-                'token' => $storageToken['token'],
+                'token' => $token['token'],
                 'url' => sprintf('https://queue.%s', $hostnameSuffix),
             ])
         );
-        $output->writeln('Deleting temporary storage token');
-        $tokensClient->dropToken($storageToken['id']);
+        $tokensClient->dropToken($token['id']);
     }
 }
