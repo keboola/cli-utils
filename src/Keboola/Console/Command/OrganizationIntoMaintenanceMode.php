@@ -2,7 +2,11 @@
 
 namespace Keboola\Console\Command;
 
-use Keboola\ManageApi\Client;
+use Keboola\JobQueueClient\Client as QueueClient;
+use Keboola\JobQueueClient\ListJobsOptions;
+use Keboola\ManageApi\Client as ManageClient;
+use Keboola\StorageApi\Client as StorageClient;
+use Keboola\StorageApi\Tokens;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -18,6 +22,7 @@ class OrganizationIntoMaintenanceMode extends Command
     const ARGUMENT_ESTIMATED_END_TIME = 'estimatedEndTime';
     const ARGUMENT_HOSTNAME_SUFFIX = 'hostnameSuffix';
     const OPTION_FORCE = 'force';
+    const OPTION_TERMINATE_JOBS = 'terminateJobs';
     protected function configure()
     {
         $this
@@ -28,6 +33,12 @@ class OrganizationIntoMaintenanceMode extends Command
                 'f',
                 InputOption::VALUE_NONE,
                 'Use [--force, -f] to do it for real.'
+            )
+            ->addOption(
+                self::OPTION_TERMINATE_JOBS,
+                't',
+                InputOption::VALUE_NONE,
+                'Use [--terminateJobs, -t] to terminate running jobs prior to setting maintenance mode'
             )
             ->addArgument(self::ARGUMENT_MANAGE_TOKEN, InputArgument::REQUIRED, 'Maname Api Token')
             ->addArgument(self::ARGUMENT_ORGANIZATION_ID, InputArgument::REQUIRED, 'Organization Id')
@@ -55,7 +66,6 @@ class OrganizationIntoMaintenanceMode extends Command
         ;
     }
 
-
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $maintenanceMode = $input->getArgument(self::ARGUMENT_MAINTENANCE_MODE);
@@ -72,7 +82,7 @@ class OrganizationIntoMaintenanceMode extends Command
         $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
         $kbcUrl = sprintf('https://connection.%s', $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX));
 
-        $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
+        $manageClient = new ManageClient(['token' => $manageToken, 'url' => $kbcUrl]);
 
         $organization = $manageClient->getOrganization($organizationId);
         $projects = $organization['projects'];
@@ -94,6 +104,14 @@ class OrganizationIntoMaintenanceMode extends Command
             $params[self::ARGUMENT_ESTIMATED_END_TIME] = $estimatedEndTime;
         }
         foreach ($projects as $project) {
+            if ($input->getOption(self::OPTION_TERMINATE_JOBS)) {
+                $this->terminateRunningJobs(
+                    $manageClient,
+                    $project['id'],
+                    $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX)
+                );
+            }
+
             $output->writeln(
                 sprintf(
                     'Putting project %s %s maintenance mode',
@@ -115,5 +133,58 @@ class OrganizationIntoMaintenanceMode extends Command
             }
         }
         $output->writeln('All done.');
+    }
+
+    private function terminateRunningJobs(
+        ManageClient $manageClient,
+        $projectId,
+        $hostnameSuffix
+    ): void {
+        // We need to create a storage token in order to use the Jobs API
+        $storageToken = $manageClient->createProjectStorageToken(
+            $projectId,
+            ['description' => 'Maintenance: Terminating Jobs prior to disabling projects']
+        );
+        $storageClient = new StorageClient([
+            'token' => $storageToken['token'],
+            'url' => sprintf('https://queue.%s', $hostnameSuffix),
+        ]);
+        $jobsClient = new QueueClient(
+            sprintf('https://queue.%s', $hostnameSuffix),
+            $storageToken['token']
+        );
+        $runningJobsListOptions = new ListJobsOptions();
+        // created, waiting, processing, terminating
+        $runningJobsListOptions->setStatuses([
+            ListJobsOptions::STATUS_CREATED,
+            ListJobsOptions::STATUS_WAITING,
+            ListJobsOptions::STATUS_PROCESSING,
+            ListJobsOptions::STATUS_TERMINATING
+        ]);
+        $runningJobs = $jobsClient->listJobs($runningJobsListOptions);
+        $terminatingJobs = [];
+        foreach ($runningJobs as $runningJob) {
+            if ($runningJob['status'] !== ListJobsOptions::STATUS_TERMINATING) {
+                $jobsClient->terminateJob($runningJob['id']);
+            }
+            $terminatingJobs[] = $runningJob;
+        }
+        while (!empty($terminatingJobs)) {
+            sleep(2);
+            foreach ($terminatingJobs as $key => $terminatingJob) {
+                $jobDetails = $jobsClient->getJob($terminatingJob['id']);
+                if ($jobDetails['status'] === ListJobsOptions::STATUS_TERMINATED) {
+                    unset($terminatingJobs[$key]);
+                }
+            }
+        }
+        // Don't need the storage token anymore
+        $tokensClient = new Tokens(
+            new StorageClient([
+                'token' => $storageToken['token'],
+                'url' => sprintf('https://queue.%s', $hostnameSuffix),
+            ])
+        );
+        $tokensClient->dropToken($storageToken['id']);
     }
 }
