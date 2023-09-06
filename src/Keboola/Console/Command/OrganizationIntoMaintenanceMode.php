@@ -23,7 +23,6 @@ class OrganizationIntoMaintenanceMode extends Command
     const ARGUMENT_ESTIMATED_END_TIME = 'estimatedEndTime';
     const ARGUMENT_HOSTNAME_SUFFIX = 'hostnameSuffix';
     const OPTION_FORCE = 'force';
-    const OPTION_TERMINATE_JOBS = 'terminateJobs';
 
     protected function configure()
     {
@@ -35,12 +34,6 @@ class OrganizationIntoMaintenanceMode extends Command
                 'f',
                 InputOption::VALUE_NONE,
                 'Use [--force, -f] to do it for real.'
-            )
-            ->addOption(
-                self::OPTION_TERMINATE_JOBS,
-                't',
-                InputOption::VALUE_NONE,
-                'Use [--terminateJobs, -t] to terminate running jobs prior to setting maintenance mode'
             )
             ->addArgument(self::ARGUMENT_MANAGE_TOKEN, InputArgument::REQUIRED, 'Maname Api Token')
             ->addArgument(self::ARGUMENT_ORGANIZATION_ID, InputArgument::REQUIRED, 'Organization Id')
@@ -105,22 +98,6 @@ class OrganizationIntoMaintenanceMode extends Command
             $params[self::ARGUMENT_ESTIMATED_END_TIME] = $estimatedEndTime;
         }
         foreach ($projects as $project) {
-            if ($input->getOption(self::OPTION_TERMINATE_JOBS)) {
-                if ($maintenanceMode === 'on') {
-                    $this->terminateRunningJobs(
-                        $manageClient,
-                        $project['id'],
-                        $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX),
-                        $output,
-                        $force
-                    );
-                } else {
-                    $output->writeln(
-                        'Skipping job termination if not turning on maintenance mode',
-                    );
-                }
-            }
-
             $output->writeln(
                 sprintf(
                     'Putting project %s %s maintenance mode',
@@ -128,6 +105,21 @@ class OrganizationIntoMaintenanceMode extends Command
                     $maintenanceMode
                 )
             );
+            if ($maintenanceMode === 'on' && $force) {
+                $output->writeln(
+                    'Checking the project for any running jobs',
+                );
+                $thereAreRunningJobs = $this->areThereRunningJobs(
+                    $manageClient,
+                    $project['id'],
+                    $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX),
+                    $output
+                );
+                if ($thereAreRunningJobs) {
+                    continue;
+                }
+            }
+
             if ($force) {
                 if ($maintenanceMode === 'on') {
                     $manageClient->disableProject(
@@ -144,16 +136,14 @@ class OrganizationIntoMaintenanceMode extends Command
         $output->writeln('All done.');
     }
 
-    private function terminateRunningJobs(
+    private function areThereRunningJobs(
         ManageClient    $manageClient,
         string          $projectId,
         string          $hostnameSuffix,
-        OutputInterface $output,
-        bool            $force
-    ): void {
-    
+        OutputInterface $output
+    ): bool {
+
         // We need to create a storage token in order to use the Jobs API
-        $output->writeln('Creating temporary storage token');
         $storageToken = $manageClient->createProjectStorageToken(
             $projectId,
             ['description' => 'Maintenance: Terminating Jobs prior to disabling projects']
@@ -170,68 +160,27 @@ class OrganizationIntoMaintenanceMode extends Command
             ListJobsOptions::STATUS_PROCESSING,
             ListJobsOptions::STATUS_TERMINATING
         ]);
-        $output->writeln(
-            sprintf(
-                'Gathering running jobs for Project %s',
-                $projectId
-            )
-        );
         $runningJobs = $jobsClient->listJobs($runningJobsListOptions);
         $output->writeln(
             sprintf(
-                'Found %d running jobs',
+                'Found %d running jobs.  Please terminate them and then re-run',
                 count($runningJobs)
             )
         );
-        if (!$force) {
-            $output->writeln('Skipping job terminations because --forrce option not provided');
-            $output->writeln('Deleting temporary storage token');
-            $this->dropToken($storageToken, $hostnameSuffix);
-            return;
-        }
-        $terminatingJobs = [];
         foreach ($runningJobs as $runningJob) {
-            if ($runningJob['status'] !== ListJobsOptions::STATUS_TERMINATING) {
-                $output->writeln(
-                    sprintf(
-                        'Terminating job %s that had status %s',
-                        $runningJob['id'],
-                        $runningJob['status']
-                    )
-                );
-                $jobsClient->terminateJob($runningJob['id']);
-            }
-            $terminatingJobs[] = $runningJob;
+            $output->writeln(
+                $runningJob['url'] . ' is ' . $runningJob['status']
+            );
         }
-        while (!empty($terminatingJobs)) {
-            sleep(2);
-            foreach ($terminatingJobs as $key => $terminatingJob) {
-                $jobDetails = $jobsClient->getJob($terminatingJob['id']);
-                $output->writeln(
-                    sprintf(
-                        'Checking whether termination is complete job %s that had status %s',
-                        $terminatingJob['id'],
-                        $terminatingJob['status']
-                    )
-                );
-                if ($jobDetails['status'] === ListJobsOptions::STATUS_TERMINATED) {
-                    unset($terminatingJobs[$key]);
-                }
-            }
-        }
-        // Don't need the storage token anymore
-        $output->writeln('Deleting temporary storage token');
-        $this->dropToken($storageToken, $hostnameSuffix);
-    }
-
-    private function dropToken(array $token, string $hostnameSuffix)
-    {
+        // drop the token
         $tokensClient = new Tokens(
             new StorageClient([
-                'token' => $token['token'],
-                'url' => sprintf('https://queue.%s', $hostnameSuffix),
+                'token' => $storageToken['token'],
+                'url' => sprintf('https://connection.%s', $hostnameSuffix),
             ])
         );
-        $tokensClient->dropToken($token['id']);
+        $tokensClient->dropToken($storageToken['id']);
+
+        return count($runningJobs) > 0;
     }
 }
