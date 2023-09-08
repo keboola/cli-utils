@@ -115,6 +115,12 @@ class OrganizationIntoMaintenanceMode extends Command
                     $output
                 );
                 if ($thereAreRunningJobs) {
+                    $output->writeln(
+                        sprintf(
+                            'Skipping project %s because it has running jobs',
+                            $project['id']
+                        )
+                    );
                     continue;
                 }
             }
