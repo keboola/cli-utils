@@ -63,21 +63,43 @@ class RemoveUserFromOrganizationProjects extends Command
         $projects = $organization['projects'];
         $output->writeln(
             sprintf(
-                'Removing %s from "%d" projects',
-                $userEmail,
-                count($projects)
+                'Checking "%d" projects for user %s',
+                count($projects),
+                $userEmail
             )
         );
+        $affectedProjects = 0;
         foreach ($projects as $project) {
-            $output->writeln(sprintf(
-                'Removing user "%s" from project "%d":"%s"',
-                $userEmail,
-                $project['id'],
-                $project['name']
-            ));
-            if ($force) {
-                $manageClient->removeUserFromProject($project['id'], $user['id']);
+            $projectUsers = $manageClient->listProjectUsers((int) $project['id']);
+            if ($this->isUserInProject((int) $user['id'], $projectUsers)) {
+                $output->writeln(sprintf(
+                    'Removing user "%s" from project "%d":"%s"',
+                    $userEmail,
+                    $project['id'],
+                    $project['name']
+                ));
+                if ($force) {
+                    $manageClient->removeUserFromProject((int) $project['id'], $user['id']);
+                }
+                $affectedProjects++;
             }
         }
+        $output->writeln(
+            sprintf(
+                'Finished. %s has been removed from %d projects.',
+                $userEmail,
+                $affectedProjects
+            )
+        );
+    }
+
+    private function isUserInProject(int $userId, array $projectUsers): bool
+    {
+        foreach ($projectUsers as $projectUser) {
+            if ((int) $projectUser['id'] === $userId) {
+                return true;
+            }
+        }
+        return false;
     }
 }
