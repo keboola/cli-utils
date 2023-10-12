@@ -26,6 +26,7 @@ use Keboola\Console\Command\RedshiftOrphanedWorkspaces;
 use Keboola\Console\Command\DeletedProjectsPurge;
 use Keboola\Console\Command\DeleteProjectSandboxes;
 use Keboola\Console\Command\NotifyProjects;
+use Keboola\Console\Command\RemoveUserFromOrganizationProjects;
 use Symfony\Component\Console\Application;
 use Keboola\Console\Command\SetDataRetention;
 
@@ -53,4 +54,5 @@ $application->add(new OrganizationIntoMaintenanceMode());
 $application->add(new OrganizationStorageBackend());
 $application->add(new DeleteOwnerlessWorkspaces());
 $application->add(new DeleteProjectSandboxes());
+$application->add(new RemoveUserFromOrganizationProjects());
 $application->run();
