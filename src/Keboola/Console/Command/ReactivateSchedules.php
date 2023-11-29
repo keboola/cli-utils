@@ -31,12 +31,11 @@ class ReactivateSchedules extends Command
             ->addArgument(self::ARG_TOKEN, InputArgument::REQUIRED, 'SAPI token of PM')
             ->addArgument(self::ARG_STACK, InputArgument::OPTIONAL, 'stack suffix', 'keboola.com')
             ->addOption(self::OPT_FORCE, 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.');
-
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $force = $input->getOption(self::OPT_FORCE);
+        $isForce = $input->getOption(self::OPT_FORCE);
 
         $this->stackSuffix = $input->getArgument(self::ARG_STACK);
         $token = $input->getArgument(self::ARG_TOKEN);
@@ -53,7 +52,7 @@ class ReactivateSchedules extends Command
             'base_uri' => $schedulerUrl,
             'headers' => [
                 'X-StorageApi-Token' => $token,
-                'Content-Type' => 'application/json'
+                'Content-Type' => 'application/json',
             ],
         ]);
 
@@ -68,11 +67,15 @@ class ReactivateSchedules extends Command
         // - DELETE https://scheduler.keboola.com/configurations/<ID>
         // - POST https://scheduler.keboola.com/schedules with { "configurationId": "<ID>" }
         foreach ($configurations as $configuration) {
-            $output->writeln("Deleting configuration {$configuration['id']}");
-            $guzzleClient->delete('/configurations/' . $configuration['id']);
+            $output->writeln('Deleting configuration ' . $configuration['id']);
+            if ($isForce) {
+                $guzzleClient->delete('/configurations/' . $configuration['id']);
+            }
 
-            $output->writeln("Activating schedule for configuration {$configuration['id']}");
-            $guzzleClient->post('/schedules', ['body' => json_encode(['configurationId' => $configuration['id']])]);
+            $output->writeln('Activating schedule for configuration ' . $configuration['id']);
+            if ($isForce) {
+                $guzzleClient->post('/schedules', ['body' => json_encode(['configurationId' => $configuration['id']])]);
+            }
         }
     }
 
