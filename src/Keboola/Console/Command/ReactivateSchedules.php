@@ -9,10 +9,15 @@ use Keboola\StorageApi\Options\Components\ListComponentConfigurationsOptions;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class ReactivateSchedules extends Command
 {
+    const OPT_FORCE = 'force';
+    const ARG_TOKEN = 'token';
+    const ARG_STACK = 'stack';
+
     private string $stackSuffix;
 
     /**
@@ -23,14 +28,18 @@ class ReactivateSchedules extends Command
         $this
             ->setName('storage:reactivate-schedules')
             ->setDescription('Reactivate schedules after SOX migration')
-            ->addArgument('token', InputArgument::REQUIRED, 'SAPI token of PM')
-            ->addArgument('stack', InputArgument::REQUIRED, 'stack suffix', 'keboola.com');
+            ->addArgument(self::ARG_TOKEN, InputArgument::REQUIRED, 'SAPI token of PM')
+            ->addArgument(self::ARG_STACK, InputArgument::OPTIONAL, 'stack suffix', 'keboola.com')
+            ->addOption(self::OPT_FORCE, 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.');
+
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->stackSuffix = $input->getArgument('stack');
-        $token = $input->getArgument('token');
+        $force = $input->getOption(self::OPT_FORCE);
+
+        $this->stackSuffix = $input->getArgument(self::ARG_STACK);
+        $token = $input->getArgument(self::ARG_TOKEN);
 
         $connectionUrl = $this->buildUrl('connection');
         $schedulerUrl = $this->buildUrl('scheduler');
@@ -44,6 +53,7 @@ class ReactivateSchedules extends Command
             'base_uri' => $schedulerUrl,
             'headers' => [
                 'X-StorageApi-Token' => $token,
+                'Content-Type' => 'application/json'
             ],
         ]);
 
@@ -54,16 +64,15 @@ class ReactivateSchedules extends Command
                 ->setIsDeleted(false)
         );
 
-// for each configuration
-// - DELETE https://scheduler.keboola.com/configurations/<ID>
-// - POST https://scheduler.keboola.com/schedules s { "configurationId": "<ID>" }
-
+        // for each configuration
+        // - DELETE https://scheduler.keboola.com/configurations/<ID>
+        // - POST https://scheduler.keboola.com/schedules with { "configurationId": "<ID>" }
         foreach ($configurations as $configuration) {
-            $output->writeln("deleting configuration {$configuration['id']}");
-            $response = $guzzleClient->delete('/configurations/' . $configuration['id']);
+            $output->writeln("Deleting configuration {$configuration['id']}");
+            $guzzleClient->delete('/configurations/' . $configuration['id']);
 
-            $output->writeln("activating schedule for configuration {$configuration['id']}");
-            $response = $guzzleClient->post('/configurations/', ['configuration' => $configuration['id']]);
+            $output->writeln("Activating schedule for configuration {$configuration['id']}");
+            $guzzleClient->post('/schedules', ['body' => json_encode(['configurationId' => $configuration['id']])]);
         }
     }
 
