@@ -9,16 +9,10 @@ use Keboola\StorageApi\Options\Components\ListComponentConfigurationsOptions;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class ReactivateSchedules extends Command
 {
-    /**
-     * @var OutputInterface
-     */
-    protected $_output;
-
     private string $stackSuffix;
 
     /**
@@ -30,7 +24,7 @@ class ReactivateSchedules extends Command
             ->setName('storage:reactivate-schedules')
             ->setDescription('Reactivate schedules after SOX migration')
             ->addArgument('token', InputArgument::REQUIRED, 'SAPI token of PM')
-            ->addArgument('stack', null, InputOption::VALUE_REQUIRED, 'stack suffix');
+            ->addArgument('stack', InputArgument::REQUIRED, 'stack suffix', 'keboola.com');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
