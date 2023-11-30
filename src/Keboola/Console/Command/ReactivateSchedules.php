@@ -37,6 +37,9 @@ class ReactivateSchedules extends Command
     {
         $isForce = $input->getOption(self::OPT_FORCE);
 
+        $prefix = $isForce ? 'FORCE: ' : 'DRY-RUN: ';
+        $output->writeln('Running ' . ($isForce ? 'force mode' : 'in dry run mode'));
+
         $this->stackSuffix = $input->getArgument(self::ARG_STACK);
         $token = $input->getArgument(self::ARG_TOKEN);
 
@@ -67,12 +70,12 @@ class ReactivateSchedules extends Command
         // - DELETE https://scheduler.keboola.com/configurations/<ID>
         // - POST https://scheduler.keboola.com/schedules with { "configurationId": "<ID>" }
         foreach ($configurations as $configuration) {
-            $output->writeln('Deleting configuration ' . $configuration['id']);
+            $output->writeln($prefix . 'Deleting configuration ' . $configuration['id']);
             if ($isForce) {
                 $guzzleClient->delete('/configurations/' . $configuration['id']);
             }
 
-            $output->writeln('Activating schedule for configuration ' . $configuration['id']);
+            $output->writeln($prefix . 'Activating schedule for configuration ' . $configuration['id']);
             if ($isForce) {
                 $guzzleClient->post('/schedules', ['body' => json_encode(['configurationId' => $configuration['id']])]);
             }
