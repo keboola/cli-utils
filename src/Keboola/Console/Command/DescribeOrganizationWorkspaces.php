@@ -122,7 +122,6 @@ class DescribeOrganizationWorkspaces extends Command
                     ];
                     $csvFile->writeRow($row);
                     $totalProjectWorkspaces ++;
-
                 }
             }
             $output->writeln(
