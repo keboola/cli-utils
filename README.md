@@ -277,7 +277,7 @@ It will perform a dry run unleass the `--force/-f` option is applied.
 
 Arguments:
 - Storage Token *required*
-- Hostname sUffix *optional* (default: keboola.com)
+- Hostname suffix *optional* (default: keboola.com)
 
 Options:
 - `--force/-f` 
@@ -286,6 +286,31 @@ Options:
 - Run the command
     ```
     php ./cli.php storage:delete-ownerless-workspaces [--force/-f] [--includeShared] <storage-token> <hostname-suffix> 
+    ```
+
+## Describe Connection Workspaces for an organization
+This command takes an output file argument and writes out a csv describing all connection workspaces in an organisation.
+The output file has header:
+'projectId',
+'projectName',
+'branchId',
+'branchName',
+'componentId',
+'configurationId',
+'creatorEmail',
+'createdDate',
+'snowflakeSchema',
+'readOnlyStorageAccess'
+
+Arguments:
+- Manage Token *required*
+- Organisation Id *required*
+- Output File *required*
+- Hostname suffix *optional* (default: keboola.com)
+
+- Run the command
+    ```
+    php ./cli.php manage:describe-organization-workspaces <manage-token> <organization-id> <output-file> <hostname-suffix> 
     ```
 
 ## License
