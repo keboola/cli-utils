@@ -110,8 +110,8 @@ class DescribeOrganizationWorkspaces extends Command
                 $output->writeln('Found ' . count($workspaceList) . ' workspaces in branch ' . $branch['name']);
                 $totalProjectWorkspaces += count($workspaceList);
                 foreach ($workspaceList as $workspace) {
-                    $userInProject = count(array_filter($projectUsers, function ($user) use($workspace) {
-                       return $user['email'] === $workspace['creatorToken']['description'];
+                    $userInProject = count(array_filter($projectUsers, function ($user) use ($workspace) {
+                        return $user['email'] === $workspace['creatorToken']['description'];
                     }));
                     $row = [
                         $project['id'],
