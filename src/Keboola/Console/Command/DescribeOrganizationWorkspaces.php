@@ -73,12 +73,14 @@ class DescribeOrganizationWorkspaces extends Command
             'componentId',
             'configurationId',
             'creatorEmail',
+            'activeUser',
             'createdDate',
             'snowflakeSchema',
             'readOnlyStorageAccess'
         ]);
 
         foreach ($projects as $project) {
+            $projectUsers = $manageClient->listProjectUsers($project['id']);
             $storageToken = $manageClient->createProjectStorageToken(
                 $project['id'],
                 ['description' => 'Fetching Workspace Details']
@@ -108,6 +110,9 @@ class DescribeOrganizationWorkspaces extends Command
                 $output->writeln('Found ' . count($workspaceList) . ' workspaces in branch ' . $branch['name']);
                 $totalProjectWorkspaces += count($workspaceList);
                 foreach ($workspaceList as $workspace) {
+                    $userInProject = count(array_filter($projectUsers, function ($user) use($workspace) {
+                       return $user['email'] === $workspace['creatorToken']['description'];
+                    }));
                     $row = [
                         $project['id'],
                         $project['name'],
@@ -116,6 +121,7 @@ class DescribeOrganizationWorkspaces extends Command
                         $workspace['component'],
                         $workspace['configurationId'],
                         $workspace['creatorToken']['description'],
+                        $userInProject > 0 ? 'true' : 'false',
                         $workspace['created'],
                         $workspace['name'],
                         $workspace['readOnlyStorageAccess']
