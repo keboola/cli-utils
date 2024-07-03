@@ -83,7 +83,10 @@ class DescribeOrganizationWorkspaces extends Command
             $projectUsers = $manageClient->listProjectUsers($project['id']);
             $storageToken = $manageClient->createProjectStorageToken(
                 $project['id'],
-                ['description' => 'Fetching Workspace Details']
+                [
+                    'description' => 'Fetching Workspace Details',
+                    'expiresIn' => 500,
+                ]
             );
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
