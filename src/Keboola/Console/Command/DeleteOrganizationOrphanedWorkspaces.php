@@ -84,7 +84,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                 $project['id'],
                 [
                     'description' => 'Maintenance Workspace Cleaner',
-                    'expiresIn' => 300,
+                    'expiresIn' => 1800,
                 ]
             );
             $storageClient = new StorageApiClient([
