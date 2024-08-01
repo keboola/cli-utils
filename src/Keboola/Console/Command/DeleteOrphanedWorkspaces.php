@@ -3,6 +3,7 @@ namespace Keboola\Console\Command;
 
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
+use Keboola\StorageApi\ClientException;
 use Keboola\StorageApi\DevBranches;
 use Keboola\StorageApi\Workspaces;
 use Symfony\Component\Console\Command\Command;
@@ -67,6 +68,7 @@ class DeleteOrphanedWorkspaces extends Command
             $branchStorageClient = new BranchAwareClient($branchId, [
                 'token' => $token,
                 'url' => $url,
+                'backoffMaxTries' => 1,
             ]);
             $workspacesClient = new Workspaces($branchStorageClient);
             $workspaceList = $workspacesClient->listWorkspaces();
@@ -83,7 +85,17 @@ class DeleteOrphanedWorkspaces extends Command
                     $output->writeln('It was created on ' . $workspace['created']);
                     $totalDeletedWorkspaces ++;
                     if ($input->getOption('force')) {
-                        $workspacesClient->deleteWorkspace($workspace['id']);
+                        try{
+                            $workspacesClient->deleteWorkspace($workspace['id']);
+                        } catch (ClientException $clientException) {
+                            $output->writeln(
+                                sprintf(
+                                    'Error deleting workspace %s:%s',
+                                    (string) $workspace['id'],
+                                    $clientException->getMessage()
+                                )
+                            );
+                        }
                     }
                 } else {
                     $output->writeln('Skipping workspace ' . $workspace['id']);
