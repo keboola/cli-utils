@@ -85,7 +85,7 @@ class DeleteOrphanedWorkspaces extends Command
                     $output->writeln('It was created on ' . $workspace['created']);
                     $totalDeletedWorkspaces ++;
                     if ($input->getOption('force')) {
-                        try{
+                        try {
                             $workspacesClient->deleteWorkspace($workspace['id']);
                         } catch (ClientException $clientException) {
                             $output->writeln(
