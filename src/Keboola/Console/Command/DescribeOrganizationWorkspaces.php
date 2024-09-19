@@ -3,6 +3,7 @@ namespace Keboola\Console\Command;
 
 use Keboola\Csv\CsvFile;
 use Keboola\ManageApi\Client;
+use Keboola\ManageApi\ClientException;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\DevBranches;
@@ -81,10 +82,18 @@ class DescribeOrganizationWorkspaces extends Command
 
         foreach ($projects as $project) {
             $projectUsers = $manageClient->listProjectUsers($project['id']);
-            $storageToken = $manageClient->createProjectStorageToken(
-                $project['id'],
-                ['description' => 'Fetching Workspace Details']
-            );
+            try {
+                $storageToken = $manageClient->createProjectStorageToken(
+                    $project['id'],
+                    ['description' => 'Fetching Workspace Details']
+                );
+            } catch (ClientException $e) {
+                if ($e->getCode() === 403) {
+                    $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
+                    continue;
+                }
+            }
+
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
                 'url' => $storageUrl,
