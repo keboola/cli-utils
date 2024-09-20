@@ -85,7 +85,10 @@ class DescribeOrganizationWorkspaces extends Command
             try {
                 $storageToken = $manageClient->createProjectStorageToken(
                     $project['id'],
-                    ['description' => 'Fetching Workspace Details']
+                    [
+                        'description' => 'Fetching Workspace Details',
+                        'expiresIn' => 1800,
+                    ]
                 );
             } catch (ClientException $e) {
                 if ($e->getCode() === 403) {

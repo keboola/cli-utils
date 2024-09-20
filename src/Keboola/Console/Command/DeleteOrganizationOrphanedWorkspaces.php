@@ -2,6 +2,7 @@
 namespace Keboola\Console\Command;
 
 use Keboola\ManageApi\Client;
+use Keboola\ManageApi\ClientException;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\DevBranches;
@@ -79,10 +80,20 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
         $totalDeletedWorkspaces = 0;
 
         foreach ($projects as $project) {
-            $storageToken = $manageClient->createProjectStorageToken(
-                $project['id'],
-                ['description' => 'Maintenance Workspace Cleaner']
-            );
+            try {
+                $storageToken = $manageClient->createProjectStorageToken(
+                    $project['id'],
+                    [
+                        'description' => 'Maintenance Workspace Cleaner',
+                        'expiresIn' => 1800,
+                    ]
+                );
+            } catch (ClientException $e) {
+                if ($e->getCode() === 403) {
+                    $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
+                    continue;
+                }
+            }
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
                 'url' => $storageUrl,
