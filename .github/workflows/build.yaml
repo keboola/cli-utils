@@ -17,10 +17,10 @@ jobs:
       run: cp .env.dist .env
 
     - name: Build container
-      run: docker-compose build app
+      run: docker compose build app
 
     - name: Run tests
-      run: docker-compose run --rm app ./vendor/bin/phpcs --standard=psr2 --ignore=vendor -n .
+      run: docker compose run --rm app ./vendor/bin/phpcs --standard=psr2 --ignore=vendor -n .
 
     - name: Push
       if: startsWith(github.ref, 'refs/tags/')
