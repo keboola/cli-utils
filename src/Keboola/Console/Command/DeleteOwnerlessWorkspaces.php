@@ -85,13 +85,17 @@ class DeleteOwnerlessWorkspaces extends Command
 
             if (!in_array($sandbox->getType(), Sandbox::CONTAINER_TYPES)) {
                 // it is a database workspace
-                $output->writeln('Deleting inactive storage workspace ' . $sandbox->getPhysicalId());
-                $totalDeletedStorageWorkspaces++;
-                if ($force) {
-                    $workspacesClient->deleteWorkspace($sandbox->getPhysicalId());
+                if (empty($sandbox->getPhysicalId())) {
+                    $output->writeln('No underlying storage workspace found for sandboxId ' . $sandbox->getId());
+                } else {
+                    $output->writeln('Deleting inactive storage workspace ' . $sandbox->getPhysicalId());
+                    $totalDeletedStorageWorkspaces++;
+                    if ($force) {
+                        $workspacesClient->deleteWorkspace($sandbox->getPhysicalId());
+                    }
                 }
             } elseif (!empty($sandbox->getStagingWorkspaceId())) {
-                $output->writeln('Deleting inactive staging storage workspace ' . $sandbox->getPhysicalId());
+                $output->writeln('Deleting inactive staging storage workspace ' . $sandbox->getStagingWorkspaceId());
                 $totalDeletedStorageWorkspaces++;
                 if ($force) {
                     $workspacesClient->deleteWorkspace($sandbox->getStagingWorkspaceId(), [], true);
