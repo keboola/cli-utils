@@ -72,9 +72,9 @@ class DeleteOwnerlessWorkspaces extends Command
             try {
                 $tokensClient->getToken($sandbox->getTokenId());
                 continue; // token exists so no need to do anything
-            } catch (ClientException $exception) {
+            } catch (\Throwable $exception) {
                 if ($exception->getCode() !== 404) {
-                    throw $e;
+                    throw $exception;
                 }
             }
 
