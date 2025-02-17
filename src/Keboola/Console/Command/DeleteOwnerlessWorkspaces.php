@@ -52,6 +52,7 @@ class DeleteOwnerlessWorkspaces extends Command
         $storageClient = new StorageApiClient([
             'token' => $token,
             'url' => $url,
+            'backoffMaxTries' => 1,
         ]);
         $workspacesClient = new Workspaces($storageClient);
         $tokensClient = new Tokens($storageClient);
@@ -91,14 +92,14 @@ class DeleteOwnerlessWorkspaces extends Command
                     $output->writeln('Deleting inactive storage workspace ' . $sandbox->getPhysicalId());
                     $totalDeletedStorageWorkspaces++;
                     if ($force) {
-                        $workspacesClient->deleteWorkspace($sandbox->getPhysicalId());
+                        $this->deleteStorageWorkspace($workspacesClient, $sandbox->getPhysicalId(), $output);
                     }
                 }
             } elseif (!empty($sandbox->getStagingWorkspaceId())) {
                 $output->writeln('Deleting inactive staging storage workspace ' . $sandbox->getStagingWorkspaceId());
                 $totalDeletedStorageWorkspaces++;
                 if ($force) {
-                    $workspacesClient->deleteWorkspace($sandbox->getStagingWorkspaceId(), [], true);
+                    $this->deleteStorageWorkspace($workspacesClient, $sandbox->getStagingWorkspaceId(), $output);
                 }
             }
 
@@ -113,5 +114,23 @@ class DeleteOwnerlessWorkspaces extends Command
             $totalDeletedSandboxes,
             $totalDeletedStorageWorkspaces
         ));
+    }
+
+    private function deleteStorageWorkspace(
+        Workspaces $workspacesClient,
+        string $workspaceId,
+        OutputInterface $output): void
+    {
+        try {
+            $workspacesClient->deleteWorkspace($workspaceId);
+        } catch (\Throwable $clientException) {
+            $output->writeln(
+                sprintf(
+                    'Error deleting workspace %s:%s',
+                    $workspaceId,
+                    $clientException->getMessage()
+                )
+            );
+        }
     }
 }
