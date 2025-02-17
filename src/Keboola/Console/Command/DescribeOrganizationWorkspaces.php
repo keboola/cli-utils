@@ -117,7 +117,6 @@ class DescribeOrganizationWorkspaces extends Command
                 $workspacesClient = new Workspaces($branchStorageClient);
                 $workspaceList = $workspacesClient->listWorkspaces();
                 $output->writeln('Found ' . count($workspaceList) . ' workspaces in branch ' . $branch['name']);
-                $totalProjectWorkspaces += count($workspaceList);
                 foreach ($workspaceList as $workspace) {
                     $userInProject = count(array_filter($projectUsers, function ($user) use ($workspace) {
                         return $user['email'] === $workspace['creatorToken']['description'];
