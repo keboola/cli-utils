@@ -29,6 +29,7 @@ use Keboola\Console\Command\DeletedProjectsPurge;
 use Keboola\Console\Command\DeleteProjectSandboxes;
 use Keboola\Console\Command\NotifyProjects;
 use Keboola\Console\Command\RemoveUserFromOrganizationProjects;
+use Keboola\Console\Command\TruncateTables;
 use Symfony\Component\Console\Application;
 use Keboola\Console\Command\SetDataRetention;
 
@@ -59,4 +60,5 @@ $application->add(new DeleteProjectSandboxes());
 $application->add(new RemoveUserFromOrganizationProjects());
 $application->add(new ReactivateSchedules());
 $application->add(new DescribeOrganizationWorkspaces());
+$application->add(new TruncateTables());
 $application->run();
