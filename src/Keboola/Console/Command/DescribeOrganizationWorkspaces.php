@@ -3,6 +3,7 @@ namespace Keboola\Console\Command;
 
 use Keboola\Csv\CsvFile;
 use Keboola\ManageApi\Client;
+use Keboola\ManageApi\ClientException;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\DevBranches;
@@ -73,16 +74,26 @@ class DescribeOrganizationWorkspaces extends Command
             'componentId',
             'configurationId',
             'creatorEmail',
+            'activeUser',
             'createdDate',
             'snowflakeSchema',
             'readOnlyStorageAccess'
         ]);
 
         foreach ($projects as $project) {
-            $storageToken = $manageClient->createProjectStorageToken(
-                $project['id'],
-                ['description' => 'Fetching Workspace Details']
-            );
+            $projectUsers = $manageClient->listProjectUsers($project['id']);
+            try {
+                $storageToken = $manageClient->createProjectStorageToken(
+                    $project['id'],
+                    ['description' => 'Fetching Workspace Details']
+                );
+            } catch (ClientException $e) {
+                if ($e->getCode() === 403) {
+                    $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
+                    continue;
+                }
+            }
+
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
                 'url' => $storageUrl,
@@ -106,8 +117,10 @@ class DescribeOrganizationWorkspaces extends Command
                 $workspacesClient = new Workspaces($branchStorageClient);
                 $workspaceList = $workspacesClient->listWorkspaces();
                 $output->writeln('Found ' . count($workspaceList) . ' workspaces in branch ' . $branch['name']);
-                $totalProjectWorkspaces += count($workspaceList);
                 foreach ($workspaceList as $workspace) {
+                    $userInProject = count(array_filter($projectUsers, function ($user) use ($workspace) {
+                        return $user['email'] === $workspace['creatorToken']['description'];
+                    }));
                     $row = [
                         $project['id'],
                         $project['name'],
@@ -116,6 +129,7 @@ class DescribeOrganizationWorkspaces extends Command
                         $workspace['component'],
                         $workspace['configurationId'],
                         $workspace['creatorToken']['description'],
+                        $userInProject > 0 ? 'true' : 'false',
                         $workspace['created'],
                         $workspace['name'],
                         $workspace['readOnlyStorageAccess']
