@@ -28,7 +28,7 @@ class MassDeleteProjectWorkspaces extends Command
     {
         $this
             ->setName('manage:mass-delete-project-workspaces')
-            ->setDescription('Mass project enable dynamic backends')
+            ->setDescription('Delete all project workspaces based on given list in file. [Works only for SNFLK now].')
             ->addArgument(self::ARGUMENT_STACK_SUFFIX, InputArgument::REQUIRED, 'stack suffix "keboola.com, eu-central-1.keboola.com"')
             ->addArgument(self::ARGUMENT_SOURCE_FILE, InputArgument::REQUIRED, 'Source csv with "prjId,workspaceSchema" columns')
             ->addOption(self::OPTION_FORCE, 'f', InputOption::VALUE_NONE, 'Write changes');
@@ -176,7 +176,7 @@ class MassDeleteProjectWorkspaces extends Command
 
             if (count($map[$projectId]) !== 0) {
                 $output->writeln([
-                    sprintf('Following schemas was not found and needs to be deleted manually:'),
+                    sprintf('Following schemas were not found and needs to be deleted manually:'),
                     ...$map[$projectId],
                 ]);
             }
