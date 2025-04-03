@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Command;
 
+use InvalidArgumentException;
 use Keboola\Csv\CsvFile;
 use Keboola\JobQueueClient\JobData;
 use Keboola\Sandboxes\Api\Client as SandboxesClient;
@@ -32,7 +33,7 @@ class MassDeleteProjectWorkspaces extends Command
             ->setName('manage:mass-delete-project-workspaces')
             ->setDescription('Delete all project workspaces based on given list in file. [Works only for SNFLK now].')
             ->addArgument(self::ARGUMENT_STACK_SUFFIX, InputArgument::REQUIRED, 'stack suffix "keboola.com, eu-central-1.keboola.com"')
-            ->addArgument(self::ARGUMENT_SOURCE_FILE, InputArgument::REQUIRED, 'Source csv with "prjId,workspaceSchema" columns')
+            ->addArgument(self::ARGUMENT_SOURCE_FILE, InputArgument::REQUIRED, 'Source csv with "project id,workspace schema" columns and no header.')
             ->addOption(self::OPTION_FORCE, 'f', InputOption::VALUE_NONE, 'Write changes');
     }
 
@@ -54,11 +55,17 @@ class MassDeleteProjectWorkspaces extends Command
          */
         $map = [];
         $csv = new CsvFile($sourceFile);
-        foreach ($csv as $i => $line) {
-            if ($i === 0) {
-                // skip header
-                continue;
+        foreach ($csv as $line) {
+            if (count($line) !== 2) {
+                throw new InvalidArgumentException('File must contain exactly two columns.');
             }
+            if (!is_numeric($line[0])) {
+                throw new InvalidArgumentException(sprintf('Project id "%s" is not numeric.', $line[0]));
+            }
+            if (!str_starts_with($line[1], 'WORKSPACE_')) {
+                throw new InvalidArgumentException(sprintf('Workspace "%s" does not start with "WORKSPACE_".', $line[1]));
+            }
+
             if (array_key_exists($line[0], $map)) {
                 $map[$line[0]][] = $line[1];
             } else {
