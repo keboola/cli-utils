@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Keboola\Console\Command;
 
 use Keboola\Csv\CsvFile;
+use Keboola\JobQueueClient\JobData;
 use Keboola\Sandboxes\Api\Client as SandboxesClient;
+use Keboola\JobQueueClient\Client as QueueClient;
+use Keboola\Sandboxes\Api\ListOptions;
 use Keboola\Sandboxes\Api\Sandbox;
 use Keboola\StorageApi\Client;
-use Keboola\StorageApi\ClientException as StorageApiClientException;
-use Keboola\StorageApi\Components;
+use Keboola\StorageApi\DevBranches;
 use Keboola\StorageApi\Workspaces;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -38,6 +40,7 @@ class MassDeleteProjectWorkspaces extends Command
     {
         $connectionUrl = 'https://connection.' . $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
         $sandboxesUrl = 'https://sandboxes.' . $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
+        $jobsUrl = 'https://queue.' . $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
         $force = $input->getOption(self::OPTION_FORCE);
@@ -71,10 +74,10 @@ class MassDeleteProjectWorkspaces extends Command
 //            ],
 //        ];
 
-        foreach ($map as $projectId => $workspaces) {
+        foreach ($map as $projectId => $workspacesSchemasToDelete) {
             $helper = $this->getHelper('question');
             $question = new Question(sprintf(
-                'Paster storage token for project "%s" to continue.' . PHP_EOL,
+                'Paste storage token for project "%s" to continue.' . PHP_EOL,
                 $projectId,
             ));
             $storageToken = $helper->ask($input, $output, $question);
@@ -83,101 +86,106 @@ class MassDeleteProjectWorkspaces extends Command
                 'token' => $storageToken,
                 'url' => $connectionUrl,
             ]);
-            $workspacesClient = new Workspaces($storageClient);
-            $componentsClient = new Components($storageClient);
             $sandboxesClient = new SandboxesClient(
                 $sandboxesUrl,
                 $storageToken
             );
+            $jobsClient = new QueueClient(
+                $jobsUrl,
+                $storageToken
+            );
 
-            /** @var Sandbox $sandbox */
-            foreach ($sandboxesClient->list() as $sandbox) {
-                if ($sandbox->getWorkspaceDetails() === [] || !array_key_exists('connection', $sandbox->getWorkspaceDetails())) {
-                    continue; // skip sandboxes
+            $branchesClient = new DevBranches($storageClient);
+
+            $jobs = [];
+            foreach ($branchesClient->listBranches() as $branch) {
+                $output->writeln(sprintf('Checking branch "%s" for sandboxes.', $branch['id']));
+                $branchId = (string) $branch['id'];
+                if ($branch['isDefault']) {
+                    $branchId = null;
                 }
-                foreach ($workspaces as $schema) {
-                    $output->writeln(sprintf('Checking sandbox "%s" with schema "%s"', $sandbox->getWorkspaceDetails()['connection']['schema'], $schema));
-                    if ($schema === $sandbox->getWorkspaceDetails()['connection']['schema']) {
-                        $output->writeln(sprintf(
-                            'Sandbox "%s" with schema "%s" found.',
-                            $sandbox->getId(),
-                            $schema,
+                /** @var Sandbox $sandbox */
+                foreach ($sandboxesClient->list((new ListOptions())->setBranchId($branchId)) as $sandbox) {
+                    $schema = $sandbox->getWorkspaceDetails()['connection']['schema'] ?? null;
+                    if (!in_array($schema, $workspacesSchemasToDelete, true)) {
+                        continue;
+                    }
+                    $output->writeln(sprintf(
+                        'Sandbox "%s" with schema "%s" found.',
+                        $sandbox->getId(),
+                        $schema,
+                    ));
+
+                    // remove found schema from map
+                    unset($map[$projectId][array_search($schema, $map[$projectId], true)]);
+
+                    if ($force) {
+                        $jobs[] = $job = $jobsClient->createJob(new JobData(
+                            'keboola.sandboxes',
+                            null,
+                            [
+                                'parameters' => [
+                                    'task' => 'delete',
+                                    'id' => $sandbox->getId(),
+                                ],
+                            ],
+
                         ));
-                        // remove found schema from map
-                        unset($map[$projectId][array_search($schema, $map[$projectId])]);
-
-                        $output->writeln('Looking for configuration.');
-                        $configuration = null;
-                        try {
-                            $configuration = $componentsClient->getConfiguration('keboola.sandboxes', $sandbox->getConfigurationId());
-                            $output->writeln(sprintf(
-                                'Configuration "%s" found.',
-                                $configuration['id'],
-                            ));
-                        } catch (StorageApiClientException $e) {
-                            $output->writeln(sprintf(
-                                'Configuration "keboola.sandboxes"->"%s" not found.',
-                                $sandbox->getConfigurationId(),
-                            ));
-                        }
-
-                        $output->writeln('Looking for storage workspace.');
-                        $storageWorkspace = null;
-                        try {
-                            $storageWorkspace = $workspacesClient->getWorkspace($sandbox->getPhysicalId());
-                            $output->writeln(sprintf(
-                                'Storage workspace "%s" found.',
-                                $storageWorkspace['id'],
-                            ));
-                        } catch (StorageApiClientException $e) {
-                            $output->writeln(sprintf(
-                                'Workspace "%s" not found.',
-                                $sandbox->getPhysicalId(),
-                            ));
-                        }
-                        // workspace is sandbox and we can delete configuration,sandbox and workspace
-                        if ($force) {
-                            $output->writeln(sprintf('Deleting sandbox "%s" with schema "%s"', $sandbox->getId(), $schema));
-                            $sandboxesClient->delete($sandbox->getId());
-                            if ($configuration !== null) {
-                                $output->writeln(sprintf('Deleting configuration "%s"', $configuration['id']));
-                                $componentsClient->deleteConfiguration('keboola.sandboxes', $configuration['id']);
-                            }
-                            if ($storageWorkspace !== null) {
-                                $output->writeln(sprintf('Deleting storage workspace "%s"', $storageWorkspace['id']));
-                                $workspacesClient->deleteWorkspace($storageWorkspace['id']);
-                            }
-                        } else {
-                            $output->writeln('[DRY-RUN] Resources would be deleted');
-                        }
+                        $output->writeln(sprintf(
+                            'Created delete job "%s" for project "%s"',
+                            $job['id'],
+                            $projectId
+                        ));
+                    } else {
+                        $output->writeln(sprintf(
+                            '[DRY-RUN] Created delete job "%s" for project "%s"',
+                            '<some job id>',
+                            $projectId
+                        ));
                     }
                 }
             }
 
-            foreach ($workspacesClient->listWorkspaces() as $workspace) {
-                foreach ($map[$projectId] as $workspaceOnlyInStorage) {
-                    if ($workspace['connection']['schema'] === $workspaceOnlyInStorage) {
+            $output->writeln('Waiting for delete jobs to finish.');
+            while (count($jobs) > 0) {
+                foreach ($jobs as $i => $job) {
+                    $jobRes = $jobsClient->getJob((string) $job['id']);
+                    if ($jobRes['isFinished'] === true) {
                         $output->writeln(sprintf(
-                            'Workspace "%s" with schema "%s" found.',
-                            $workspace['id'],
-                            $workspaceOnlyInStorage,
+                            'Delete job "%s" finished with status "%s"',
+                            $job['id'],
+                            $jobRes['status']
                         ));
-                        // remove found schema from map
-                        unset($map[$projectId][array_search($workspaceOnlyInStorage, $map[$projectId])]);
-                        if ($force) {
-                            $output->writeln(sprintf('Deleting workspace "%s" with schema "%s"', $workspace['id'], $workspaceOnlyInStorage));
-                            $workspacesClient->deleteWorkspace($workspace['id']);
-                        } else {
-                            $output->writeln('[DRY-RUN] Resources would be deleted');
-                        }
+                        unset($jobs[$i]);
+                    }
+                }
+                sleep(2);
+            }
+
+            foreach ($branchesClient->listBranches() as $branch) {
+                $output->writeln(sprintf('Checking branch "%s" for storage workspaces.', $branch['id']));
+                $workspacesClient = new Workspaces(
+                    $storageClient->getBranchAwareClient($branch['id'])
+                );
+                foreach ($workspacesClient->listWorkspaces() as $workspace) {
+                    if (!in_array($workspace['connection']['schema'], $map[$projectId], true)) {
+                        continue;
+                    }
+                    // remove found schema from map
+                    unset($map[$projectId][array_search($workspace['connection']['schema'], $map[$projectId], true)]);
+                    if ($force) {
+                        $output->writeln(sprintf('Deleting workspace "%s" with schema "%s"', $workspace['id'], $workspace['connection']['schema']));
+                        $workspacesClient->deleteWorkspace($workspace['id']);
+                    } else {
+                        $output->writeln(sprintf('[DRY-RUN] Deleting workspace "%s" with schema "%s"', $workspace['id'], $workspace['connection']['schema']));
                     }
                 }
             }
 
             if (count($map[$projectId]) !== 0) {
                 $output->writeln([
-                    sprintf('Following schemas were not found and needs to be deleted manually:'),
-                    ...$map[$projectId],
+                    '<error>Following schemas were not found (are deleted or needs to be deleted manually): %s</error>',
+                    implode(', ', $map[$projectId]),
                 ]);
             }
         }
