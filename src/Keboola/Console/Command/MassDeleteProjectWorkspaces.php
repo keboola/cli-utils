@@ -136,7 +136,6 @@ class MassDeleteProjectWorkspaces extends Command
                                     'id' => $sandbox->getId(),
                                 ],
                             ],
-
                         ));
                         $output->writeln(sprintf(
                             'Created delete job "%s" for project "%s"',
