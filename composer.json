@@ -1,7 +1,7 @@
 {
     "name": "keboola/cli-utils",
     "require": {
-        "php": "^7.4|^8",
+        "php": "^8.2",
         "symfony/console": "^3.1",
         "keboola/sandboxes-api-php-client": "^6.31",
         "keboola/storage-api-client": "^14",
