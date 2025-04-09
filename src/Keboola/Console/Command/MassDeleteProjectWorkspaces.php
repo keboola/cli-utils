@@ -127,7 +127,7 @@ class MassDeleteProjectWorkspaces extends Command
                     unset($map[$projectId][array_search($schema, $map[$projectId], true)]);
 
                     if ($force) {
-                        $jobs[] = $job = $jobsClient->createJob(new JobData(
+                        $job = $jobsClient->createJob(new JobData(
                             'keboola.sandboxes',
                             null,
                             [
@@ -137,6 +137,10 @@ class MassDeleteProjectWorkspaces extends Command
                                 ],
                             ],
                         ));
+
+                        $job['sandbox'] = $sandbox;
+                        $jobs[] = $job;
+
                         $output->writeln(sprintf(
                             'Created delete job "%s" for project "%s"',
                             $job['id'],
@@ -158,8 +162,10 @@ class MassDeleteProjectWorkspaces extends Command
                     $jobRes = $jobsClient->getJob((string) $job['id']);
                     if ($jobRes['isFinished'] === true) {
                         $output->writeln(sprintf(
-                            'Delete job "%s" finished with status "%s"',
+                            'Delete job "%s" for sandbox "%s" with schema "%s" finished with status "%s"',
                             $job['id'],
+                            $job['sandbox']->getId(),
+                            $job['sandbox']->getWorkspaceDetails()['connection']['schema'],
                             $jobRes['status']
                         ));
                         unset($jobs[$i]);
@@ -181,7 +187,7 @@ class MassDeleteProjectWorkspaces extends Command
                     unset($map[$projectId][array_search($workspace['connection']['schema'], $map[$projectId], true)]);
                     if ($force) {
                         $output->writeln(sprintf('Deleting workspace "%s" with schema "%s"', $workspace['id'], $workspace['connection']['schema']));
-                        $workspacesClient->deleteWorkspace($workspace['id']);
+                        $workspacesClient->deleteWorkspace($workspace['id'], [], true);
                     } else {
                         $output->writeln(sprintf('[DRY-RUN] Deleting workspace "%s" with schema "%s"', $workspace['id'], $workspace['connection']['schema']));
                     }
@@ -190,7 +196,7 @@ class MassDeleteProjectWorkspaces extends Command
 
             if (count($map[$projectId]) !== 0) {
                 $output->writeln([
-                    '<error>Following schemas were not found (are deleted or needs to be deleted manually): %s</error>',
+                    '<error>Following schemas were not found (are deleted or needs to be deleted manually):</error>',
                     implode(', ', $map[$projectId]),
                 ]);
             }
