@@ -32,6 +32,7 @@ use Keboola\Console\Command\NotifyProjects;
 use Keboola\Console\Command\RemoveUserFromOrganizationProjects;
 use Symfony\Component\Console\Application;
 use Keboola\Console\Command\SetDataRetention;
+use Keboola\Console\Command\UpdateDataRetention;
 
 $application = new Application();
 $application->add(new MassDedup());
@@ -61,4 +62,5 @@ $application->add(new RemoveUserFromOrganizationProjects());
 $application->add(new ReactivateSchedules());
 $application->add(new DescribeOrganizationWorkspaces());
 $application->add(new MassDeleteProjectWorkspaces());
+$application->add(new UpdateDataRetention());
 $application->run();
