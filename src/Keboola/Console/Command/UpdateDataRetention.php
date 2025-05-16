@@ -28,7 +28,7 @@ class UpdateDataRetention extends Command
     {
         $this
             ->setName('manage:update-data-retention')
-            ->setDescription('Update data retention time in days for all projects')
+            ->setDescription('Update data retention time in days for all projects on the whole stack.')
             ->addArgument(self::ARG_TOKEN, InputArgument::REQUIRED, 'manage token')
             ->addArgument(self::ARG_URL, InputArgument::REQUIRED, 'Stack URL')
             ->addArgument(self::ARG_DATA_RETENTION, InputArgument::REQUIRED, 'Data retention time in days')
