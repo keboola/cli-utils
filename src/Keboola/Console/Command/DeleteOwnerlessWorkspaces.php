@@ -12,6 +12,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteOwnerlessWorkspaces extends Command
@@ -53,6 +54,7 @@ class DeleteOwnerlessWorkspaces extends Command
             'token' => $token,
             'url' => $url,
             'backoffMaxTries' => 1,
+            'logger' => new ConsoleLogger($output),
         ]);
         $workspacesClient = new Workspaces($storageClient);
         $tokensClient = new Tokens($storageClient);

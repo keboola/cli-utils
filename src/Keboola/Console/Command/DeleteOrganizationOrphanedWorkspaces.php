@@ -5,7 +5,6 @@ use Keboola\ManageApi\Client;
 use Keboola\ManageApi\ClientException;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
-use Keboola\StorageApi\ClientException;
 use Keboola\StorageApi\DevBranches;
 use Keboola\StorageApi\Tokens;
 use Keboola\StorageApi\Workspaces;
@@ -13,6 +12,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteOrganizationOrphanedWorkspaces extends Command
@@ -98,6 +98,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
                 'url' => $storageUrl,
+                'logger' => new ConsoleLogger($output),
             ]);
             $devBranches = new DevBranches($storageClient);
             $branchesList = $devBranches->listBranches();

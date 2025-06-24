@@ -12,6 +12,7 @@ use Keboola\StorageApi\Workspaces;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class DescribeOrganizationWorkspaces extends Command
@@ -100,6 +101,7 @@ class DescribeOrganizationWorkspaces extends Command
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
                 'url' => $storageUrl,
+                'logger' => new ConsoleLogger($output),
             ]);
             $devBranches = new DevBranches($storageClient);
             $branchesList = $devBranches->listBranches();
