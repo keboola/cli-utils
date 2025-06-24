@@ -121,8 +121,8 @@ class DeleteOwnerlessWorkspaces extends Command
     private function deleteStorageWorkspace(
         Workspaces $workspacesClient,
         string $workspaceId,
-        OutputInterface $output): void
-    {
+        OutputInterface $output
+    ): void {
         try {
             $workspacesClient->deleteWorkspace($workspaceId);
         } catch (\Throwable $clientException) {
