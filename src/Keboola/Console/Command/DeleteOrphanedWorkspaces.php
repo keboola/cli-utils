@@ -1,7 +1,9 @@
 <?php
+
 namespace Keboola\Console\Command;
 
-use Keboola\StorageApi\BranchAwareClient;
+use InvalidArgumentException;
+use Keboola\ManageApi\Client;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\ClientException;
 use Keboola\StorageApi\DevBranches;
@@ -10,6 +12,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteOrphanedWorkspaces extends Command
@@ -20,6 +23,8 @@ class DeleteOrphanedWorkspaces extends Command
             ->setName('storage:delete-orphaned-workspaces')
             ->setDescription('Bulk delete orphaned workspaces of this project.')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.')
+            ->addOption('ignore-backend-errors', 'i', InputOption::VALUE_NONE, 'Use [--ignore-backend-errors, -i] to run delete using commands API. [--manage-token, -m] must be supplied for this action.')
+            ->addOption('manage-token', 'm', InputOption::VALUE_OPTIONAL, 'Use [--manage-token, -m] to delete workspace via Command API. Manage token must be super admin token.')
             ->addArgument(
                 'storageToken',
                 InputArgument::REQUIRED,
@@ -47,29 +52,36 @@ class DeleteOrphanedWorkspaces extends Command
     protected function execute(InputInterface $input, OutputInterface $output): void
     {
         $token = $input->getArgument('storageToken');
+        $componentToDelete = $input->getArgument('orphanComponent');
+        $isForce = (bool) $input->getOption('force');
+        $ignoreBackendErrors = (bool) $input->getOption('ignore-backend-errors');
+        $manageToken = $input->getOption('manage-token');
+        if ($ignoreBackendErrors && !$manageToken) {
+            throw new InvalidArgumentException('Manage token must be supplied for ignore-backend-errors.');
+        }
         $url = 'https://connection.' . $input->getArgument('hostnameSuffix');
 
         $storageClient = new StorageApiClient([
             'token' => $token,
             'url' => $url,
+            'logger' => new ConsoleLogger($output),
         ]);
         $devBranches = new DevBranches($storageClient);
         $branchesList = $devBranches->listBranches();
 
-        if ($input->getOption('force')) {
+        $output->writeln('Workspaces for component ' . $componentToDelete . ' will be deleted from ' . $url);
+
+        if ($isForce) {
             $output->writeln('Force option is set, doing it for real');
         } else {
             $output->writeln('This is just a dry-run, nothing will be actually deleted');
         }
+        $toDelete = [];
         $totalWorkspaces = 0;
         $totalDeletedWorkspaces = 0;
         foreach ($branchesList as $branch) {
             $branchId = $branch['id'];
-            $branchStorageClient = new BranchAwareClient($branchId, [
-                'token' => $token,
-                'url' => $url,
-                'backoffMaxTries' => 1,
-            ]);
+            $branchStorageClient = $storageClient->getBranchAwareClient($branchId);
             $workspacesClient = new Workspaces($branchStorageClient);
             $workspaceList = $workspacesClient->listWorkspaces();
             $output->writeln('Found ' . count($workspaceList) . ' workspaces in branch ' . $branch['name']);
@@ -77,17 +89,21 @@ class DeleteOrphanedWorkspaces extends Command
             foreach ($workspaceList as $workspace) {
                 $shouldDropWorkspace = $this->isWorkspaceOrphaned(
                     $workspace,
-                    $input->getArgument('orphanComponent'),
+                    $componentToDelete,
                     strtotime($input->getArgument('untilDate'))
                 );
                 if ($shouldDropWorkspace) {
                     $output->writeln('Deleting orphaned workspace ' . $workspace['id']);
                     $output->writeln('It was created on ' . $workspace['created']);
-                    $totalDeletedWorkspaces ++;
-                    if ($input->getOption('force')) {
+                    $totalDeletedWorkspaces++;
+                    if ($ignoreBackendErrors) {
+                        $toDelete[] = $workspace['id'];
+                    }
+                    if ($isForce && !$ignoreBackendErrors) {
+                        $output->writeln('Deleting orphaned workspace via SYNC API call' . $workspace['id']);
                         try {
                             $workspacesClient->deleteWorkspace($workspace['id']);
-                        } catch (ClientException $clientException) {
+                        } catch (\Throwable $clientException) {
                             $output->writeln(
                                 sprintf(
                                     'Error deleting workspace %s:%s',
@@ -104,6 +120,27 @@ class DeleteOrphanedWorkspaces extends Command
                 }
             }
         }
+
+        if ($ignoreBackendErrors && count($toDelete) > 0) {
+            $parameters = [
+                '--ids',
+                implode(',', array_map(fn($i) => (string) $i, $toDelete)),
+            ];
+            if ($isForce) {
+                $parameters[] = '--force';
+            }
+            $output->writeln('Deleting orphaned workspaces by command API "' . implode(' ', $toDelete) . '"');
+            $manageClient = new Client([
+                'token' => $manageToken,
+                'url' => $url,
+            ]);
+            $response = $manageClient->runCommand([
+                'command' => 'storage:workspace:drop-failed-workspaces-from-metadata',
+                'parameters' => $parameters,
+            ]);
+            $output->writeln(sprintf(' - Command ID: %s', $response['commandExecutionId']));
+        }
+
         $output->writeln(sprintf(
             'Of %d total workspaces found, %d were deleted.',
             $totalWorkspaces,
