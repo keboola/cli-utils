@@ -64,7 +64,6 @@ class DescribeOrganizationWorkspaces extends Command
         $storageUrl = 'https://connection.' . $input->getArgument('hostnameSuffix');
 
         $totalWorkspaces = 0;
-        $totalDeletedWorkspaces = 0;
 
         $csvFile = new CsvFile($outputFile);
         $csvFile->writeRow([
@@ -91,7 +90,7 @@ class DescribeOrganizationWorkspaces extends Command
                         'expiresIn' => 1800,
                     ]
                 );
-            } catch (ClientException $e) {
+            } catch (\Throwable $e) {
                 if ($e->getCode() === 403) {
                     $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
                     continue;

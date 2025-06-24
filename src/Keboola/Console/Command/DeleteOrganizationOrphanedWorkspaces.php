@@ -89,7 +89,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                         'expiresIn' => 1800,
                     ]
                 );
-            } catch (ClientException $e) {
+            } catch (\Throwable $e) {
                 if ($e->getCode() === 403) {
                     $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
                     continue;
@@ -135,7 +135,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                         if ($force) {
                             try {
                                 $workspacesClient->deleteWorkspace($workspace['id']);
-                            } catch (ClientException $clientException) {
+                            } catch (\Throwable $clientException) {
                                 $output->writeln(
                                     sprintf(
                                         'Error deleting workspace %s:%s',
