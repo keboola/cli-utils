@@ -4,6 +4,7 @@ namespace Keboola\Console\Command;
 use Keboola\ManageApi\Client;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
+use Keboola\StorageApi\ClientException;
 use Keboola\StorageApi\DevBranches;
 use Keboola\StorageApi\Tokens;
 use Keboola\StorageApi\Workspaces;
@@ -81,7 +82,10 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
         foreach ($projects as $project) {
             $storageToken = $manageClient->createProjectStorageToken(
                 $project['id'],
-                ['description' => 'Maintenance Workspace Cleaner']
+                [
+                    'description' => 'Maintenance Workspace Cleaner',
+                    'expiresIn' => 1800,
+                ]
             );
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
@@ -104,6 +108,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                 $branchStorageClient = new BranchAwareClient($branchId, [
                     'token' => $storageToken['token'],
                     'url' => $storageUrl,
+                    'backoffMaxTries' => 1,
                 ]);
                 $workspacesClient = new Workspaces($branchStorageClient);
                 $workspaceList = $workspacesClient->listWorkspaces();
@@ -117,15 +122,29 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                     );
                     if ($shouldDropWorkspace) {
                         $output->writeln('Deleting orphaned workspace ' . $workspace['id']);
-                        $output->writeln('It was created on ' . $workspace['created']);
                         $totalProjectDeletedWorkspaces ++;
                         if ($force) {
-                            $workspacesClient->deleteWorkspace($workspace['id']);
+                            try {
+                                $workspacesClient->deleteWorkspace($workspace['id']);
+                            } catch (ClientException $clientException) {
+                                $output->writeln(
+                                    sprintf(
+                                        'Error deleting workspace %s:%s',
+                                        (string) $workspace['id'],
+                                        $clientException->getMessage()
+                                    )
+                                );
+                            }
                         }
                     } else {
-                        $output->writeln('Skipping workspace ' . $workspace['id']);
-                        $output->writeln('It was created on ' . $workspace['created']);
-                        $output->writeln('It is of type ' . $workspace['component']);
+                        $output->writeln(
+                            sprintf(
+                                'Skipping %s workspace %s created on %s',
+                                $workspace['component'],
+                                (string) $workspace['id'],
+                                $workspace['created']
+                            )
+                        );
                     }
                 }
             }

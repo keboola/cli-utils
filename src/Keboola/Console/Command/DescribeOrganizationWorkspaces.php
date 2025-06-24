@@ -84,9 +84,12 @@ class DescribeOrganizationWorkspaces extends Command
             $projectUsers = $manageClient->listProjectUsers($project['id']);
             try {
                 $storageToken = $manageClient->createProjectStorageToken(
-                    $project['id'],
-                    ['description' => 'Fetching Workspace Details']
-                );
+                $project['id'],
+                [
+                    'description' => 'Fetching Workspace Details',
+                    'expiresIn' => 500,
+                ]
+            );
             } catch (ClientException $e) {
                 if ($e->getCode() === 403) {
                     $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
