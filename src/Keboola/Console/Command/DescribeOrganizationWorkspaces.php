@@ -3,7 +3,6 @@ namespace Keboola\Console\Command;
 
 use Keboola\Csv\CsvFile;
 use Keboola\ManageApi\Client;
-use Keboola\ManageApi\ClientException;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\DevBranches;
