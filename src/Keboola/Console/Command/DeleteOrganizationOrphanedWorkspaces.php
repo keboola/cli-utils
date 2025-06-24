@@ -2,6 +2,7 @@
 namespace Keboola\Console\Command;
 
 use Keboola\ManageApi\Client;
+use Keboola\ManageApi\ClientException;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\DevBranches;
@@ -11,6 +12,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteOrganizationOrphanedWorkspaces extends Command
@@ -79,13 +81,24 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
         $totalDeletedWorkspaces = 0;
 
         foreach ($projects as $project) {
-            $storageToken = $manageClient->createProjectStorageToken(
-                $project['id'],
-                ['description' => 'Maintenance Workspace Cleaner']
-            );
+            try {
+                $storageToken = $manageClient->createProjectStorageToken(
+                    $project['id'],
+                    [
+                        'description' => 'Maintenance Workspace Cleaner',
+                        'expiresIn' => 1800,
+                    ]
+                );
+            } catch (\Throwable $e) {
+                if ($e->getCode() === 403) {
+                    $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
+                    continue;
+                }
+            }
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
                 'url' => $storageUrl,
+                'logger' => new ConsoleLogger($output),
             ]);
             $devBranches = new DevBranches($storageClient);
             $branchesList = $devBranches->listBranches();
@@ -104,6 +117,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                 $branchStorageClient = new BranchAwareClient($branchId, [
                     'token' => $storageToken['token'],
                     'url' => $storageUrl,
+                    'backoffMaxTries' => 1,
                 ]);
                 $workspacesClient = new Workspaces($branchStorageClient);
                 $workspaceList = $workspacesClient->listWorkspaces();
@@ -117,15 +131,29 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                     );
                     if ($shouldDropWorkspace) {
                         $output->writeln('Deleting orphaned workspace ' . $workspace['id']);
-                        $output->writeln('It was created on ' . $workspace['created']);
                         $totalProjectDeletedWorkspaces ++;
                         if ($force) {
-                            $workspacesClient->deleteWorkspace($workspace['id']);
+                            try {
+                                $workspacesClient->deleteWorkspace($workspace['id']);
+                            } catch (\Throwable $clientException) {
+                                $output->writeln(
+                                    sprintf(
+                                        'Error deleting workspace %s:%s',
+                                        (string) $workspace['id'],
+                                        $clientException->getMessage()
+                                    )
+                                );
+                            }
                         }
                     } else {
-                        $output->writeln('Skipping workspace ' . $workspace['id']);
-                        $output->writeln('It was created on ' . $workspace['created']);
-                        $output->writeln('It is of type ' . $workspace['component']);
+                        $output->writeln(
+                            sprintf(
+                                'Skipping %s workspace %s created on %s',
+                                $workspace['component'],
+                                (string) $workspace['id'],
+                                $workspace['created']
+                            )
+                        );
                     }
                 }
             }

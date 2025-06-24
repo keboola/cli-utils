@@ -11,6 +11,7 @@ use Keboola\StorageApi\Workspaces;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class DescribeOrganizationWorkspaces extends Command
@@ -62,7 +63,6 @@ class DescribeOrganizationWorkspaces extends Command
         $storageUrl = 'https://connection.' . $input->getArgument('hostnameSuffix');
 
         $totalWorkspaces = 0;
-        $totalDeletedWorkspaces = 0;
 
         $csvFile = new CsvFile($outputFile);
         $csvFile->writeRow([
@@ -73,19 +73,33 @@ class DescribeOrganizationWorkspaces extends Command
             'componentId',
             'configurationId',
             'creatorEmail',
+            'activeUser',
             'createdDate',
             'snowflakeSchema',
             'readOnlyStorageAccess'
         ]);
 
         foreach ($projects as $project) {
-            $storageToken = $manageClient->createProjectStorageToken(
-                $project['id'],
-                ['description' => 'Fetching Workspace Details']
-            );
+            $projectUsers = $manageClient->listProjectUsers($project['id']);
+            try {
+                $storageToken = $manageClient->createProjectStorageToken(
+                    $project['id'],
+                    [
+                        'description' => 'Fetching Workspace Details',
+                        'expiresIn' => 1800,
+                    ]
+                );
+            } catch (\Throwable $e) {
+                if ($e->getCode() === 403) {
+                    $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
+                    continue;
+                }
+            }
+
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
                 'url' => $storageUrl,
+                'logger' => new ConsoleLogger($output),
             ]);
             $devBranches = new DevBranches($storageClient);
             $branchesList = $devBranches->listBranches();
@@ -106,8 +120,10 @@ class DescribeOrganizationWorkspaces extends Command
                 $workspacesClient = new Workspaces($branchStorageClient);
                 $workspaceList = $workspacesClient->listWorkspaces();
                 $output->writeln('Found ' . count($workspaceList) . ' workspaces in branch ' . $branch['name']);
-                $totalProjectWorkspaces += count($workspaceList);
                 foreach ($workspaceList as $workspace) {
+                    $userInProject = count(array_filter($projectUsers, function ($user) use ($workspace) {
+                        return $user['email'] === $workspace['creatorToken']['description'];
+                    }));
                     $row = [
                         $project['id'],
                         $project['name'],
@@ -116,6 +132,7 @@ class DescribeOrganizationWorkspaces extends Command
                         $workspace['component'],
                         $workspace['configurationId'],
                         $workspace['creatorToken']['description'],
+                        $userInProject > 0 ? 'true' : 'false',
                         $workspace['created'],
                         $workspace['name'],
                         $workspace['readOnlyStorageAccess']
