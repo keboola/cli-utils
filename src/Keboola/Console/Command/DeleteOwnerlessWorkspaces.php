@@ -52,6 +52,7 @@ class DeleteOwnerlessWorkspaces extends Command
         $storageClient = new StorageApiClient([
             'token' => $token,
             'url' => $url,
+            'backoffMaxTries' => 1,
         ]);
         $workspacesClient = new Workspaces($storageClient);
         $tokensClient = new Tokens($storageClient);
@@ -72,9 +73,9 @@ class DeleteOwnerlessWorkspaces extends Command
             try {
                 $tokensClient->getToken($sandbox->getTokenId());
                 continue; // token exists so no need to do anything
-            } catch (ClientException $exception) {
+            } catch (\Throwable $exception) {
                 if ($exception->getCode() !== 404) {
-                    throw $e;
+                    throw $exception;
                 }
             }
 
@@ -85,16 +86,20 @@ class DeleteOwnerlessWorkspaces extends Command
 
             if (!in_array($sandbox->getType(), Sandbox::CONTAINER_TYPES)) {
                 // it is a database workspace
-                $output->writeln('Deleting inactive storage workspace ' . $sandbox->getPhysicalId());
-                $totalDeletedStorageWorkspaces++;
-                if ($force) {
-                    $workspacesClient->deleteWorkspace($sandbox->getPhysicalId());
+                if (empty($sandbox->getPhysicalId())) {
+                    $output->writeln('No underlying storage workspace found for sandboxId ' . $sandbox->getId());
+                } else {
+                    $output->writeln('Deleting inactive storage workspace ' . $sandbox->getPhysicalId());
+                    $totalDeletedStorageWorkspaces++;
+                    if ($force) {
+                        $this->deleteStorageWorkspace($workspacesClient, $sandbox->getPhysicalId(), $output);
+                    }
                 }
             } elseif (!empty($sandbox->getStagingWorkspaceId())) {
-                $output->writeln('Deleting inactive staging storage workspace ' . $sandbox->getPhysicalId());
+                $output->writeln('Deleting inactive staging storage workspace ' . $sandbox->getStagingWorkspaceId());
                 $totalDeletedStorageWorkspaces++;
                 if ($force) {
-                    $workspacesClient->deleteWorkspace($sandbox->getStagingWorkspaceId(), [], true);
+                    $this->deleteStorageWorkspace($workspacesClient, $sandbox->getStagingWorkspaceId(), $output);
                 }
             }
 
@@ -109,5 +114,23 @@ class DeleteOwnerlessWorkspaces extends Command
             $totalDeletedSandboxes,
             $totalDeletedStorageWorkspaces
         ));
+    }
+
+    private function deleteStorageWorkspace(
+        Workspaces $workspacesClient,
+        string $workspaceId,
+        OutputInterface $output): void
+    {
+        try {
+            $workspacesClient->deleteWorkspace($workspaceId);
+        } catch (\Throwable $clientException) {
+            $output->writeln(
+                sprintf(
+                    'Error deleting workspace %s:%s',
+                    $workspaceId,
+                    $clientException->getMessage()
+                )
+            );
+        }
     }
 }
