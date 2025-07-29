@@ -19,8 +19,7 @@ class DeleteStorageBackend extends Command
             ->addArgument('token', InputArgument::REQUIRED, 'storage api token')
             ->addArgument('ids', InputArgument::REQUIRED, 'list of IDs separated')
             ->addArgument('url', InputArgument::REQUIRED, 'Stack URL')
-            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run')
-            ;
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -39,24 +38,24 @@ class DeleteStorageBackend extends Command
             $allBackendsAssociative[$backend['id']] = $backend;
         }
         foreach (explode(',', $ids) as $id) {
-            // get backend detail and print it
-
+            if (!array_key_exists($id, $allBackendsAssociative)) {
+                $output->writeln(sprintf('Backend with ID "%s" does not exist, skipping...', $id));
+                continue;
+            }
             $output->write(sprintf(
                 'Removing backend "%s" (%s) by "%s" - ',
                 $id,
                 $allBackendsAssociative[$id]['host'],
                 $allBackendsAssociative[$id]['owner']
             ));
-            if($force){
+            if ($force) {
                 $output->writeln('really');
                 $client->removeStorageBackend($id);
             } else {
                 $output->writeln('just kidding - dry mode');
             }
-
         }
     }
-
 
     private function createClient(string $host, string $token): Client
     {
