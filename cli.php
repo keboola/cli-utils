@@ -6,6 +6,7 @@ require __DIR__.'/vendor/autoload.php';
 
 use Keboola\Console\Command\AddFeature;
 use Keboola\Console\Command\AllStacksIterator;
+use Keboola\Console\Command\DeleteStorageBackend;
 use Keboola\Console\Command\DeleteOrganizationOrphanedWorkspaces;
 use Keboola\Console\Command\DeleteOrphanedWorkspaces;
 use Keboola\Console\Command\DeleteOwnerlessWorkspaces;
@@ -63,4 +64,5 @@ $application->add(new ReactivateSchedules());
 $application->add(new DescribeOrganizationWorkspaces());
 $application->add(new MassDeleteProjectWorkspaces());
 $application->add(new UpdateDataRetention());
+$application->add(new DeleteStorageBackend());
 $application->run();
