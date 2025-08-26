@@ -27,7 +27,7 @@ class UpdateDataRetention extends Command
     protected function configure(): void
     {
         $this
-            ->setName('manage:update-data-retention')
+            ->setName('storage:update-data-retention')
             ->setDescription('Update data retention time in days for all projects on the whole stack.')
             ->addArgument(self::ARG_TOKEN, InputArgument::REQUIRED, 'manage token')
             ->addArgument(self::ARG_URL, InputArgument::REQUIRED, 'Stack URL')
