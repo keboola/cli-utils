@@ -9,7 +9,6 @@ Assorted CLI utils
 `docker run --rm -it keboola/cli-utils php ./cli.php`
 
 ## Bulk Project Add Feature
-
 Adds a project feature to multiple projects
 
 ```
@@ -145,7 +144,7 @@ It will perform a dry run unleass the `--force/-f` option is applied.
 
 - Run the command
     ```
-    php ./cli.php storage:delete-orphaned=workspaces [--force/-f] <storage-token> <component-list> <untile-date> <hostname-suffix> 
+    php ./cli.php storage:delete-orphaned-workspaces [--force/-f] <storage-token> <component-list> <untile-date> <hostname-suffix> 
     ```
 
 ## Delete Orphaned Workspaces in Organization command
