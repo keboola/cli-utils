@@ -129,8 +129,50 @@ Options:
     ```
     php ./cli.php storage:delete-ownerless-workspaces [--force/-f] [--includeShared] <storage-token> <hostname-suffix> 
     ```
-### TODO storage:delete-project-sandboxes
-### TODO manage:mass-delete-project-workspaces
+### Delete all sandboxes in a project
+Bulk delete all sandboxes in a project (and their underlying storage workspaces). Dry-run by default.
+
+```
+php cli.php storage:delete-project-sandboxes [--force/-f] [--includeShared] <storageToken> [<hostnameSuffix>]
+```
+Arguments:
+- storageToken (required) Storage API token for the target project.
+- hostnameSuffix (optional, default: keboola.com) Connection host suffix (e.g. eu-central-1.keboola.com).
+
+Options:
+- --force / -f     Actually perform deletions. Without it the command just lists what would be deleted.
+- --includeShared  Include shared sandboxes; by default shared ones are skipped.
+
+Behavior:
+- Lists all sandboxes via Sandboxes API.
+- (Unless --includeShared) skips those marked shared.
+- For DB-type sandboxes deletes associated Storage workspace (physicalId or staging workspace) first, then deletes sandbox.
+- Prints summary: X sandboxes deleted and Y storage workspaces deleted.
+
+### Delete multiple project workspaces access projects
+Delete specific Snowflake sandboxes and storage workspaces across multiple projects by workspace schema names.
+
+```
+php cli.php manage:mass-delete-project-workspaces [-f|--force] <stack-suffix> <source-file>
+```
+Arguments:
+- stack-suffix (required) Stack host suffix (e.g. keboola.com, eu-central-1.keboola.com).
+- source-file (required) CSV without header, two columns per line: <projectId>,<WORKSPACE_schema>. Example:
+  ```
+  12345,WORKSPACE_111111111
+  98765,WORKSPACE_222222222
+  ```
+
+Options:
+- --force / -f  Create and wait for delete jobs and actually delete matching storage workspaces. Without it the command only reports (dry-run).
+
+Behavior:
+- Builds a map of projectId => list of workspace schemas to delete; validates schema names start with WORKSPACE_.
+- For each project it interactively prompts (STDIN) for that project's STORAGE token (one-by-one) so tokens aren't stored in file.
+- Enumerates all dev branches, lists sandboxes per branch, matches schemas, and (force) queues delete jobs (via queue API) for sandboxes; waits until the jobs finish.
+- Then enumerates Storage workspaces per branch and deletes any whose schema is still pending.
+- Any schemas not found are printed for manual follow-up.
+- Currently targeted at Snowflake (SNFLK) workspaces only.
 
 ## Project manipulation
 
@@ -191,9 +233,81 @@ Run command:
 
 Use number of days or 0 as show to remove expiration completely. By default, it's dry-run. Override with `-f` parameter.
 
-### `storage:deleted-projects-purge` TODO
-### `storage:set-data-retention` TODO
-### `storage:update-data-retention` TODO
+### Purge deleted projects
+Purge already deleted projects (remove residual metadata, optionally ignoring backend errors) using a Manage API token and a CSV piped via STDIN.
+
+```
+cat deleted-projects.csv | php cli.php storage:deleted-projects-purge [--ignore-backend-errors] <manageToken>
+```
+Input CSV header must be exactly:
+```
+id,name
+```
+Behavior:
+- Validates header.
+- For each row calls Manage API purgeDeletedProject; prints command execution id.
+- Polls every second (max 600s) until project `isPurged` is true; errors on timeout.
+- With --ignore-backend-errors it instructs API to ignore backend failures and just purge metadata (buckets/workspaces records).
+
+### Set data retention for multiple projects
+Set data retention days for specific projects listed in a CSV piped via STDIN.
+
+```
+cat retention.csv | php cli.php storage:set-data-retention <manageToken> [--url=<stackConnectionUrl>]
+```
+Input CSV header must be exactly:
+```
+projectId,dataRetentionTimeInDays
+```
+Behavior:
+- For each project row calls updateProject with provided retention days.
+- Logs success or error per project; ends with "All done.".
+- Default URL: https://connection.keboola.com (override with --url).
+
+Example retention.csv:
+```
+projectId,dataRetentionTimeInDays
+12345,7
+67890,30
+```
+
+### Update data retention for all projects on the stack
+Bulk update data retention days for ALL projects on a stack (optionally dry-run first) – only affects projects that have Snowflake backend.
+
+```
+php cli.php storage:update-data-retention [-f|--force] <manageToken> <stackConnectionUrl> <dataRetentionTimeInDays>
+```
+Arguments:
+- manageToken (required) Manage API token.
+- stackConnectionUrl (required) Full Connection URL, e.g. https://connection.keboola.com.
+- dataRetentionTimeInDays (required) Target retention value.
+
+Options:
+- --force / -f Actually apply changes. Without it runs dry-run and only reports.
+
+Behavior:
+- Iterates maintainers -> organizations -> projects.
+- Skips disabled projects (counts them separately).
+- Skips projects without Snowflake backend (counts separately).
+- (Force) updates remaining projects, otherwise states it "would update".
+- Prints final summary: maintainers, orgs, disabled projects, non-snowflake projects, updated/would-update, errors.
+
+### Reactivate Scheduler schedules after SOX migration
+Recreate (reactivate) Scheduler schedules after SOX migration by deleting each existing `keboola.scheduler` configuration in Scheduler API and creating a new schedule referencing it.
+
+```
+php cli.php storage:reactivate-schedules [-f|--force] <storageToken> [<stack-suffix>]
+```
+Arguments:
+- storageToken (required) Project maintainer (PM) Storage API token with access to all scheduler configs.
+- stack-suffix (optional, default: keboola.com) e.g. eu-central-1.keboola.com.
+
+Options:
+- --force / -f Actually perform DELETE + POST operations. Without it logs planned actions (dry-run).
+
+Behavior:
+- Lists all non-deleted configurations of component `keboola.scheduler`.
+- For each: (force) DELETE /configurations/{id} on scheduler service, then POST /schedules {configurationId} to recreate active schedule.
 
 ## Jobs
 
@@ -218,8 +332,6 @@ This command can be used to terminate all jobs in a project in specified state (
     ```
     php ./cli.php queue:terminate-project-jobs <storage-token> <connection-url> <job-status>
     ```
-
-### `storage:reactivate-schedules` TODO
 
 # Utils
 ## Bulk operation on multiple stacks
@@ -262,7 +374,26 @@ Arguments:
     php ./cli.php manage:set-organization-maintenance-mode [--force/-f] <manage-token> <organization Id> <on/off> <hostname-suffix> <reason> <estimatedEndTime> 
     ```
   
-## `manage:remove-user-from-organization-projects` TODO
+## Remove user from all projects in an organization
+Remove a user (by email) from all projects in an organization. Dry-run by default.
+
+```
+php cli.php manage:remove-user-from-organization-projects [-f|--force] <manageToken> <organizationId> <userEmail> [<hostnameSuffix>]
+```
+Arguments:
+- manageToken (required) Manage API token with access to the organization.
+- organizationId (required) Target organization ID.
+- userEmail (required) Email of the user to remove.
+- hostnameSuffix (optional, default: keboola.com) Connection stack suffix.
+
+Options:
+- --force / -f Actually remove the user. Without it only logs projects where removal would happen.
+
+Behavior:
+- Fetches the organization and user, iterates its projects and lists project users.
+- If the user is a member, logs removal (and performs it if forced).
+- Prints final count of affected projects.
+
 # License
 
 MIT licensed, see [LICENSE](./LICENSE) file.
