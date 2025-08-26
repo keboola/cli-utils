@@ -4,9 +4,21 @@
 
 Assorted CLI utils
 
+# Usage and development
+
 ### Running in Docker
 
-`docker run --rm -it keboola/cli-utils php ./cli.php`
+`docker run --rm -it keboola/cli-utils php ./cli.php <commands>`
+
+### Running locally and local development
+1. Clone the repo
+2. Build the image `docker build dev`
+3. Init .env file `cp .env.dist .env` (actual values are not needed unless you want to run `manage:mass-project-remove-expiration`)
+4. Install dependencies `docker run --rm dev composer install`
+5. Run commands 
+   1. From docker: `docker run --rm dev php ./cli.php <command>`
+   2. Locally using local php bin: `php ./cli.php <command>`
+   3. In Container: `docker run --rm dev bash` -> `php ./cli.php <command>`
 
 # Commands documentation
 In the following sections you can find documentation for all the commands available in this package.
