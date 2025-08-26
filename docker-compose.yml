@@ -3,6 +3,8 @@ services:
     build: .
     image: keboola/cli-utils
     tty: true
+    env_file:
+      - .env
     stdin_open: true
     command: php cli.php
 
