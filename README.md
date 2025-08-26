@@ -59,8 +59,6 @@ You can add a project feature to all the project templates available on the stac
 
 ## Workspaces and sandboxes
 
-### TODO storage:delete-project-sandboxes
-### TODO manage:mass-delete-project-workspaces
 ### Delete Orphaned Workspaces command
 This command can be used to delete all the workspaces in a project that were made for componentIds in the `component-list` argument
 and that were created before the `until-date` argument.
@@ -131,12 +129,10 @@ Options:
     ```
     php ./cli.php storage:delete-ownerless-workspaces [--force/-f] [--includeShared] <storage-token> <hostname-suffix> 
     ```
-  
-## Project manipulation
+### TODO storage:delete-project-sandboxes
+### TODO manage:mass-delete-project-workspaces
 
-### `storage:deleted-projects-purge` TODO
-### `storage:set-data-retention` TODO
-### `anage:update-data-retention` TODO
+## Project manipulation
 
 ### Notify Projects
 
@@ -195,9 +191,12 @@ Run command:
 
 Use number of days or 0 as show to remove expiration completely. By default, it's dry-run. Override with `-f` parameter.
 
+### `storage:deleted-projects-purge` TODO
+### `storage:set-data-retention` TODO
+### `storage:update-data-retention` TODO
+
 ## Jobs
 
-### TODO storage:reactivate-schedules
 ### Load Queue Jobs Lineage events into Marqueez
 
 ```
@@ -219,6 +218,8 @@ This command can be used to terminate all jobs in a project in specified state (
     ```
     php ./cli.php queue:terminate-project-jobs <storage-token> <connection-url> <job-status>
     ```
+
+### `storage:reactivate-schedules` TODO
 
 # Utils
 ## Bulk operation on multiple stacks
@@ -261,7 +262,7 @@ Arguments:
     php ./cli.php manage:set-organization-maintenance-mode [--force/-f] <manage-token> <organization Id> <on/off> <hostname-suffix> <reason> <estimatedEndTime> 
     ```
   
-## TODO manage:remove-user-from-organization-projects
+## `manage:remove-user-from-organization-projects` TODO
 # License
 
 MIT licensed, see [LICENSE](./LICENSE) file.
