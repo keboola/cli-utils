@@ -8,14 +8,6 @@ Assorted CLI utils
 
 `docker run --rm -it keboola/cli-utils php ./cli.php`
 
-## Redshift Deep Copy
-
-Performs a deep copy of a table in Redshift backend. Fails if there are any aliases based on this table. 
-
-```
-php cli.php storage:redshift-deep-copy PROJECTTOKEN in.c-main.buggy-table
-```
-
 ## Bulk Project Add Feature
 
 Adds a project feature to multiple projects
