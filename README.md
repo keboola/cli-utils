@@ -354,13 +354,23 @@ If you want to run your command on multiple stacks, you can predefine stacks and
 
 
 ## Set Storage Backend for Organization
-This commaand is rather specific to BYODB snowflake backend migration.
+This command is rather specific to BYODB snowflake backend migration.
 You can use it to set all projects of an organization to use a storage backend.
 
 - Run the command
     ```
     php ./cli.php manage:set-organization-storage-backend [--force/-f] <manage-token> <organization-id> <storage-backend-id> <hostname-suffix> 
     ```
+
+## Reset Workspace passwords for projects in an organization
+This command is rather specific to BYODB snowflake backend migration.
+It resets all legacy (not keypair type) Snowflake workspace passwords for all projects in an organization.
+
+- Run the command
+    ```
+    php ./cli.php manage:reset-organization-workspace-passwords [--force/-f] <manage-token> <organization-id> <snowflake-hostname> <hostname-suffix> 
+    ```
+It prints `command-01k3m9p324cae95c48rr23rqvh` for each project, you can track the progress in Datadog.
 
 ## Set a maintenance mode for the organization
 This command can be used to enable/disable all projects in an organization
