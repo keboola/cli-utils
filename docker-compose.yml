@@ -7,6 +7,7 @@ services:
     command: php cli.php
 
   dev:
+    build: .
     image: keboola/cli-utils
     volumes:
       - ./:/code
