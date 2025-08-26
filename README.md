@@ -8,43 +8,7 @@ Assorted CLI utils
 
 `docker run --rm -it keboola/cli-utils php ./cli.php`
 
-## Mass Dedup
-
-Loads project ids and tables from a CSV file and runs a dedup job on each table. 
-
-**Command**
-
-```
-php cli.php storage:mass-dedup MANAGETOKEN /usr/ondra/data.csv
-```
-
-**Dry run**
-
-Does not create the job or the snapshot.
-
-```
-php cli.php storage:mass-dedup MANAGETOKEN /usr/ondra/data.csv --dry-run
-```
-
-**CSV data sample**
-
-```
-data.csv
-"project","table"
-"232","out.c-rs-main.data"
-"232","in.c-main.data"
-```
-
-## Redshift Deep Copy
-
-Performs a deep copy of a table in Redshift backend. Fails if there are any aliases based on this table. 
-
-```
-php cli.php storage:redshift-deep-copy PROJECTTOKEN in.c-main.buggy-table
-```
-
 ## Bulk Project Add Feature
-
 Adds a project feature to multiple projects
 
 ```
@@ -87,7 +51,7 @@ cat data.csv |  php cli.php storage:notify-projects MANAGETOKEN
 
 ## Mass project extend expiration:
 
-Prepare input file "extend.txt" from looker https://keboola.looker.com/explore/keboola_internal_reporting/usage_metric_values: 
+Prepare input file "extend.txt" in following format: 
 ```
 123-EU
 579-US
@@ -106,27 +70,6 @@ Run command:
 `php cli.php manage:mass-project-remove-expiration extend.txt 0`
 
 Use number of days or 0 as show to remove expiration completely. By default, it's dry-run. Override with `-f` parameter.
-
-## Mass GD project drop:
-
-Prepare input file "projects.csv" with project IDs:
-
-```
-123abc123abc123abc123abc123abc123abc
-```
-
-Prepare `.env` file from `.env.dist`:
-```
-GOODDATA_URL=
-GOODDATA_LOGIN=
-GOODDATA_PASSWORD=
-```
-
-Run command:
-
-`php cli.php gooddata:delete-projects`
-
-To actually drop the projects add `-f` flag. Default is dry-run. 
 
 ## Add a feature to project templates
 
@@ -159,32 +102,6 @@ php cli.php storage:lineage-events-export <marquezUrl> [<connectionUrl>] [--limi
 Loads last N _(default 100)_ jobs into Marquez tool. Export has two modes:
 - default - jobs are identified by job IDs
 - with `--job-names-configurations` option - job are identified by component and configuration IDs
-
-## Mass Project Queue Migration
-
-- Create a manage token.
-- Prepare input file (e.g. "projects") with ids of the projects to migrate to new Queue.
-    ```
-    1234
-    5678
-    9012
-    3456
-    ```
-
-- Run the mass migration command 
-    ```
-    php cli.php manage:mass-project-queue-migration <manage_token> <kbc_url> <file_with_projects>
-    ```
-
-   The command will do the following for every projectId in the source file:
-   - add project feature `queuev2`
-   - create and run configuration of `keboola.queue-migration-tool` component
-   - if a job was successful, it will disable legacy orchestrations in the project
-   - if a job ended with error, it will remove the `queuev2` feature from the project
-
-
-- After migration delete your manage token you have created and used for migrations.
-
 
 ## Mass project enable dynamic backends
 Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/Enable+Dynamic+Backends#Enable-for-project 
@@ -227,7 +144,7 @@ It will perform a dry run unleass the `--force/-f` option is applied.
 
 - Run the command
     ```
-    php ./cli.php storage:delete-orphaned=workspaces [--force/-f] <storage-token> <component-list> <untile-date> <hostname-suffix> 
+    php ./cli.php storage:delete-orphaned-workspaces [--force/-f] <storage-token> <component-list> <untile-date> <hostname-suffix> 
     ```
 
 ## Delete Orphaned Workspaces in Organization command
