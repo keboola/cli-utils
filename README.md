@@ -52,7 +52,7 @@ cat data.csv |  php cli.php storage:notify-projects MANAGETOKEN
 
 ## Mass project extend expiration:
 
-Prepare input file "extend.txt" from looker https://keboola.looker.com/explore/keboola_internal_reporting/usage_metric_values: 
+Prepare input file "extend.txt" in following format: 
 ```
 123-EU
 579-US
@@ -71,27 +71,6 @@ Run command:
 `php cli.php manage:mass-project-remove-expiration extend.txt 0`
 
 Use number of days or 0 as show to remove expiration completely. By default, it's dry-run. Override with `-f` parameter.
-
-## Mass GD project drop:
-
-Prepare input file "projects.csv" with project IDs:
-
-```
-123abc123abc123abc123abc123abc123abc
-```
-
-Prepare `.env` file from `.env.dist`:
-```
-GOODDATA_URL=
-GOODDATA_LOGIN=
-GOODDATA_PASSWORD=
-```
-
-Run command:
-
-`php cli.php gooddata:delete-projects`
-
-To actually drop the projects add `-f` flag. Default is dry-run. 
 
 ## Add a feature to project templates
 
