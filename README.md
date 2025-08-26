@@ -58,6 +58,9 @@ You can add a project feature to all the project templates available on the stac
 **This command supports dry-run. Add the `-f` flag if you want to submit the changes**
 
 ## Workspaces and sandboxes
+
+### TODO storage:delete-project-sandboxes
+### TODO manage:mass-delete-project-workspaces
 ### Delete Orphaned Workspaces command
 This command can be used to delete all the workspaces in a project that were made for componentIds in the `component-list` argument
 and that were created before the `until-date` argument.
@@ -131,6 +134,10 @@ Options:
   
 ## Project manipulation
 
+### `storage:deleted-projects-purge` TODO
+### `storage:set-data-retention` TODO
+### `anage:update-data-retention` TODO
+
 ### Notify Projects
 
 Prepare input `data.csv`:
@@ -189,6 +196,8 @@ Run command:
 Use number of days or 0 as show to remove expiration completely. By default, it's dry-run. Override with `-f` parameter.
 
 ## Jobs
+
+### TODO storage:reactivate-schedules
 ### Load Queue Jobs Lineage events into Marqueez
 
 ```
@@ -251,6 +260,8 @@ Arguments:
     ```
     php ./cli.php manage:set-organization-maintenance-mode [--force/-f] <manage-token> <organization Id> <on/off> <hostname-suffix> <reason> <estimatedEndTime> 
     ```
+  
+## TODO manage:remove-user-from-organization-projects
 # License
 
 MIT licensed, see [LICENSE](./LICENSE) file.
