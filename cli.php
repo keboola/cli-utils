@@ -32,6 +32,7 @@ use Keboola\Console\Command\RemoveUserFromOrganizationProjects;
 use Symfony\Component\Console\Application;
 use Keboola\Console\Command\SetDataRetention;
 use Keboola\Console\Command\UpdateDataRetention;
+use Keboola\Console\Command\ForceUnlinkSharedBuckets;
 
 $application = new Application();
 $application->add(new ProjectsAddFeature());
@@ -58,5 +59,6 @@ $application->add(new DescribeOrganizationWorkspaces());
 $application->add(new MassDeleteProjectWorkspaces());
 $application->add(new UpdateDataRetention());
 $application->add(new OrganizationResetWorkspacePasswords());
+$application->add(new ForceUnlinkSharedBuckets());
 $application->add(new OrganizationsAddFeature());
 $application->run();
