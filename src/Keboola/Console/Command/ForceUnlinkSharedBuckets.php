@@ -15,7 +15,7 @@ class ForceUnlinkSharedBuckets extends Command
     {
         $this
             ->setName('storage:force-unlink-shared-buckets')
-            ->setDescription('List all buckets in the project and force-unlink those that are shared and linked.')
+            ->setDescription('List all buckets in the project and force-unlink those that are shared BY this project and linked TO other projects.')
             ->addArgument('storageToken', InputArgument::REQUIRED, 'Keboola Storage API token to use')
             ->addArgument('url', InputArgument::REQUIRED, 'stack URL. Including https://')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to actually unlink. Otherwise, dry-run.');
