@@ -195,6 +195,28 @@ Command execution:
 cat data.csv |  php cli.php storage:notify-projects MANAGETOKEN
 ```
 
+
+### Force Unlink Shared and Linked Buckets
+
+List all buckets in the project and force-unlink those that are both shared and linked. By default, the command runs in dry-run mode and only reports what would be unlinked. Use the `--force` flag to actually perform the unlinking.
+
+```
+php cli.php storage:force-unlink-shared-buckets [--force|-f] <storageToken> <url>
+```
+Arguments:
+- `storageToken` (required): Storage API token for the target project.
+- `url` (required): Stack URL, including `https://`.
+
+Options:
+- `--force` / `-f`: Actually perform the unlinking. Without this flag, the command only reports what would be unlinked (dry-run).
+
+Behavior:
+- Lists all buckets in the project.
+- For each bucket, checks if it is both shared and linked.
+- In dry-run mode, lists the buckets that would be unlinked.
+- With `--force`, unlinks each shared and linked bucket and confirms the action.
+- Prints a summary of unlinked or would-be-unlinked buckets.
+
 ### Mass enablement of dynamic backends for multiple projects
 Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/Enable+Dynamic+Backends#Enable-for-project
 
@@ -432,6 +454,7 @@ Behavior:
 - Fetches the organization and user, iterates its projects and lists project users.
 - If the user is a member, logs removal (and performs it if forced).
 - Prints final count of affected projects.
+
 
 # License
 
