@@ -52,7 +52,7 @@ class ForceUnlinkSharedBuckets extends Command
                     );
                 }
             } else {
-                $output->writeln(\sprintf('No linked buckets found for bucket "%s"', $bucket['id']));
+                $output->writeln(sprintf('No linked buckets found for bucket "%s"', $bucket['id']));
             }
         }
 
