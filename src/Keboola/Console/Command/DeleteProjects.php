@@ -12,6 +12,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteProjects extends Command
 {
+    private int $projectNotFound = 0;
+
     private int $projectsDisabled = 0;
     private int $projectsFailed = 0;
     private int $projectsDeleted = 0;
@@ -74,11 +76,12 @@ class DeleteProjects extends Command
                 $this->deleteSingleProject($client, $output, $project, $force);
             } catch (ClientException $e) {
                 if ($e->getCode() === 404) {
-                    $output->writeln('<error>not found</error>');
+                    $output->writeln('<info>not found - deleted already</info>');
+                    $this->projectNotFound++;
                 } else {
                     $output->writeln(sprintf('<error>error</error>: %s', $e->getMessage()));
+                    $this->projectsFailed++;
                 }
-                $this->projectsFailed++;
             }
         }
     }
@@ -125,5 +128,6 @@ class DeleteProjects extends Command
         $output->writeln(sprintf('  %d projects disabled', $this->projectsDisabled));
         $output->writeln(sprintf('  %d projects deleted', $this->projectsDeleted));
         $output->writeln(sprintf('  %d projects failed', $this->projectsFailed));
+        $output->writeln(sprintf('  %d projects not found', $this->projectNotFound));
     }
 }
