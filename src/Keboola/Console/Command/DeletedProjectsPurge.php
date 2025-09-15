@@ -19,7 +19,7 @@ class DeletedProjectsPurge extends Command
             ->setDescription('Purge deleted projects.')
             ->addArgument('url', InputArgument::REQUIRED, 'URL of stack including https://')
             ->addArgument('token', InputArgument::REQUIRED, 'manage api token')
-            ->addArgument('projectIds', InputArgument::IS_ARRAY | InputArgument::REQUIRED, 'IDs of projects to purge (separate multiple IDs with a space)')
+            ->addArgument('projectIds', InputArgument::REQUIRED, 'IDs of projects to purge (separate multiple IDs with a space)')
             ->addOption('ignore-backend-errors', null, InputOption::VALUE_NONE, "Ignore errors from backend and just delete buckets and workspaces metadata")
             ->addOption('force', null, InputOption::VALUE_NONE, 'Actually perform destructive operations (purge). Without this flag, the command will only simulate actions.');
     }
@@ -45,6 +45,7 @@ class DeletedProjectsPurge extends Command
             'url' => $url,
             'token' => $token,
         ]);
+        $projectIds = array_filter(explode(',', $projectIds), 'is_numeric');
 
         foreach ($projectIds as $projectId) {
             $this->purgeProject(
