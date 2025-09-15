@@ -240,20 +240,11 @@ Run command:
 Use number of days or 0 as show to remove expiration completely. By default, it's dry-run. Override with `-f` parameter.
 
 ### Purge deleted projects
-Purge already deleted projects (remove residual metadata, optionally ignoring backend errors) using a Manage API token and a CSV piped via STDIN.
+Purge already deleted projects (remove residual metadata, optionally ignoring backend errors) using a Manage API token.
 
 ```
-cat deleted-projects.csv | php cli.php storage:deleted-projects-purge [--ignore-backend-errors] <manageToken>
+php cli.php storage:deleted-projects-purge [--ignore-backend-errors] <manageToken> <stackUrl> [--ignore-backend-errors] <projectIds>
 ```
-Input CSV header must be exactly:
-```
-id,name
-```
-Behavior:
-- Validates header.
-- For each row calls Manage API purgeDeletedProject; prints command execution id.
-- Polls every second (max 600s) until project `isPurged` is true; errors on timeout.
-- With --ignore-backend-errors it instructs API to ignore backend failures and just purge metadata (buckets/workspaces records).
 
 ### Set data retention for multiple projects
 Set data retention days for specific projects listed in a CSV piped via STDIN.
