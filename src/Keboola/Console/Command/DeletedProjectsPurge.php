@@ -102,7 +102,8 @@ class DeletedProjectsPurge extends Command
             }
             sleep(2);
             $output->writeln(
-                sprintf(' - - Waiting for project "%s" (%s) to be purged: execution id %s',
+                sprintf(
+                    ' - - Waiting for project "%s" (%s) to be purged: execution id %s',
                     $projectName,
                     $projectId,
                     $response['commandExecutionId'],
