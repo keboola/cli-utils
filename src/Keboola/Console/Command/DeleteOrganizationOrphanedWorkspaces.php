@@ -36,7 +36,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             ->addArgument(
                 'orphanComponent',
                 InputArgument::REQUIRED,
-                'Component that qualify for orphanage (ex. keboola.snowflake-transformation).'
+                'Component that qualify for orphanage (ex. keboola.snowflake-transformation, or "" for empty/blank components).'
             )
             ->addArgument(
                 'hostnameSuffix',
@@ -70,6 +70,10 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
 
         $storageUrl = 'https://connection.' . $input->getArgument('hostnameSuffix');
 
+        $orphanComponent = $input->getArgument('orphanComponent');
+        $componentDesc = empty($orphanComponent) ? '(empty/blank)' : $orphanComponent;
+        $output->writeln(sprintf('Targeting workspaces with component: %s', $componentDesc));
+        
         $force = $input->getOption('force');
         if ($force) {
             $output->writeln('Force option is set, doing it for real');
@@ -126,7 +130,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                 foreach ($workspaceList as $workspace) {
                     $shouldDropWorkspace = $this->isWorkspaceOrphaned(
                         $workspace,
-                        $input->getArgument('orphanComponent'),
+                        $orphanComponent,
                         strtotime($input->getArgument('untilDate'))
                     );
                     if ($shouldDropWorkspace) {
@@ -182,6 +186,19 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
 
     private function isWorkspaceOrphaned(array $workspace, string $component, int $untilDate): bool
     {
-        return ($workspace['component'] === $component) && strtotime($workspace['created']) < $untilDate;
+        // If no component is specified, only workspaces with no component qualify
+        if (empty($component) && !empty($workspace['component'])) {
+            return false;
+        }
+        // If a component is specified, skip workspaces that don't match it
+        if (!empty($component) && $workspace['component'] !== $component) {
+            return false;
+        }
+        // Skip workspaces created after or on the cutoff date
+        if (strtotime($workspace['created']) >= $untilDate) {
+            return false;
+        }
+        // If all conditions pass, the workspace qualifies
+        return true;
     }
 }
