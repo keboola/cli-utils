@@ -186,11 +186,19 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
 
     private function isWorkspaceOrphaned(array $workspace, string $component, int $untilDate): bool
     {
-        // Handle both empty string and specific component matching
-        $componentMatches = empty($component) 
-            ? empty($workspace['component']) 
-            : ($workspace['component'] === $component);
-        
-        return $componentMatches && strtotime($workspace['created']) < $untilDate;
+        // If no component is specified, only workspaces with no component qualify
+        if (empty($component) && !empty($workspace['component'])) {
+            return false;
+        }
+        // If a component is specified, skip workspaces that don't match it
+        if (!empty($component) && $workspace['component'] !== $component) {
+            return false;
+        }
+        // Skip workspaces created after or on the cutoff date
+        if (strtotime($workspace['created']) >= $untilDate) {
+            return false;
+        }
+        // If all conditions pass, the workspace qualifies
+        return true;
     }
 }
