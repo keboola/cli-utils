@@ -36,7 +36,7 @@ class MassProjectEnableDynamicBackends extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
         $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
@@ -76,7 +76,7 @@ class MassProjectEnableDynamicBackends extends Command
                             '/^(y|j)/i'
                         );
                         if (!$helper->ask($input, $output, $question)) {
-                            return;
+                            return 0;
                         }
                     }
                     $manageClient->addProjectFeature($projectId, self::FEATURE_NEW_TRANSFORMATIONS_ONLY);
@@ -96,7 +96,7 @@ class MassProjectEnableDynamicBackends extends Command
                 while (1) {
                     if ($sleepCount > 10) {
                         $output->writeln(sprintf(' - Project: %s not enabled check PT for more.', $projectId));
-                        return;
+                        return 0;
                     }
                     $project = $manageClient->getProject($projectId);
                     if (in_array(self::FEATURE_DYNAMIC_BACKEND_SIZE, $project['features'], true)) {
@@ -116,6 +116,8 @@ class MassProjectEnableDynamicBackends extends Command
                 ));
             }
         }
+
+        return 0;
     }
 
     private function parseProjectIds(string $sourceFile): array

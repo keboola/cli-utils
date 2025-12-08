@@ -37,7 +37,7 @@ class MassDeleteProjectWorkspaces extends Command
             ->addOption(self::OPTION_FORCE, 'f', InputOption::VALUE_NONE, 'Write changes');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $connectionUrl = 'https://connection.' . $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
         $sandboxesUrl = 'https://sandboxes.' . $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
@@ -201,5 +201,7 @@ class MassDeleteProjectWorkspaces extends Command
                 ]);
             }
         }
+
+        return 0;
     }
 }

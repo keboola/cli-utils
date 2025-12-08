@@ -44,7 +44,7 @@ class OrganizationStorageBackend extends Command
     }
 
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $storageBackendId = $input->getArgument(self::ARGUMENT_STORAGE_BACKEND_ID);
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
@@ -84,5 +84,7 @@ class OrganizationStorageBackend extends Command
             }
         }
         $output->writeln('All done.');
+        
+        return 0;
     }
 }

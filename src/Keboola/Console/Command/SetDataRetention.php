@@ -29,7 +29,7 @@ class SetDataRetention extends Command
             ->addOption('url', null, InputOption::VALUE_REQUIRED, 'API URL', 'https://connection.keboola.com');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $client = new Client([
             'token' => $input->getArgument('token'),
@@ -59,9 +59,11 @@ class SetDataRetention extends Command
         }
 
         $output->writeln("All done.");
+
+        return 0;
     }
 
-    private function validateHeader($header)
+    private function validateHeader(array $header): void
     {
         $expectedHeader = ['projectId', 'dataRetentionTimeInDays'];
         if ($header !== $expectedHeader) {

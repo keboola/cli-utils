@@ -31,7 +31,7 @@ class QueueMassTerminateJobs extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $storageToken = $input->getArgument(self::ARGUMENT_STORAGE_TOKEN);
         $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
@@ -82,5 +82,7 @@ class QueueMassTerminateJobs extends Command
 
         $output->writeln(sprintf('Terminated %s jobs', count($terminatedJobsIds)));
         $output->writeln(PHP_EOL);
+
+        return 0;
     }
 }

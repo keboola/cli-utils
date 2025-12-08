@@ -22,7 +22,7 @@ class NotifyProjects extends Command
     }
 
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
 
         $fh = fopen('php://stdin', 'r');
@@ -50,9 +50,11 @@ class NotifyProjects extends Command
             }
             $lineNumber++;
         }
+
+        return 0;
     }
 
-    private function validateHeader($header)
+    private function validateHeader(array $header): void
     {
         $expectedHeader = ['projectId', 'notificationTitle', 'notificationMessage'];
         if ($header !== $expectedHeader) {
@@ -64,7 +66,13 @@ class NotifyProjects extends Command
         }
     }
 
-    private function notifyProject(Client $client, OutputInterface $output, $projectId, $notificationTitle, $notificationMessage)
+    private function notifyProject(
+        Client $client,
+        OutputInterface $output,
+        int $projectId,
+        string $notificationTitle,
+        string $notificationMessage
+    ): void
     {
         $output->writeln("Sending notification to project $projectId");
 

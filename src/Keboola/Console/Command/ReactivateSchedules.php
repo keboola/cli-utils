@@ -33,7 +33,7 @@ class ReactivateSchedules extends Command
             ->addOption(self::OPT_FORCE, 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $isForce = $input->getOption(self::OPT_FORCE);
 
@@ -80,6 +80,8 @@ class ReactivateSchedules extends Command
                 $guzzleClient->post('/schedules', ['body' => json_encode(['configurationId' => $configuration['id']])]);
             }
         }
+
+        return 0;
     }
 
     private function buildUrl(string $serviceKey): string

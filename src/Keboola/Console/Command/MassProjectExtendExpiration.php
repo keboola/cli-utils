@@ -29,7 +29,7 @@ class MassProjectExtendExpiration extends Command
     }
 
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
@@ -62,7 +62,7 @@ class MassProjectExtendExpiration extends Command
         }
         $projectsText = trim(file_get_contents($sourceFile));
         if (!$projectsText) {
-            return;
+            return 0;
         }
 
         $projects = [];
@@ -113,5 +113,7 @@ class MassProjectExtendExpiration extends Command
                 ));
             }
         }
+
+        return 0;
     }
 }

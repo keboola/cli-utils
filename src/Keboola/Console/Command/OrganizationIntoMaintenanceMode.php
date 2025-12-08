@@ -60,7 +60,7 @@ class OrganizationIntoMaintenanceMode extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $maintenanceMode = $input->getArgument(self::ARGUMENT_MAINTENANCE_MODE);
         if (!in_array($maintenanceMode, ['on', 'off'])) {
@@ -140,6 +140,8 @@ class OrganizationIntoMaintenanceMode extends Command
             }
         }
         $output->writeln('All done.');
+
+        return 0;
     }
 
     private function areThereRunningJobs(
