@@ -112,6 +112,9 @@ class MassDeleteProjectWorkspaces extends Command
 
             $branchesClient = new DevBranches($storageClient);
 
+            /**
+             * @var array<int, array{job: \Keboola\JobQueueClient\DTO\Job, sandbox: \Keboola\Sandboxes\Api\Sandbox}> $jobs
+             */
             $jobs = [];
             foreach ($branchesClient->listBranches() as $branch) {
                 $output->writeln(sprintf('Checking branch "%s" for sandboxes.', $branch['id']));
@@ -146,12 +149,13 @@ class MassDeleteProjectWorkspaces extends Command
                             ],
                         ));
 
-                        $job['sandbox'] = $sandbox;
-                        $jobs[] = $job;
+                        $jobs[] = ['job' => $job, 'sandbox' => $sandbox];
 
+                        // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
+                        $jobId = $job['id'];
                         $output->writeln(sprintf(
                             'Created delete job "%s" for project "%s"',
-                            $job['id'],
+                            $jobId,
                             $projectId
                         ));
                     } else {
@@ -166,15 +170,25 @@ class MassDeleteProjectWorkspaces extends Command
 
             $output->writeln('Waiting for delete jobs to finish.');
             while (count($jobs) > 0) {
-                foreach ($jobs as $i => $job) {
-                    $jobRes = $jobsClient->getJob((string) $job['id']);
+                foreach ($jobs as $i => $jobData) {
+                    $job = $jobData['job'];
+                    $sandbox = $jobData['sandbox'];
+                    // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
+                    $jobRes = $jobsClient->getJob($job['id']);
+                    // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
                     if ($jobRes['isFinished'] === true) {
+                        $workspaceDetails = $sandbox->getWorkspaceDetails();
+                        $schema = $workspaceDetails['connection']['schema'] ?? 'unknown';
+                        // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
+                        $jobId = $job['id'];
+                        // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
+                        $jobStatus = $jobRes['status'];
                         $output->writeln(sprintf(
                             'Delete job "%s" for sandbox "%s" with schema "%s" finished with status "%s"',
-                            $job['id'],
-                            $job['sandbox']->getId(),
-                            $job['sandbox']->getWorkspaceDetails()['connection']['schema'],
-                            $jobRes['status']
+                            $jobId,
+                            $sandbox->getId(),
+                            $schema,
+                            $jobStatus
                         ));
                         unset($jobs[$i]);
                     }
@@ -188,13 +202,14 @@ class MassDeleteProjectWorkspaces extends Command
                     $storageClient->getBranchAwareClient($branch['id'])
                 );
                 foreach ($workspacesClient->listWorkspaces() as $workspace) {
-                    if (!in_array($workspace['connection']['schema'], $map[$projectId], true)) {
+                    $schema = $workspace['connection']['schema'] ?? null;
+                    if ($schema === null || !in_array($schema, $map[$projectId], true)) {
                         continue;
                     }
                     // remove found schema from map
-                    unset($map[$projectId][array_search($workspace['connection']['schema'], $map[$projectId], true)]);
+                    unset($map[$projectId][array_search($schema, $map[$projectId], true)]);
                     if ($force) {
-                        $output->writeln(sprintf('Deleting workspace "%s" with schema "%s"', $workspace['id'], $workspace['connection']['schema']));
+                        $output->writeln(sprintf('Deleting workspace "%s" with schema "%s"', $workspace['id'], $schema));
                         $workspacesClient->deleteWorkspace($workspace['id'], [], true);
                     } else {
                         $output->writeln(sprintf('[DRY-RUN] Deleting workspace "%s" with schema "%s"', $workspace['id'], $workspace['connection']['schema']));

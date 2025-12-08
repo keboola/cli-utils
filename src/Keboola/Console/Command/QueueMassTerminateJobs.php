@@ -6,6 +6,7 @@ namespace Keboola\Console\Command;
 
 use Exception;
 use Keboola\JobQueueClient\Client as JobQueueClient;
+use Keboola\JobQueueClient\JobStatuses;
 use Keboola\JobQueueClient\ListJobsOptions;
 use Keboola\StorageApi\Client as StorageClient;
 use Symfony\Component\Console\Command\Command;
@@ -66,9 +67,15 @@ class QueueMassTerminateJobs extends Command
             $storageToken
         );
 
+        $statusEnum = match($status) {
+            'created' => JobStatuses::CREATED,
+            'waiting' => JobStatuses::WAITING,
+            default => JobStatuses::PROCESSING,
+        };
+
         $jobs = $jobQueueClient->listJobs(
             (new ListJobsOptions())
-                ->setStatuses([$status])
+                ->setStatuses([$statusEnum])
                 ->setLimit(3000)
         );
 
