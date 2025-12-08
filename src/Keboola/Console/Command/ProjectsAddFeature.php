@@ -59,7 +59,9 @@ class ProjectsAddFeature extends Command
 
         // Disabled projects
         if (isset($projectInfo["isDisabled"]) && $projectInfo["isDisabled"]) {
-            $disabledReason = $projectInfo["disabled"]["reason"];
+            $disabled = $projectInfo["disabled"];
+            assert(is_array($disabled));
+            $disabledReason = $disabled["reason"];
             assert(is_string($disabledReason));
             $output->writeln(" - project disabled: " . $disabledReason);
             $this->projectsDisabled++;
@@ -74,7 +76,9 @@ class ProjectsAddFeature extends Command
                     $client->addProjectFeature($projectInfo['id'], $featureName);
                     $output->writeln(" - feature '{$featureName}' successfully added.");
                 } else {
-                    $output->writeln(sprintf(' - feature "%s" DOES NOT exist in the project %s yet. Enable force mode with -f option', $featureName, $projectInfo['id']));
+                    $projectIdForDisplay = $projectInfo['id'];
+                    assert(is_string($projectIdForDisplay) || is_int($projectIdForDisplay));
+                    $output->writeln(sprintf(' - feature "%s" DOES NOT exist in the project %s yet. Enable force mode with -f option', $featureName, $projectIdForDisplay));
                 }
                 $this->projectsUpdated++;
             }

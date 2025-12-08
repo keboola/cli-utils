@@ -56,20 +56,26 @@ class MassDeleteProjectWorkspaces extends Command
         $map = [];
         $csv = new CsvFile($sourceFile);
         foreach ($csv as $line) {
+            assert(is_array($line));
             if (count($line) !== 2) {
                 throw new InvalidArgumentException('File must contain exactly two columns.');
             }
-            if (!is_numeric($line[0])) {
-                throw new InvalidArgumentException(sprintf('Project id "%s" is not numeric.', $line[0]));
+            $projectId = $line[0];
+            $workspaceSchema = $line[1];
+            assert(is_string($projectId) || is_numeric($projectId));
+            assert(is_string($workspaceSchema));
+            if (!is_numeric($projectId)) {
+                throw new InvalidArgumentException(sprintf('Project id "%s" is not numeric.', $projectId));
             }
-            if (!str_starts_with($line[1], 'WORKSPACE_')) {
-                throw new InvalidArgumentException(sprintf('Workspace "%s" does not start with "WORKSPACE_".', $line[1]));
+            if (!str_starts_with($workspaceSchema, 'WORKSPACE_')) {
+                throw new InvalidArgumentException(sprintf('Workspace "%s" does not start with "WORKSPACE_".', $workspaceSchema));
             }
 
-            if (array_key_exists($line[0], $map)) {
-                $map[$line[0]][] = $line[1];
+            $projectIdStr = (string) $projectId;
+            if (array_key_exists($projectIdStr, $map)) {
+                $map[$projectIdStr][] = $workspaceSchema;
             } else {
-                $map[$line[0]] = [$line[1]];
+                $map[$projectIdStr] = [$workspaceSchema];
             }
         }
 

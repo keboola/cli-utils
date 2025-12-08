@@ -108,7 +108,9 @@ class RemoveUserFromOrganizationProjects extends Command
     private function isUserInProject(int $userId, array $projectUsers): bool
     {
         foreach ($projectUsers as $projectUser) {
-            if ((int) $projectUser['id'] === $userId) {
+            $projectUserId = $projectUser['id'];
+            assert(is_int($projectUserId) || is_string($projectUserId) || is_numeric($projectUserId));
+            if ((int) $projectUserId === $userId) {
                 return true;
             }
         }

@@ -79,6 +79,7 @@ class NotifyProjects extends Command
     {
         $output->writeln("Sending notification to project $projectId");
 
+        // @phpstan-ignore-next-line method.notFound
         $client->addNotification([
             'type' => 'common',
             'projectId' => (int) $projectId,

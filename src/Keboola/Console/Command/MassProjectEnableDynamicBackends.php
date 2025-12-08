@@ -39,8 +39,11 @@ class MassProjectEnableDynamicBackends extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        assert(is_string($manageToken));
         $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
+        assert(is_string($kbcUrl));
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        assert(is_string($sourceFile));
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
         $forceNT = $input->getOption(self::OPTION_FORCE_NEW_TRANSFORMATION);
 
@@ -69,6 +72,7 @@ class MassProjectEnableDynamicBackends extends Command
                     $output->writeln(sprintf(' - Feature "%s" is missing for project "%s".', self::FEATURE_NEW_TRANSFORMATIONS_ONLY, $projectId));
                     // don't ask when force option is on
                     if (!$forceNT) {
+                        /** @var \Symfony\Component\Console\Helper\QuestionHelper $helper */
                         $helper = $this->getHelper('question');
                         $question = new ConfirmationQuestion(
                             ' - Do you want to add this feature (y/n)?',

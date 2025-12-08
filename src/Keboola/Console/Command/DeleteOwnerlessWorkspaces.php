@@ -76,8 +76,11 @@ class DeleteOwnerlessWorkspaces extends Command
         /** @var Sandbox $sandbox */
         foreach ($sandboxes as $sandbox) {
             try {
-                $tokensClient->getToken($sandbox->getTokenId());
-                continue; // token exists so no need to do anything
+                $tokenId = $sandbox->getTokenId();
+                if ($tokenId !== null) {
+                    $tokensClient->getToken((int) $tokenId);
+                    continue; // token exists so no need to do anything
+                }
             } catch (\Throwable $exception) {
                 if ($exception->getCode() !== 404) {
                     throw $exception;

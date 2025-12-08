@@ -73,7 +73,11 @@ class AllStacksIterator extends Command
             }
 
             // build input for the target command. It adds token and host from http-client files.
-            $inputForThisStack = sprintf('%s %s %s %s', $commandName, (string) $token['manageToken'], (string) $stack['host'], $cmndInput);
+            $manageToken = $token['manageToken'];
+            $stackHost = $stack['host'];
+            assert(is_string($manageToken));
+            assert(is_string($stackHost));
+            $inputForThisStack = sprintf('%s %s %s %s', $commandName, $manageToken, $stackHost, $cmndInput);
             $cmdInput = new StringInput($inputForThisStack);
 
             // confirm from the user

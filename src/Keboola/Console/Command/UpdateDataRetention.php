@@ -53,11 +53,19 @@ class UpdateDataRetention extends Command
         int $dataRetentionTimeInDays,
         bool $force
     ): void {
-        $output->writeln(sprintf('Updating data retention for project "%s" ("%s")', $projectInfo['id'], $projectInfo['name']));
+        $projectId = $projectInfo['id'];
+        $projectName = $projectInfo['name'];
+        assert(is_string($projectId) || is_int($projectId));
+        assert(is_string($projectName));
+        $output->writeln(sprintf('Updating data retention for project "%s" ("%s")', $projectId, $projectName));
 
         // Disabled projects
         if (isset($projectInfo["isDisabled"]) && $projectInfo["isDisabled"]) {
-            $output->writeln(sprintf(' - project disabled: "%s"', $projectInfo["disabled"]["reason"]));
+            $disabled = $projectInfo["disabled"];
+            assert(is_array($disabled));
+            $disabledReason = $disabled["reason"];
+            assert(is_string($disabledReason));
+            $output->writeln(sprintf(' - project disabled: "%s"', $disabledReason));
             $this->projectsDisabled++;
         } else {
             $assignedBackends = $projectInfo['assignedBackends'];
