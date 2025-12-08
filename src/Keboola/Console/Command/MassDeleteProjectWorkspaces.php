@@ -113,7 +113,7 @@ class MassDeleteProjectWorkspaces extends Command
             $branchesClient = new DevBranches($storageClient);
 
             /**
-             * @var array<int, array{job: \Keboola\JobQueueClient\DTO\Job, sandbox: \Keboola\Sandboxes\Api\Sandbox}> $jobs
+             * @var array<int, array{job: array{id: string|int, ...<string, mixed>}, sandbox: \Keboola\Sandboxes\Api\Sandbox}> $jobs
              */
             $jobs = [];
             foreach ($branchesClient->listBranches() as $branch) {
@@ -149,13 +149,15 @@ class MassDeleteProjectWorkspaces extends Command
                             ],
                         ));
 
-                        $jobs[] = ['job' => $job, 'sandbox' => $sandbox];
+                        /**
+                         * @var array{id: string|int, ...<string, mixed>} $jobArray
+                         */
+                        $jobArray = (array) $job;
+                        $jobs[] = ['job' => $jobArray, 'sandbox' => $sandbox];
 
-                        // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
-                        $jobId = $job['id'];
                         $output->writeln(sprintf(
                             'Created delete job "%s" for project "%s"',
-                            $jobId,
+                            $jobArray['id'],
                             $projectId
                         ));
                     } else {
@@ -173,22 +175,19 @@ class MassDeleteProjectWorkspaces extends Command
                 foreach ($jobs as $i => $jobData) {
                     $job = $jobData['job'];
                     $sandbox = $jobData['sandbox'];
-                    // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
-                    $jobRes = $jobsClient->getJob($job['id']);
-                    // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
+                    /**
+                     * @var array{id: string|int, isFinished: bool, status: string, ...<string, mixed>} $jobRes
+                     */
+                    $jobRes = (array) $jobsClient->getJob((string) $job['id']);
                     if ($jobRes['isFinished'] === true) {
                         $workspaceDetails = $sandbox->getWorkspaceDetails();
                         $schema = $workspaceDetails['connection']['schema'] ?? 'unknown';
-                        // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
-                        $jobId = $job['id'];
-                        // @phpstan-ignore-next-line offsetAccess.nonOffsetAccessible
-                        $jobStatus = $jobRes['status'];
                         $output->writeln(sprintf(
                             'Delete job "%s" for sandbox "%s" with schema "%s" finished with status "%s"',
-                            $jobId,
+                            $job['id'],
                             $sandbox->getId(),
                             $schema,
-                            $jobStatus
+                            $jobRes['status']
                         ));
                         unset($jobs[$i]);
                     }
