@@ -51,15 +51,18 @@ class DeleteOrphanedWorkspaces extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $token = (string) $input->getArgument('storageToken');
-        $componentToDelete = (string) $input->getArgument('orphanComponent');
+        $token = $input->getArgument('storageToken');
+        assert(is_string($token));
+        $componentToDelete = $input->getArgument('orphanComponent');
+        assert(is_string($componentToDelete));
         $isForce = (bool) $input->getOption('force');
         $ignoreBackendErrors = (bool) $input->getOption('ignore-backend-errors');
         $manageToken = $input->getOption('manage-token');
         if ($ignoreBackendErrors && !$manageToken) {
             throw new InvalidArgumentException('Manage token must be supplied for ignore-backend-errors.');
         }
-        $hostnameSuffix = (string) $input->getArgument('hostnameSuffix');
+        $hostnameSuffix = $input->getArgument('hostnameSuffix');
+        assert(is_string($hostnameSuffix));
         $url = 'https://connection.' . $hostnameSuffix;
 
         $storageClient = new StorageApiClient([
@@ -70,7 +73,8 @@ class DeleteOrphanedWorkspaces extends Command
         $devBranches = new DevBranches($storageClient);
         $branchesList = $devBranches->listBranches();
 
-        $untilDateStr = (string) $input->getArgument('untilDate');
+        $untilDateStr = $input->getArgument('untilDate');
+        assert(is_string($untilDateStr));
         $untilDate = strtotime($untilDateStr);
         if ($untilDate === false) {
             throw new InvalidArgumentException(sprintf('Invalid date format: %s', $untilDateStr));

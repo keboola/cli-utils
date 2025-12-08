@@ -33,9 +33,12 @@ class QueueMassTerminateJobs extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $storageToken = (string) $input->getArgument(self::ARGUMENT_STORAGE_TOKEN);
-        $kbcUrl = (string) $input->getArgument(self::ARGUMENT_CONNECTION_URL);
-        $status = (string) $input->getArgument(self::ARGUMENT_JOB_STATUS);
+        $storageToken = $input->getArgument(self::ARGUMENT_STORAGE_TOKEN);
+        assert(is_string($storageToken));
+        $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
+        assert(is_string($kbcUrl));
+        $status = $input->getArgument(self::ARGUMENT_JOB_STATUS);
+        assert(is_string($status));
 
         if (!in_array($status, ['created', 'waiting', 'processing'])) {
             throw new Exception('Status must be either "created", "waiting" or "processing"!');

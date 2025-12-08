@@ -41,10 +41,14 @@ class ProjectsRemoveFeature extends Command
 
     public function execute(InputInterface $input, OutputInterface $output): ?int
     {
-        $apiToken = (string) $input->getArgument('token');
-        $apiUrl = (string) $input->getArgument('url');
-        $featureName = (string) $input->getArgument('feature');
-        $projects = (string) $input->getArgument('projects');
+        $apiToken = $input->getArgument('token');
+        assert(is_string($apiToken));
+        $apiUrl = $input->getArgument('url');
+        assert(is_string($apiUrl));
+        $featureName = $input->getArgument('feature');
+        assert(is_string($featureName));
+        $projects = $input->getArgument('projects');
+        assert(is_string($projects));
         $allProjects = strtolower($projects) === 'all';
 
         $force = (bool) $input->getOption('force');

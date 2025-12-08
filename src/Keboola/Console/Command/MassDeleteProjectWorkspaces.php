@@ -39,11 +39,13 @@ class MassDeleteProjectWorkspaces extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $stackSuffix = (string) $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
+        $stackSuffix = $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
+        assert(is_string($stackSuffix));
         $connectionUrl = 'https://connection.' . $stackSuffix;
         $sandboxesUrl = 'https://sandboxes.' . $stackSuffix;
         $jobsUrl = 'https://queue.' . $stackSuffix;
-        $sourceFile = (string) $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        assert(is_string($sourceFile));
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
         $force = (bool) $input->getOption(self::OPTION_FORCE);
 

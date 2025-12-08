@@ -44,8 +44,10 @@ class DeleteOwnerlessWorkspaces extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $token = (string) $input->getArgument('storageToken');
-        $hostnameSuffix = (string) $input->getArgument('hostnameSuffix');
+        $token = $input->getArgument('storageToken');
+        assert(is_string($token));
+        $hostnameSuffix = $input->getArgument('hostnameSuffix');
+        assert(is_string($hostnameSuffix));
         $url = 'https://connection.' . $hostnameSuffix;
         $sandboxesUrl = 'https://sandboxes.' . $hostnameSuffix;
         $includeShared = (bool) $input->getOption('includeShared');

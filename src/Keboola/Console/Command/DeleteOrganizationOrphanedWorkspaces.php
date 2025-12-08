@@ -54,9 +54,13 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $manageToken = (string) $input->getArgument('manageToken');
-        $organizationId = (int) $input->getArgument('organizationId');
-        $hostnameSuffix = (string) $input->getArgument('hostnameSuffix');
+        $manageToken = $input->getArgument('manageToken');
+        assert(is_string($manageToken));
+        $organizationId = $input->getArgument('organizationId');
+        assert(is_int($organizationId) || is_string($organizationId));
+        $organizationId = (int) $organizationId;
+        $hostnameSuffix = $input->getArgument('hostnameSuffix');
+        assert(is_string($hostnameSuffix));
         $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
@@ -71,11 +75,13 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
 
         $storageUrl = 'https://connection.' . $hostnameSuffix;
 
-        $orphanComponent = (string) $input->getArgument('orphanComponent');
+        $orphanComponent = $input->getArgument('orphanComponent');
+        assert(is_string($orphanComponent));
         $componentDesc = empty($orphanComponent) ? '(empty/blank)' : $orphanComponent;
         $output->writeln(sprintf('Targeting workspaces with component: %s', $componentDesc));
 
-        $untilDateStr = (string) $input->getArgument('untilDate');
+        $untilDateStr = $input->getArgument('untilDate');
+        assert(is_string($untilDateStr));
         $untilDate = strtotime($untilDateStr);
         if ($untilDate === false) {
             throw new \InvalidArgumentException(sprintf('Invalid date format: %s', $untilDateStr));

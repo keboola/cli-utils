@@ -62,7 +62,8 @@ class OrganizationIntoMaintenanceMode extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $maintenanceMode = (string) $input->getArgument(self::ARGUMENT_MAINTENANCE_MODE);
+        $maintenanceMode = $input->getArgument(self::ARGUMENT_MAINTENANCE_MODE);
+        assert(is_string($maintenanceMode));
         if (!in_array($maintenanceMode, ['on', 'off'])) {
             throw new \Exception(sprintf(
                 'The argument "%s" must be either "on" or "off", not "%s"',
@@ -70,11 +71,15 @@ class OrganizationIntoMaintenanceMode extends Command
                 $maintenanceMode
             ));
         }
-        $manageToken = (string) $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        assert(is_string($manageToken));
         $reason = $input->getArgument(self::ARGUMENT_REASON);
         $estimatedEndTime = $input->getArgument(self::ARGUMENT_ESTIMATED_END_TIME);
-        $organizationId = (int) $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
-        $hostnameSuffix = (string) $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
+        assert(is_int($organizationId) || is_string($organizationId));
+        $organizationId = (int) $organizationId;
+        $hostnameSuffix = $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        assert(is_string($hostnameSuffix));
         $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new ManageClient(['token' => $manageToken, 'url' => $kbcUrl]);

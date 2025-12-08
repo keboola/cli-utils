@@ -31,9 +31,11 @@ class MassProjectExtendExpiration extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $sourceFile = (string) $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        assert(is_string($sourceFile));
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
-        $expirationDays = (string) $input->getArgument(self::ARGUMENT_EXPIRATION_DAYS);
+        $expirationDays = $input->getArgument(self::ARGUMENT_EXPIRATION_DAYS);
+        assert(is_string($expirationDays));
         $output->writeln(sprintf('Expiration days "%s"', $expirationDays));
         $force = (bool) $input->getOption(self::OPTION_FORCE);
         $output->writeln($force ? 'FORCE MODE' : 'DRY RUN');

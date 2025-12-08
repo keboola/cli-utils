@@ -43,10 +43,15 @@ class OrganizationResetWorkspacePasswords extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $manageToken = (string) $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
-        $snowflakeHostname = (string) $input->getArgument(self::ARGUMENT_SNOWFLAKE_HOSTNAME);
-        $organizationId = (int) $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
-        $hostnameSuffix = (string) $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        assert(is_string($manageToken));
+        $snowflakeHostname = $input->getArgument(self::ARGUMENT_SNOWFLAKE_HOSTNAME);
+        assert(is_string($snowflakeHostname));
+        $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
+        assert(is_int($organizationId) || is_string($organizationId));
+        $organizationId = (int) $organizationId;
+        $hostnameSuffix = $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        assert(is_string($hostnameSuffix));
         $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);

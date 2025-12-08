@@ -46,10 +46,15 @@ class OrganizationStorageBackend extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $storageBackendId = (string) $input->getArgument(self::ARGUMENT_STORAGE_BACKEND_ID);
-        $manageToken = (string) $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
-        $organizationId = (int) $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
-        $hostnameSuffix = (string) $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        $storageBackendId = $input->getArgument(self::ARGUMENT_STORAGE_BACKEND_ID);
+        assert(is_string($storageBackendId));
+        $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        assert(is_string($manageToken));
+        $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
+        assert(is_int($organizationId) || is_string($organizationId));
+        $organizationId = (int) $organizationId;
+        $hostnameSuffix = $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        assert(is_string($hostnameSuffix));
         $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);

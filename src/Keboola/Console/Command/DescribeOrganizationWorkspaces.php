@@ -46,10 +46,15 @@ class DescribeOrganizationWorkspaces extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $manageToken = (string) $input->getArgument('manageToken');
-        $organizationId = (int) $input->getArgument('organizationId');
-        $outputFile = (string) $input->getArgument('outputFile');
-        $hostnameSuffix = (string) $input->getArgument('hostnameSuffix');
+        $manageToken = $input->getArgument('manageToken');
+        assert(is_string($manageToken));
+        $organizationId = $input->getArgument('organizationId');
+        assert(is_int($organizationId) || is_string($organizationId));
+        $organizationId = (int) $organizationId;
+        $outputFile = $input->getArgument('outputFile');
+        assert(is_string($outputFile));
+        $hostnameSuffix = $input->getArgument('hostnameSuffix');
+        assert(is_string($hostnameSuffix));
         $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
         $organization = $manageClient->getOrganization($organizationId);
