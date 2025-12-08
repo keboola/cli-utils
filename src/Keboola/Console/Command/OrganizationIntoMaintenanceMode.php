@@ -113,7 +113,7 @@ class OrganizationIntoMaintenanceMode extends Command
                 $thereAreRunningJobs = $this->areThereRunningJobs(
                     $manageClient,
                     $project['id'],
-                    $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX),
+                    $hostnameSuffix,
                     $output
                 );
                 if ($thereAreRunningJobs) {

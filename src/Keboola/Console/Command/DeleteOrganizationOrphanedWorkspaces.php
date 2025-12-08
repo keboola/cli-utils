@@ -208,7 +208,9 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             return false;
         }
         // Skip workspaces created after or on the cutoff date
-        if (strtotime($workspace['created']) >= $untilDate) {
+        $createdDate = $workspace['created'];
+        assert(is_string($createdDate));
+        if (strtotime($createdDate) >= $untilDate) {
             return false;
         }
         // If all conditions pass, the workspace qualifies

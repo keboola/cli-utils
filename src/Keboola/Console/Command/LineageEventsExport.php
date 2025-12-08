@@ -75,12 +75,17 @@ class LineageEventsExport extends Command
             throw new Exception('Environment variable "STORAGE_API_TOKEN" missing.');
         }
 
+        $connectionUrl = $input->getArgument('connectionUrl');
+        assert(is_string($connectionUrl));
+        $marquezUrl = $input->getArgument('marquezUrl');
+        assert(is_string($marquezUrl));
+
         $queueClient = $this->createQueueClient(
             $token,
-            $this->findQueueServiceUrl($token, $input->getArgument('connectionUrl'))
+            $this->findQueueServiceUrl($token, $connectionUrl)
         );
 
-        $marquezClient = $this->createMarquezClient($input->getArgument('marquezUrl'));
+        $marquezClient = $this->createMarquezClient($marquezUrl);
         $jobsResponse = $queueClient->request('GET', '/jobs?' . http_build_query([
             'createdTimeFrom' => '-20 days',
             'sortOrder' => 'desc',

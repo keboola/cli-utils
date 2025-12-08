@@ -162,6 +162,8 @@ class DeleteOrphanedWorkspaces extends Command
      */
     private function isWorkspaceOrphaned(array $workspace, string $component, int $untilDate): bool
     {
-        return ($workspace['component'] === $component) && strtotime($workspace['created']) < $untilDate;
+        $createdDate = $workspace['created'];
+        assert(is_string($createdDate));
+        return ($workspace['component'] === $component) && strtotime($createdDate) < $untilDate;
     }
 }

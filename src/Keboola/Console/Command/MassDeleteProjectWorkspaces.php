@@ -83,12 +83,14 @@ class MassDeleteProjectWorkspaces extends Command
 //        ];
 
         foreach ($map as $projectId => $workspacesSchemasToDelete) {
+            /** @var \Symfony\Component\Console\Helper\QuestionHelper $helper */
             $helper = $this->getHelper('question');
             $question = new Question(sprintf(
                 'Paste storage token for project "%s" to continue.' . PHP_EOL,
                 $projectId,
             ));
             $storageToken = $helper->ask($input, $output, $question);
+            assert(is_string($storageToken));
 
             $storageClient = new Client([
                 'token' => $storageToken,
