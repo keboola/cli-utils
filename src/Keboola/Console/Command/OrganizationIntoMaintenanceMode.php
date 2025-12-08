@@ -3,6 +3,7 @@
 namespace Keboola\Console\Command;
 
 use Keboola\JobQueueClient\Client as QueueClient;
+use Keboola\JobQueueClient\JobStatuses;
 use Keboola\JobQueueClient\ListJobsOptions;
 use Keboola\ManageApi\Client as ManageClient;
 use Keboola\StorageApi\Client as StorageClient;
@@ -160,10 +161,10 @@ class OrganizationIntoMaintenanceMode extends Command
         $runningJobsListOptions = new ListJobsOptions();
         // created, waiting, processing, terminating
         $runningJobsListOptions->setStatuses([
-            ListJobsOptions::STATUS_CREATED,
-            ListJobsOptions::STATUS_WAITING,
-            ListJobsOptions::STATUS_PROCESSING,
-            ListJobsOptions::STATUS_TERMINATING
+            JobStatuses::CREATED,
+            JobStatuses::WAITING,
+            JobStatuses::PROCESSING,
+            JobStatuses::TERMINATING
         ]);
         $runningJobs = $jobsClient->listJobs($runningJobsListOptions);
         $output->writeln(

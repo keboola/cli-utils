@@ -1,13 +1,16 @@
 {
     "name": "keboola/cli-utils",
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "symfony/console": "^3.1",
-        "keboola/sandboxes-api-php-client": "^6.31",
-        "keboola/storage-api-client": "^14",
+        "keboola/sandboxes-api-php-client": "6.32.0",
+        "keboola/storage-api-client": "^18.5.0",
         "keboola/kbc-manage-api-php-client": "^7",
         "symfony/event-dispatcher": "6.4.*",
-        "keboola/job-queue-api-php-client": "^2.2"
+        "keboola/job-queue-api-php-client": "^5.2.0",
+        "psr/log": "^2.0|^3.0",
+        "symfony/config": "^6.0|^7.0",
+        "keboola/php-datatypes": "^8.0"
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "3.*"

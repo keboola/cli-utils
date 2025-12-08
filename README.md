@@ -21,7 +21,7 @@ Assorted CLI utils
 1. Clone the repo
 2. Init .env file `cp .env.dist .env` (actual values are not needed unless you want to run `manage:mass-project-remove-expiration`)
 3. Build the image `docker compose build dev`
-4. [optional] Install dependencies `docker run --rm dev composer install`
+4. [optional] Install dependencies `docker compose run --rm dev composer install`
 5. Update the code
 6. Run a command `docker compose run --rm app php cli.php <command>`
 
