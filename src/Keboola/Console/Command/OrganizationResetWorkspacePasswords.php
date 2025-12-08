@@ -48,7 +48,8 @@ class OrganizationResetWorkspacePasswords extends Command
         $snowflakeHostname = $input->getArgument(self::ARGUMENT_SNOWFLAKE_HOSTNAME);
         assert(is_string($snowflakeHostname));
         $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
-        assert(is_int($organizationId) || is_string($organizationId));
+        assert(is_string($organizationId));
+        $organizationId = is_numeric($organizationId) ? (int) $organizationId : (int) $organizationId;
         $organizationId = (int) $organizationId;
         $hostnameSuffix = $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
         assert(is_string($hostnameSuffix));

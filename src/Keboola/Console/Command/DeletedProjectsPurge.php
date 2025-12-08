@@ -62,7 +62,10 @@ class DeletedProjectsPurge extends Command
         return 0;
     }
 
-    private function validateHeader($header): void
+    /**
+     * @param array<int, string|null> $header
+     */
+    private function validateHeader(array $header): void
     {
         $expectedHeader = ['id', 'name'];
         if ($header !== $expectedHeader) {

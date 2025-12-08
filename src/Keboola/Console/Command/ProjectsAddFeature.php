@@ -53,7 +53,8 @@ class ProjectsAddFeature extends Command
     protected function addFeatureToProject(Client $client, OutputInterface $output, array $projectInfo, string $featureName, bool $force): void
     {
         $projectId = $projectInfo['id'];
-        assert(is_int($projectId) || is_string($projectId));
+        assert(is_string($projectId));
+        $projectId = is_numeric($projectId) ? (int) $projectId : (int) $projectId;
         $output->writeln("Adding feature to project " . $projectId);
 
         // Disabled projects

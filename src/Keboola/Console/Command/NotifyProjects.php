@@ -55,7 +55,7 @@ class NotifyProjects extends Command
     }
 
     /**
-     * @param array<int, string> $header
+     * @param array<int, string|null> $header
      */
     private function validateHeader(array $header): void
     {

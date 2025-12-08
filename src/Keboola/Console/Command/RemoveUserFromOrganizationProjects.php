@@ -45,7 +45,8 @@ class RemoveUserFromOrganizationProjects extends Command
         $manageToken = $input->getArgument('manageToken');
         assert(is_string($manageToken));
         $organizationId = $input->getArgument('organizationId');
-        assert(is_int($organizationId) || is_string($organizationId));
+        assert(is_string($organizationId));
+        $organizationId = is_numeric($organizationId) ? (int) $organizationId : (int) $organizationId;
         $organizationId = (int) $organizationId;
         $userEmail = $input->getArgument('userEmail');
         assert(is_string($userEmail));
