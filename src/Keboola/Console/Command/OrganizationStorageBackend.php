@@ -46,10 +46,11 @@ class OrganizationStorageBackend extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $storageBackendId = $input->getArgument(self::ARGUMENT_STORAGE_BACKEND_ID);
-        $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
-        $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX));
+        $storageBackendId = (string) $input->getArgument(self::ARGUMENT_STORAGE_BACKEND_ID);
+        $manageToken = (string) $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        $organizationId = (int) $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
+        $hostnameSuffix = (string) $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
 
@@ -63,7 +64,7 @@ class OrganizationStorageBackend extends Command
                 $storageBackendId
             )
         );
-        $force = $input->getOption(self::OPTION_FORCE);
+        $force = (bool) $input->getOption(self::OPTION_FORCE);
         $output->writeln($force ? 'FORCE MODE' : 'DRY RUN');
         foreach ($projects as $project) {
             $output->writeln(

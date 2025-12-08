@@ -43,10 +43,11 @@ class OrganizationResetWorkspacePasswords extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
-        $snowflakeHostname = $input->getArgument(self::ARGUMENT_SNOWFLAKE_HOSTNAME);
-        $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX));
+        $manageToken = (string) $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        $snowflakeHostname = (string) $input->getArgument(self::ARGUMENT_SNOWFLAKE_HOSTNAME);
+        $organizationId = (int) $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
+        $hostnameSuffix = (string) $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
 
@@ -59,7 +60,7 @@ class OrganizationResetWorkspacePasswords extends Command
                 count($projects),
             )
         );
-        $force = $input->getOption(self::OPTION_FORCE);
+        $force = (bool) $input->getOption(self::OPTION_FORCE);
         $output->writeln($force ? 'FORCE MODE' : 'DRY RUN');
         foreach ($projects as $project) {
             $output->writeln(

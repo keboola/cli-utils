@@ -46,8 +46,8 @@ class SetDataRetention extends Command
             if ($lineNumber === 0) {
                 $this->validateHeader($row);
             } else {
-                $projectId = (int) trim($row[0]);
-                $dataRetentionTimeInDays = (int) trim($row[1]);
+                $projectId = (int) trim((string) $row[0]);
+                $dataRetentionTimeInDays = (int) trim((string) $row[1]);
                 try {
                     $client->updateProject($projectId, ['dataRetentionTimeInDays' => $dataRetentionTimeInDays]);
                     $output->writeln("Updated project " . $projectId . " to data retention period " . $dataRetentionTimeInDays);

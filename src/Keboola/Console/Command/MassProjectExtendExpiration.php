@@ -31,11 +31,11 @@ class MassProjectExtendExpiration extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        $sourceFile = (string) $input->getArgument(self::ARGUMENT_SOURCE_FILE);
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
-        $expirationDays = $input->getArgument(self::ARGUMENT_EXPIRATION_DAYS);
+        $expirationDays = (string) $input->getArgument(self::ARGUMENT_EXPIRATION_DAYS);
         $output->writeln(sprintf('Expiration days "%s"', $expirationDays));
-        $force = $input->getOption(self::OPTION_FORCE);
+        $force = (bool) $input->getOption(self::OPTION_FORCE);
         $output->writeln($force ? 'FORCE MODE' : 'DRY RUN');
 
         if ($force) {
@@ -60,7 +60,11 @@ class MassProjectExtendExpiration extends Command
         if (!file_exists($sourceFile)) {
             throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
         }
-        $projectsText = trim(file_get_contents($sourceFile));
+        $fileContents = file_get_contents($sourceFile);
+        if ($fileContents === false) {
+            throw new \Exception(sprintf('Cannot read "%s"', $sourceFile));
+        }
+        $projectsText = trim($fileContents);
         if (!$projectsText) {
             return 0;
         }

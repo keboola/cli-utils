@@ -42,10 +42,11 @@ class RemoveUserFromOrganizationProjects extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $manageToken = $input->getArgument('manageToken');
-        $organizationId = $input->getArgument('organizationId');
-        $userEmail = $input->getArgument('userEmail');
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument('hostnameSuffix'));
+        $manageToken = (string) $input->getArgument('manageToken');
+        $organizationId = (int) $input->getArgument('organizationId');
+        $userEmail = (string) $input->getArgument('userEmail');
+        $hostnameSuffix = (string) $input->getArgument('hostnameSuffix');
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
 

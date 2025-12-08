@@ -125,7 +125,11 @@ class MassProjectEnableDynamicBackends extends Command
         if (!file_exists($sourceFile)) {
             throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
         }
-        $projectsText = trim(file_get_contents($sourceFile));
+        $fileContents = file_get_contents($sourceFile);
+        if ($fileContents === false) {
+            throw new \Exception(sprintf('Cannot read "%s"', $sourceFile));
+        }
+        $projectsText = trim($fileContents);
         if (!$projectsText) {
             return [];
         }
