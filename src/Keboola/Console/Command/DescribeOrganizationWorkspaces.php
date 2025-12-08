@@ -46,10 +46,11 @@ class DescribeOrganizationWorkspaces extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $manageToken = $input->getArgument('manageToken');
-        $organizationId = $input->getArgument('organizationId');
-        $outputFile = $input->getArgument('outputFile');
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument('hostnameSuffix'));
+        $manageToken = (string) $input->getArgument('manageToken');
+        $organizationId = (int) $input->getArgument('organizationId');
+        $outputFile = (string) $input->getArgument('outputFile');
+        $hostnameSuffix = (string) $input->getArgument('hostnameSuffix');
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
         $organization = $manageClient->getOrganization($organizationId);
         $projects = $organization['projects'];
@@ -60,7 +61,7 @@ class DescribeOrganizationWorkspaces extends Command
             )
         );
 
-        $storageUrl = 'https://connection.' . $input->getArgument('hostnameSuffix');
+        $storageUrl = 'https://connection.' . $hostnameSuffix;
 
         $totalWorkspaces = 0;
 
