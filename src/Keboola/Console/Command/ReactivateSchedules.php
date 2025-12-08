@@ -40,8 +40,11 @@ class ReactivateSchedules extends Command
         $prefix = $isForce ? 'FORCE: ' : 'DRY-RUN: ';
         $output->writeln('Running ' . ($isForce ? 'force mode' : 'in dry run mode'));
 
-        $this->stackSuffix = $input->getArgument(self::ARG_STACK);
+        $stackArg = $input->getArgument(self::ARG_STACK);
+        assert(is_string($stackArg));
+        $this->stackSuffix = $stackArg;
         $token = $input->getArgument(self::ARG_TOKEN);
+        assert(is_string($token));
 
         $connectionUrl = $this->buildUrl('connection');
         $schedulerUrl = $this->buildUrl('scheduler');

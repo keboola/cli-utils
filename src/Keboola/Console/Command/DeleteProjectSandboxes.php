@@ -84,7 +84,7 @@ class DeleteProjectSandboxes extends Command
                 if (!empty($sandbox->getPhysicalId())) {
                     if ($force) {
                         try {
-                            $workspacesClient->deleteWorkspace($sandbox->getPhysicalId());
+                            $workspacesClient->deleteWorkspace((int) $sandbox->getPhysicalId());
                             $totalDeletedStorageWorkspaces++;
                         } catch (Exception $exception) {
                             if ($exception->getCode() === 404) {
@@ -99,7 +99,7 @@ class DeleteProjectSandboxes extends Command
                 $output->writeln('Deleting staging storage workspace ' . $sandbox->getPhysicalId());
                 $totalDeletedStorageWorkspaces++;
                 if ($force) {
-                    $workspacesClient->deleteWorkspace($sandbox->getStagingWorkspaceId(), [], true);
+                    $workspacesClient->deleteWorkspace((int) $sandbox->getStagingWorkspaceId(), [], true);
                 }
             }
 

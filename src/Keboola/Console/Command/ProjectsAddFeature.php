@@ -17,15 +17,15 @@ class ProjectsAddFeature extends Command
     const ARG_TOKEN = 'token';
     const OPT_FORCE = 'force';
 
-    protected $maintainersChecked = 0;
+    protected int $maintainersChecked = 0;
 
-    protected $orgsChecked = 0;
+    protected int $orgsChecked = 0;
 
-    protected $projectsDisabled = 0;
+    protected int $projectsDisabled = 0;
 
-    protected $projectsWithFeature = 0;
+    protected int $projectsWithFeature = 0;
 
-    protected $projectsUpdated = 0;
+    protected int $projectsUpdated = 0;
 
     protected function configure(): void
     {

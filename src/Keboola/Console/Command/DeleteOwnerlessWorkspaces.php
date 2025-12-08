@@ -127,7 +127,7 @@ class DeleteOwnerlessWorkspaces extends Command
         OutputInterface $output
     ): void {
         try {
-            $workspacesClient->deleteWorkspace($workspaceId);
+            $workspacesClient->deleteWorkspace((int) $workspaceId);
         } catch (\Throwable $clientException) {
             $output->writeln(
                 sprintf(

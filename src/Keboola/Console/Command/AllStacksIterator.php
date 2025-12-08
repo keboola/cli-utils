@@ -26,13 +26,15 @@ class AllStacksIterator extends Command
 
     public function execute(InputInterface $input, OutputInterface $output): ?int
     {
-        $commandName = (string) $input->getArgument(self::ARG_COMMAND);
+        $commandName = $input->getArgument(self::ARG_COMMAND);
+        assert(is_string($commandName));
         $application = $this->getApplication();
         if ($application === null) {
             throw new Exception('Application not found');
         }
         $command = $application->find($commandName);
-        $cmndInput = (string) $input->getArgument(self::ARG_PARAMS);
+        $cmndInput = $input->getArgument(self::ARG_PARAMS);
+        assert(is_string($cmndInput));
 
         $stacksFile = file_get_contents('http-client.env.json');
         $stacksTokensFile = file_get_contents('http-client.private.env.json');
