@@ -17,7 +17,7 @@ class MassProjectExtendExpiration extends Command
     const ARGUMENT_TOKEN_STACK = 'token-stack';
     const ARGUMENT_EXPIRATION_DAYS = 'extend-days';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:mass-project-remove-expiration')

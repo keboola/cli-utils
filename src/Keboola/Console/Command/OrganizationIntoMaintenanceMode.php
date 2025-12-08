@@ -24,7 +24,7 @@ class OrganizationIntoMaintenanceMode extends Command
     const ARGUMENT_HOSTNAME_SUFFIX = 'hostnameSuffix';
     const OPTION_FORCE = 'force';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:set-organization-maintenance-mode')

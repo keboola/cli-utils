@@ -27,7 +27,7 @@ class MassDeleteProjectWorkspaces extends Command
     private const ARGUMENT_SOURCE_FILE = 'source-file';
     private const OPTION_FORCE = 'force';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:mass-delete-project-workspaces')

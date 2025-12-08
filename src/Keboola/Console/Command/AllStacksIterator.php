@@ -26,9 +26,13 @@ class AllStacksIterator extends Command
 
     public function execute(InputInterface $input, OutputInterface $output): ?int
     {
-        $commandName = $input->getArgument(self::ARG_COMMAND);
-        $command = $this->getApplication()->find($commandName);
-        $cmndInput = $input->getArgument(self::ARG_PARAMS);
+        $commandName = (string) $input->getArgument(self::ARG_COMMAND);
+        $application = $this->getApplication();
+        if ($application === null) {
+            throw new Exception('Application not found');
+        }
+        $command = $application->find($commandName);
+        $cmndInput = (string) $input->getArgument(self::ARG_PARAMS);
 
         $stacksFile = file_get_contents('http-client.env.json');
         $stacksTokensFile = file_get_contents('http-client.private.env.json');
@@ -40,20 +44,34 @@ class AllStacksIterator extends Command
         $stacks = json_decode($stacksFile, true);
         $tokens = json_decode($stacksTokensFile, true);
 
+        if (!is_array($stacks) || !is_array($tokens)) {
+            throw new Exception('Invalid JSON format in http-client files');
+        }
+
         /** @var QuestionHelper $helper */
         $helper = $this->getHelper('question');
 
         // iterates over all stacks
         foreach ($stacks as $stackName => $stack) {
-            if (!isset($tokens[$stackName]) || $tokens[$stackName] === '') {
-                $output->writeln(sprintf('Token for %s not found or it is empty. Skipping', $stackName));
+            if (!is_array($stack) || !isset($stack['host'])) {
+                $output->writeln(sprintf('Invalid stack configuration for %s. Skipping', (string) $stackName));
+                continue;
+            }
+
+            if (!isset($tokens[$stackName]) || $tokens[$stackName] === '' || !is_array($tokens[$stackName])) {
+                $output->writeln(sprintf('Token for %s not found or it is empty. Skipping', (string) $stackName));
                 continue;
             }
 
             $token = $tokens[$stackName];
 
+            if (!isset($token['manageToken'])) {
+                $output->writeln(sprintf('Manage token for %s not found. Skipping', (string) $stackName));
+                continue;
+            }
+
             // build input for the target command. It adds token and host from http-client files.
-            $inputForThisStack = sprintf('%s %s %s %s', $commandName, $token['manageToken'], $stack['host'], $cmndInput);
+            $inputForThisStack = sprintf('%s %s %s %s', $commandName, (string) $token['manageToken'], (string) $stack['host'], $cmndInput);
             $cmdInput = new StringInput($inputForThisStack);
 
             // confirm from the user

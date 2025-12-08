@@ -17,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteOrphanedWorkspaces extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:delete-orphaned-workspaces')
@@ -49,17 +49,18 @@ class DeleteOrphanedWorkspaces extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $token = $input->getArgument('storageToken');
-        $componentToDelete = $input->getArgument('orphanComponent');
+        $token = (string) $input->getArgument('storageToken');
+        $componentToDelete = (string) $input->getArgument('orphanComponent');
         $isForce = (bool) $input->getOption('force');
         $ignoreBackendErrors = (bool) $input->getOption('ignore-backend-errors');
         $manageToken = $input->getOption('manage-token');
         if ($ignoreBackendErrors && !$manageToken) {
             throw new InvalidArgumentException('Manage token must be supplied for ignore-backend-errors.');
         }
-        $url = 'https://connection.' . $input->getArgument('hostnameSuffix');
+        $hostnameSuffix = (string) $input->getArgument('hostnameSuffix');
+        $url = 'https://connection.' . $hostnameSuffix;
 
         $storageClient = new StorageApiClient([
             'token' => $token,
@@ -68,6 +69,12 @@ class DeleteOrphanedWorkspaces extends Command
         ]);
         $devBranches = new DevBranches($storageClient);
         $branchesList = $devBranches->listBranches();
+
+        $untilDateStr = (string) $input->getArgument('untilDate');
+        $untilDate = strtotime($untilDateStr);
+        if ($untilDate === false) {
+            throw new InvalidArgumentException(sprintf('Invalid date format: %s', $untilDateStr));
+        }
 
         $output->writeln('Workspaces for component ' . $componentToDelete . ' will be deleted from ' . $url);
 
@@ -90,7 +97,7 @@ class DeleteOrphanedWorkspaces extends Command
                 $shouldDropWorkspace = $this->isWorkspaceOrphaned(
                     $workspace,
                     $componentToDelete,
-                    strtotime($input->getArgument('untilDate'))
+                    $untilDate
                 );
                 if ($shouldDropWorkspace) {
                     $output->writeln('Deleting orphaned workspace ' . $workspace['id']);
@@ -146,8 +153,13 @@ class DeleteOrphanedWorkspaces extends Command
             $totalWorkspaces,
             $totalDeletedWorkspaces
         ));
+
+        return 0;
     }
 
+    /**
+     * @param array<string, mixed> $workspace
+     */
     private function isWorkspaceOrphaned(array $workspace, string $component, int $untilDate): bool
     {
         return ($workspace['component'] === $component) && strtotime($workspace['created']) < $untilDate;

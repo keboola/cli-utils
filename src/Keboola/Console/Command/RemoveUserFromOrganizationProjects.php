@@ -11,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class RemoveUserFromOrganizationProjects extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:remove-user-from-organization-projects')
@@ -40,7 +40,7 @@ class RemoveUserFromOrganizationProjects extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument('manageToken');
         $organizationId = $input->getArgument('organizationId');
@@ -91,6 +91,8 @@ class RemoveUserFromOrganizationProjects extends Command
                 $affectedProjects
             )
         );
+
+        return 0;
     }
 
     private function isUserInProject(int $userId, array $projectUsers): bool

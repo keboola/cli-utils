@@ -24,7 +24,7 @@ class MassProjectEnableDynamicBackends extends Command
     private const FEATURE_NEW_TRANSFORMATIONS_ONLY = 'new-transformations-only';
     private const FEATURE_DYNAMIC_BACKEND_SIZE = 'workspace-snowflake-dynamic-backend-size';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:mass-project-enable-dynamic-backends')

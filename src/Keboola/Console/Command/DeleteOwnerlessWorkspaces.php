@@ -17,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteOwnerlessWorkspaces extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:delete-ownerless-workspaces')
@@ -42,7 +42,7 @@ class DeleteOwnerlessWorkspaces extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = $input->getArgument('storageToken');
         $url = 'https://connection.' . $input->getArgument('hostnameSuffix');
@@ -116,6 +116,8 @@ class DeleteOwnerlessWorkspaces extends Command
             $totalDeletedSandboxes,
             $totalDeletedStorageWorkspaces
         ));
+
+        return 0;
     }
 
     private function deleteStorageWorkspace(

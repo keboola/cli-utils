@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class LineageEventsExport extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:lineage-events-export')
@@ -68,7 +68,7 @@ class LineageEventsExport extends Command
         ]);
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = getenv('STORAGE_API_TOKEN');
         if (!$token) {
@@ -115,6 +115,8 @@ class LineageEventsExport extends Command
         }
 
         $output->writeln('Done');
+
+        return 0;
     }
 
     private function decodeResponse(ResponseInterface $response): array

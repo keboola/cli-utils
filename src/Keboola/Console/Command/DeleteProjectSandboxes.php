@@ -15,7 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteProjectSandboxes extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:delete-project-sandboxes')
@@ -40,7 +40,7 @@ class DeleteProjectSandboxes extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = $input->getArgument('storageToken');
         $url = 'https://connection.' . $input->getArgument('hostnameSuffix');
@@ -114,5 +114,7 @@ class DeleteProjectSandboxes extends Command
             $totalDeletedSandboxes,
             $totalDeletedStorageWorkspaces
         ));
+
+        return 0;
     }
 }

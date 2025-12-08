@@ -21,7 +21,7 @@ class QueueMassTerminateJobs extends Command
     const ARGUMENT_CONNECTION_URL = 'connection-url';
     const ARGUMENT_JOB_STATUS = 'job-status';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setDescription('Terminated all jobs in project')

@@ -16,7 +16,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DescribeOrganizationWorkspaces extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:describe-organization-workspaces')
@@ -44,7 +44,7 @@ class DescribeOrganizationWorkspaces extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument('manageToken');
         $organizationId = $input->getArgument('organizationId');
@@ -159,5 +159,7 @@ class DescribeOrganizationWorkspaces extends Command
                 $totalWorkspaces
             )
         );
+
+        return 0;
     }
 }

@@ -41,7 +41,7 @@ class OrganizationResetWorkspacePasswords extends Command
     }
 
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
         $snowflakeHostname = $input->getArgument(self::ARGUMENT_SNOWFLAKE_HOSTNAME);
@@ -79,5 +79,7 @@ class OrganizationResetWorkspacePasswords extends Command
             }
         }
         $output->writeln('All done.');
+
+        return 0;
     }
 }

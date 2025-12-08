@@ -105,7 +105,7 @@ class AddFeature extends Command
     public function execute(InputInterface $input, OutputInterface $output): ?int
     {
         $args = $input->getArguments();
-        $force = $input->getOption(self::OPT_FORCE);
+        $force = (bool) $input->getOption(self::OPT_FORCE);
 
         $client = $this->createClient($args[self::ARG_URL], $args[self::ARG_TOKEN]);
         $this->createFeature($client, $args[self::ARG_FEATURE_NAME], $args[self::ARG_FEATURE_TITLE], $args[self::ARG_FEATURE_DESC], $force, $output);

@@ -20,7 +20,7 @@ class SetDataRetention extends Command
     /**
      * Configure command, set parameters definition and help.
      */
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:set-data-retention')

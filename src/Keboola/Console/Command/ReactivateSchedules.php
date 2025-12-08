@@ -23,7 +23,7 @@ class ReactivateSchedules extends Command
     /**
      * Configure command, set parameters definition and help.
      */
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:reactivate-schedules')
