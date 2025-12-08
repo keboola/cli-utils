@@ -59,7 +59,9 @@ class ProjectsAddFeature extends Command
             $output->writeln(" - project disabled: " . $projectInfo["disabled"]["reason"]);
             $this->projectsDisabled++;
         } else {
-            if (in_array($featureName, $projectInfo["features"], true)) {
+            $features = $projectInfo["features"];
+            assert(is_array($features));
+            if (in_array($featureName, $features, true)) {
                 $output->writeln(" - feature '{$featureName}' is already set.");
                 $this->projectsWithFeature++;
             } else {
@@ -93,7 +95,7 @@ class ProjectsAddFeature extends Command
     }
 
     /**
-     * @param array<int, int> $projectIds
+     * @param array<int, string> $projectIds
      */
     protected function addFeatureToSelectedProjects(Client $client, OutputInterface $output, string $featureName, array $projectIds, bool $force): void
     {

@@ -106,7 +106,7 @@ class ProjectsRemoveFeature extends Command
     }
 
     /**
-     * @param array<int, int> $projectIds
+     * @param array<int, string> $projectIds
      */
     private function removeFeatureFromSelectedProjects(
         Client $client,
@@ -148,7 +148,9 @@ class ProjectsRemoveFeature extends Command
             return;
         }
 
-        if (!in_array($featureName, $projectInfo['features'], true)) {
+        $features = $projectInfo['features'];
+        assert(is_array($features));
+        if (!in_array($featureName, $features, true)) {
             $output->writeln('doesn\'t have the feature, <comment>skipping</comment>');
             $this->projectsWithoutFeature++;
 

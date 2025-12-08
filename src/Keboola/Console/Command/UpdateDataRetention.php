@@ -60,7 +60,9 @@ class UpdateDataRetention extends Command
             $output->writeln(sprintf(' - project disabled: "%s"', $projectInfo["disabled"]["reason"]));
             $this->projectsDisabled++;
         } else {
-            if (!in_array('snowflake', $projectInfo['assignedBackends'])) {
+            $assignedBackends = $projectInfo['assignedBackends'];
+            assert(is_array($assignedBackends));
+            if (!in_array('snowflake', $assignedBackends)) {
                 $output->writeln(' - project does not have Snowflake backend assigned. Skiping.');
                 $this->projectsNoSnowflake++;
             } else {

@@ -49,10 +49,7 @@ class MassDeleteProjectWorkspaces extends Command
 
         // map by project id
         /**
-         * @var array{
-         *     string,
-         *     string[],
-         * } $map
+         * @var array<string, array<int, string>> $map
          */
         $map = [];
         $csv = new CsvFile($sourceFile);
