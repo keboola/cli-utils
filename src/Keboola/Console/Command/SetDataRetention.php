@@ -63,6 +63,9 @@ class SetDataRetention extends Command
         return 0;
     }
 
+    /**
+     * @param array<int, string> $header
+     */
     private function validateHeader(array $header): void
     {
         $expectedHeader = ['projectId', 'dataRetentionTimeInDays'];

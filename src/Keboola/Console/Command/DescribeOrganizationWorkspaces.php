@@ -95,6 +95,7 @@ class DescribeOrganizationWorkspaces extends Command
                     $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
                     continue;
                 }
+                throw $e;
             }
 
             $storageClient = new StorageApiClient([

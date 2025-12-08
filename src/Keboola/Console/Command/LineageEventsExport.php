@@ -119,6 +119,9 @@ class LineageEventsExport extends Command
         return 0;
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     private function decodeResponse(ResponseInterface $response): array
     {
         return json_decode($response->getBody()->getContents(), true, 512, JSON_THROW_ON_ERROR);

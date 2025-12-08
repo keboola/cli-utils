@@ -47,6 +47,9 @@ class ProjectsAddFeature extends Command
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $projectInfo
+     */
     protected function addFeatureToProject(Client $client, OutputInterface $output, array $projectInfo, string $featureName, bool $force): void
     {
         $output->writeln("Adding feature to project " . $projectInfo['id']);
@@ -89,6 +92,9 @@ class ProjectsAddFeature extends Command
         }
     }
 
+    /**
+     * @param array<int, int> $projectIds
+     */
     protected function addFeatureToSelectedProjects(Client $client, OutputInterface $output, string $featureName, array $projectIds, bool $force): void
     {
         foreach ($projectIds as $projectId) {

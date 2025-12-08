@@ -96,6 +96,9 @@ class RemoveUserFromOrganizationProjects extends Command
         return 0;
     }
 
+    /**
+     * @param array<int, array<string, mixed>> $projectUsers
+     */
     private function isUserInProject(int $userId, array $projectUsers): bool
     {
         foreach ($projectUsers as $projectUser) {

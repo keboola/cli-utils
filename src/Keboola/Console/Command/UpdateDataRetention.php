@@ -43,6 +43,9 @@ class UpdateDataRetention extends Command
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $projectInfo
+     */
     protected function updateProjectDataRetention(
         Client $client,
         OutputInterface $output,

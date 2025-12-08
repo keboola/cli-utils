@@ -43,9 +43,9 @@ class NotifyProjects extends Command
                 $this->notifyProject(
                     $client,
                     $output,
-                    $row[0],
-                    $row[1],
-                    $row[2]
+                    (int) $row[0],
+                    (string) $row[1],
+                    (string) $row[2]
                 );
             }
             $lineNumber++;
@@ -54,6 +54,9 @@ class NotifyProjects extends Command
         return 0;
     }
 
+    /**
+     * @param array<int, string> $header
+     */
     private function validateHeader(array $header): void
     {
         $expectedHeader = ['projectId', 'notificationTitle', 'notificationMessage'];

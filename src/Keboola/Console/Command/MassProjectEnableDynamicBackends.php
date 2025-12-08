@@ -120,6 +120,9 @@ class MassProjectEnableDynamicBackends extends Command
         return 0;
     }
 
+    /**
+     * @return array<int, string>
+     */
     private function parseProjectIds(string $sourceFile): array
     {
         if (!file_exists($sourceFile)) {

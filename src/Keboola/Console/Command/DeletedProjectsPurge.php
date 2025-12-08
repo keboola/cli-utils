@@ -51,8 +51,8 @@ class DeletedProjectsPurge extends Command
                     $client,
                     $output,
                     $ignoreBackendErrors,
-                    $row[0],
-                    $row[1]
+                    (int) $row[0],
+                    (string) $row[1]
                 );
             }
             $lineNumber++;

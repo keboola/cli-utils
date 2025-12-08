@@ -41,10 +41,10 @@ class ProjectsRemoveFeature extends Command
 
     public function execute(InputInterface $input, OutputInterface $output): ?int
     {
-        $apiToken = $input->getArgument('token');
-        $apiUrl = $input->getArgument('url');
-        $featureName = $input->getArgument('feature');
-        $projects = $input->getArgument('projects');
+        $apiToken = (string) $input->getArgument('token');
+        $apiUrl = (string) $input->getArgument('url');
+        $featureName = (string) $input->getArgument('feature');
+        $projects = (string) $input->getArgument('projects');
         $allProjects = strtolower($projects) === 'all';
 
         $force = (bool) $input->getOption('force');
@@ -105,6 +105,9 @@ class ProjectsRemoveFeature extends Command
         }
     }
 
+    /**
+     * @param array<int, int> $projectIds
+     */
     private function removeFeatureFromSelectedProjects(
         Client $client,
         OutputInterface $output,
@@ -128,6 +131,9 @@ class ProjectsRemoveFeature extends Command
         }
     }
 
+    /**
+     * @param array<string, mixed> $projectInfo
+     */
     private function removeFeatureFromProject(
         Client $client,
         OutputInterface $output,
