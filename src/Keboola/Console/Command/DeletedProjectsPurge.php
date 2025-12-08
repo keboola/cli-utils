@@ -25,6 +25,7 @@ class DeletedProjectsPurge extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = $input->getArgument('token');
+        assert(is_string($token));
 
         $fh = fopen('php://stdin', 'r');
         if (!$fh) {

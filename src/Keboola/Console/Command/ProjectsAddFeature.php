@@ -52,11 +52,15 @@ class ProjectsAddFeature extends Command
      */
     protected function addFeatureToProject(Client $client, OutputInterface $output, array $projectInfo, string $featureName, bool $force): void
     {
-        $output->writeln("Adding feature to project " . $projectInfo['id']);
+        $projectId = $projectInfo['id'];
+        assert(is_int($projectId) || is_string($projectId));
+        $output->writeln("Adding feature to project " . $projectId);
 
         // Disabled projects
         if (isset($projectInfo["isDisabled"]) && $projectInfo["isDisabled"]) {
-            $output->writeln(" - project disabled: " . $projectInfo["disabled"]["reason"]);
+            $disabledReason = $projectInfo["disabled"]["reason"];
+            assert(is_string($disabledReason));
+            $output->writeln(" - project disabled: " . $disabledReason);
             $this->projectsDisabled++;
         } else {
             $features = $projectInfo["features"];
