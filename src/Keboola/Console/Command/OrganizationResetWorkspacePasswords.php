@@ -41,12 +41,19 @@ class OrganizationResetWorkspacePasswords extends Command
     }
 
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        assert(is_string($manageToken));
         $snowflakeHostname = $input->getArgument(self::ARGUMENT_SNOWFLAKE_HOSTNAME);
+        assert(is_string($snowflakeHostname));
         $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX));
+        assert(is_string($organizationId));
+        $organizationId = is_numeric($organizationId) ? (int) $organizationId : (int) $organizationId;
+        $organizationId = (int) $organizationId;
+        $hostnameSuffix = $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        assert(is_string($hostnameSuffix));
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
 
@@ -59,7 +66,7 @@ class OrganizationResetWorkspacePasswords extends Command
                 count($projects),
             )
         );
-        $force = $input->getOption(self::OPTION_FORCE);
+        $force = (bool) $input->getOption(self::OPTION_FORCE);
         $output->writeln($force ? 'FORCE MODE' : 'DRY RUN');
         foreach ($projects as $project) {
             $output->writeln(
@@ -79,5 +86,7 @@ class OrganizationResetWorkspacePasswords extends Command
             }
         }
         $output->writeln('All done.');
+
+        return 0;
     }
 }

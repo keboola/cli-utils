@@ -27,7 +27,7 @@ class MassDeleteProjectWorkspaces extends Command
     private const ARGUMENT_SOURCE_FILE = 'source-file';
     private const OPTION_FORCE = 'force';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:mass-delete-project-workspaces')
@@ -37,39 +37,45 @@ class MassDeleteProjectWorkspaces extends Command
             ->addOption(self::OPTION_FORCE, 'f', InputOption::VALUE_NONE, 'Write changes');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $connectionUrl = 'https://connection.' . $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
-        $sandboxesUrl = 'https://sandboxes.' . $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
-        $jobsUrl = 'https://queue.' . $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
+        $stackSuffix = $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
+        assert(is_string($stackSuffix));
+        $connectionUrl = 'https://connection.' . $stackSuffix;
+        $sandboxesUrl = 'https://sandboxes.' . $stackSuffix;
+        $jobsUrl = 'https://queue.' . $stackSuffix;
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        assert(is_string($sourceFile));
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
-        $force = $input->getOption(self::OPTION_FORCE);
+        $force = (bool) $input->getOption(self::OPTION_FORCE);
 
         // map by project id
         /**
-         * @var array{
-         *     string,
-         *     string[],
-         * } $map
+         * @var array<string, array<int, string>> $map
          */
         $map = [];
         $csv = new CsvFile($sourceFile);
         foreach ($csv as $line) {
+            assert(is_array($line));
             if (count($line) !== 2) {
                 throw new InvalidArgumentException('File must contain exactly two columns.');
             }
-            if (!is_numeric($line[0])) {
-                throw new InvalidArgumentException(sprintf('Project id "%s" is not numeric.', $line[0]));
+            $projectId = $line[0];
+            $workspaceSchema = $line[1];
+            assert(is_string($projectId) || is_numeric($projectId));
+            assert(is_string($workspaceSchema));
+            if (!is_numeric($projectId)) {
+                throw new InvalidArgumentException(sprintf('Project id "%s" is not numeric.', $projectId));
             }
-            if (!str_starts_with($line[1], 'WORKSPACE_')) {
-                throw new InvalidArgumentException(sprintf('Workspace "%s" does not start with "WORKSPACE_".', $line[1]));
+            if (!str_starts_with($workspaceSchema, 'WORKSPACE_')) {
+                throw new InvalidArgumentException(sprintf('Workspace "%s" does not start with "WORKSPACE_".', $workspaceSchema));
             }
 
-            if (array_key_exists($line[0], $map)) {
-                $map[$line[0]][] = $line[1];
+            $projectIdStr = (string) $projectId;
+            if (array_key_exists($projectIdStr, $map)) {
+                $map[$projectIdStr][] = $workspaceSchema;
             } else {
-                $map[$line[0]] = [$line[1]];
+                $map[$projectIdStr] = [$workspaceSchema];
             }
         }
 
@@ -82,12 +88,14 @@ class MassDeleteProjectWorkspaces extends Command
 //        ];
 
         foreach ($map as $projectId => $workspacesSchemasToDelete) {
+            /** @var \Symfony\Component\Console\Helper\QuestionHelper $helper */
             $helper = $this->getHelper('question');
             $question = new Question(sprintf(
                 'Paste storage token for project "%s" to continue.' . PHP_EOL,
                 $projectId,
             ));
             $storageToken = $helper->ask($input, $output, $question);
+            assert(is_string($storageToken));
 
             $storageClient = new Client([
                 'token' => $storageToken,
@@ -104,6 +112,9 @@ class MassDeleteProjectWorkspaces extends Command
 
             $branchesClient = new DevBranches($storageClient);
 
+            /**
+             * @var array<int, array{job: array{id: string|int, ...<string, mixed>}, sandbox: \Keboola\Sandboxes\Api\Sandbox}> $jobs
+             */
             $jobs = [];
             foreach ($branchesClient->listBranches() as $branch) {
                 $output->writeln(sprintf('Checking branch "%s" for sandboxes.', $branch['id']));
@@ -138,12 +149,15 @@ class MassDeleteProjectWorkspaces extends Command
                             ],
                         ));
 
-                        $job['sandbox'] = $sandbox;
-                        $jobs[] = $job;
+                        /**
+                         * @var array{id: string|int, ...<string, mixed>} $jobArray
+                         */
+                        $jobArray = (array) $job;
+                        $jobs[] = ['job' => $jobArray, 'sandbox' => $sandbox];
 
                         $output->writeln(sprintf(
                             'Created delete job "%s" for project "%s"',
-                            $job['id'],
+                            $jobArray['id'],
                             $projectId
                         ));
                     } else {
@@ -158,14 +172,21 @@ class MassDeleteProjectWorkspaces extends Command
 
             $output->writeln('Waiting for delete jobs to finish.');
             while (count($jobs) > 0) {
-                foreach ($jobs as $i => $job) {
-                    $jobRes = $jobsClient->getJob((string) $job['id']);
+                foreach ($jobs as $i => $jobData) {
+                    $job = $jobData['job'];
+                    $sandbox = $jobData['sandbox'];
+                    /**
+                     * @var array{id: string|int, isFinished: bool, status: string, ...<string, mixed>} $jobRes
+                     */
+                    $jobRes = (array) $jobsClient->getJob((string) $job['id']);
                     if ($jobRes['isFinished'] === true) {
+                        $workspaceDetails = $sandbox->getWorkspaceDetails();
+                        $schema = $workspaceDetails['connection']['schema'] ?? 'unknown';
                         $output->writeln(sprintf(
                             'Delete job "%s" for sandbox "%s" with schema "%s" finished with status "%s"',
                             $job['id'],
-                            $job['sandbox']->getId(),
-                            $job['sandbox']->getWorkspaceDetails()['connection']['schema'],
+                            $sandbox->getId(),
+                            $schema,
                             $jobRes['status']
                         ));
                         unset($jobs[$i]);
@@ -180,13 +201,14 @@ class MassDeleteProjectWorkspaces extends Command
                     $storageClient->getBranchAwareClient($branch['id'])
                 );
                 foreach ($workspacesClient->listWorkspaces() as $workspace) {
-                    if (!in_array($workspace['connection']['schema'], $map[$projectId], true)) {
+                    $schema = $workspace['connection']['schema'] ?? null;
+                    if ($schema === null || !in_array($schema, $map[$projectId], true)) {
                         continue;
                     }
                     // remove found schema from map
-                    unset($map[$projectId][array_search($workspace['connection']['schema'], $map[$projectId], true)]);
+                    unset($map[$projectId][array_search($schema, $map[$projectId], true)]);
                     if ($force) {
-                        $output->writeln(sprintf('Deleting workspace "%s" with schema "%s"', $workspace['id'], $workspace['connection']['schema']));
+                        $output->writeln(sprintf('Deleting workspace "%s" with schema "%s"', $workspace['id'], $schema));
                         $workspacesClient->deleteWorkspace($workspace['id'], [], true);
                     } else {
                         $output->writeln(sprintf('[DRY-RUN] Deleting workspace "%s" with schema "%s"', $workspace['id'], $workspace['connection']['schema']));
@@ -201,5 +223,7 @@ class MassDeleteProjectWorkspaces extends Command
                 ]);
             }
         }
+
+        return 0;
     }
 }

@@ -19,8 +19,11 @@ jobs:
     - name: Build container
       run: docker compose build app
 
-    - name: Run tests
+    - name: Check codestyle
       run: docker compose run --rm app ./vendor/bin/phpcs --standard=psr2 --ignore=vendor -n .
+
+    - name: Static analysis
+      run: docker compose run --rm app composer phpstan
 
     - name: Push
       if: startsWith(github.ref, 'refs/tags/')

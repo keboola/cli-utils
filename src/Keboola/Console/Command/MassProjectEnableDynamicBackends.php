@@ -24,7 +24,7 @@ class MassProjectEnableDynamicBackends extends Command
     private const FEATURE_NEW_TRANSFORMATIONS_ONLY = 'new-transformations-only';
     private const FEATURE_DYNAMIC_BACKEND_SIZE = 'workspace-snowflake-dynamic-backend-size';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:mass-project-enable-dynamic-backends')
@@ -36,11 +36,14 @@ class MassProjectEnableDynamicBackends extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        assert(is_string($manageToken));
         $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
+        assert(is_string($kbcUrl));
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        assert(is_string($sourceFile));
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
         $forceNT = $input->getOption(self::OPTION_FORCE_NEW_TRANSFORMATION);
 
@@ -69,6 +72,7 @@ class MassProjectEnableDynamicBackends extends Command
                     $output->writeln(sprintf(' - Feature "%s" is missing for project "%s".', self::FEATURE_NEW_TRANSFORMATIONS_ONLY, $projectId));
                     // don't ask when force option is on
                     if (!$forceNT) {
+                        /** @var \Symfony\Component\Console\Helper\QuestionHelper $helper */
                         $helper = $this->getHelper('question');
                         $question = new ConfirmationQuestion(
                             ' - Do you want to add this feature (y/n)?',
@@ -76,7 +80,7 @@ class MassProjectEnableDynamicBackends extends Command
                             '/^(y|j)/i'
                         );
                         if (!$helper->ask($input, $output, $question)) {
-                            return;
+                            return 0;
                         }
                     }
                     $manageClient->addProjectFeature($projectId, self::FEATURE_NEW_TRANSFORMATIONS_ONLY);
@@ -96,7 +100,7 @@ class MassProjectEnableDynamicBackends extends Command
                 while (1) {
                     if ($sleepCount > 10) {
                         $output->writeln(sprintf(' - Project: %s not enabled check PT for more.', $projectId));
-                        return;
+                        return 0;
                     }
                     $project = $manageClient->getProject($projectId);
                     if (in_array(self::FEATURE_DYNAMIC_BACKEND_SIZE, $project['features'], true)) {
@@ -116,14 +120,23 @@ class MassProjectEnableDynamicBackends extends Command
                 ));
             }
         }
+
+        return 0;
     }
 
+    /**
+     * @return array<int, string>
+     */
     private function parseProjectIds(string $sourceFile): array
     {
         if (!file_exists($sourceFile)) {
             throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
         }
-        $projectsText = trim(file_get_contents($sourceFile));
+        $fileContents = file_get_contents($sourceFile);
+        if ($fileContents === false) {
+            throw new \Exception(sprintf('Cannot read "%s"', $sourceFile));
+        }
+        $projectsText = trim($fileContents);
         if (!$projectsText) {
             return [];
         }

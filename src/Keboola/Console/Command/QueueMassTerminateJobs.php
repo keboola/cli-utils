@@ -6,6 +6,7 @@ namespace Keboola\Console\Command;
 
 use Exception;
 use Keboola\JobQueueClient\Client as JobQueueClient;
+use Keboola\JobQueueClient\JobStatuses;
 use Keboola\JobQueueClient\ListJobsOptions;
 use Keboola\StorageApi\Client as StorageClient;
 use Symfony\Component\Console\Command\Command;
@@ -21,7 +22,7 @@ class QueueMassTerminateJobs extends Command
     const ARGUMENT_CONNECTION_URL = 'connection-url';
     const ARGUMENT_JOB_STATUS = 'job-status';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setDescription('Terminated all jobs in project')
@@ -31,11 +32,14 @@ class QueueMassTerminateJobs extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $storageToken = $input->getArgument(self::ARGUMENT_STORAGE_TOKEN);
+        assert(is_string($storageToken));
         $kbcUrl = $input->getArgument(self::ARGUMENT_CONNECTION_URL);
+        assert(is_string($kbcUrl));
         $status = $input->getArgument(self::ARGUMENT_JOB_STATUS);
+        assert(is_string($status));
 
         if (!in_array($status, ['created', 'waiting', 'processing'])) {
             throw new Exception('Status must be either "created", "waiting" or "processing"!');
@@ -63,9 +67,15 @@ class QueueMassTerminateJobs extends Command
             $storageToken
         );
 
+        $statusEnum = match ($status) {
+            'created' => JobStatuses::CREATED,
+            'waiting' => JobStatuses::WAITING,
+            default => JobStatuses::PROCESSING,
+        };
+
         $jobs = $jobQueueClient->listJobs(
             (new ListJobsOptions())
-                ->setStatuses([$status])
+                ->setStatuses([$statusEnum])
                 ->setLimit(3000)
         );
 
@@ -82,5 +92,7 @@ class QueueMassTerminateJobs extends Command
 
         $output->writeln(sprintf('Terminated %s jobs', count($terminatedJobsIds)));
         $output->writeln(PHP_EOL);
+
+        return 0;
     }
 }

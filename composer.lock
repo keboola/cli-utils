@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1cb691a3a5beacf61fd6bf492bf0438b",
+    "content-hash": "6145cf81434434a68ec1b9175d40b75d",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -881,32 +881,35 @@
         },
         {
             "name": "keboola/job-queue-api-php-client",
-            "version": "2.4.0",
+            "version": "5.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/job-queue-api-php-client.git",
-                "reference": "4e62bb7f4d3f00cc85c5844ea975a2d6bc5693c2"
+                "reference": "3be7da9beac3bb931df8264e7828ea2fde253e87"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client/zipball/4e62bb7f4d3f00cc85c5844ea975a2d6bc5693c2",
-                "reference": "4e62bb7f4d3f00cc85c5844ea975a2d6bc5693c2",
+                "url": "https://api.github.com/repos/keboola/job-queue-api-php-client/zipball/3be7da9beac3bb931df8264e7828ea2fde253e87",
+                "reference": "3be7da9beac3bb931df8264e7828ea2fde253e87",
                 "shasum": ""
             },
             "require": {
+                "ext-curl": "*",
                 "ext-json": "*",
                 "guzzlehttp/guzzle": "^6.3|^7.2",
-                "php": "^7.4|^8.0",
-                "psr/log": "^1.1",
-                "symfony/config": "^4.4|^5.2|^6.0",
-                "symfony/validator": "^4.4|^5.2  !=4.4.33 !=4.4.34  !=5.3.10 !=5.3.11|^6.0"
+                "php": "^8.3",
+                "psr/log": "^2.0|^3.0",
+                "symfony/config": "^6.0|^7.0",
+                "symfony/validator": "^6.0|^7.0"
             },
             "require-dev": {
                 "infection/infection": "^0.26",
                 "keboola/coding-standard": ">=13.0",
-                "keboola/storage-api-client": "^14.0",
+                "keboola/settle": "^1.0",
+                "keboola/storage-api-client": "^18.0",
                 "phpstan/phpstan": "^1.4",
-                "phpunit/phpunit": "^9.5"
+                "phpunit/phpunit": "^9.5",
+                "symfony/dotenv": "^6.0"
             },
             "type": "library",
             "autoload": {
@@ -932,9 +935,9 @@
                 "queue"
             ],
             "support": {
-                "source": "https://github.com/keboola/job-queue-api-php-client/tree/2.4.0"
+                "source": "https://github.com/keboola/job-queue-api-php-client/tree/5.2.0"
             },
-            "time": "2022-10-10T10:16:47+00:00"
+            "time": "2025-05-26T12:20:34+00:00"
         },
         {
             "name": "keboola/kbc-manage-api-php-client",
@@ -988,23 +991,23 @@
         },
         {
             "name": "keboola/php-datatypes",
-            "version": "6.4.0",
+            "version": "8.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/php-datatypes.git",
-                "reference": "418820042083b2ed4b0820b6862f62f7bfe03547"
+                "reference": "21d4d87f6439102b946a1ee45d83a59babff917d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/php-datatypes/zipball/418820042083b2ed4b0820b6862f62f7bfe03547",
-                "reference": "418820042083b2ed4b0820b6862f62f7bfe03547",
+                "url": "https://api.github.com/repos/keboola/php-datatypes/zipball/21d4d87f6439102b946a1ee45d83a59babff917d",
+                "reference": "21d4d87f6439102b946a1ee45d83a59babff917d",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.4|^8"
+                "php": "^8.2"
             },
             "require-dev": {
-                "keboola/coding-standard": "^14",
+                "keboola/coding-standard": "^15",
                 "php-parallel-lint/php-parallel-lint": "^1.3",
                 "phpstan/phpdoc-parser": "^1.6",
                 "phpstan/phpstan": "^1.4",
@@ -1030,22 +1033,22 @@
             "description": "PHP datatypes for databases",
             "support": {
                 "issues": "https://github.com/keboola/php-datatypes/issues",
-                "source": "https://github.com/keboola/php-datatypes/tree/6.4.0"
+                "source": "https://github.com/keboola/php-datatypes/tree/8.2.0"
             },
-            "time": "2023-03-03T15:00:55+00:00"
+            "time": "2025-08-27T11:12:26+00:00"
         },
         {
             "name": "keboola/sandboxes-api-php-client",
-            "version": "6.31.0",
+            "version": "6.32.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/sandboxes-api-php-client.git",
-                "reference": "739084bc3fb50a780f33c1981af7bc72f43f0215"
+                "reference": "2125f1121d0c877f642902b94536aa1d744e8ff2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/sandboxes-api-php-client/zipball/739084bc3fb50a780f33c1981af7bc72f43f0215",
-                "reference": "739084bc3fb50a780f33c1981af7bc72f43f0215",
+                "url": "https://api.github.com/repos/keboola/sandboxes-api-php-client/zipball/2125f1121d0c877f642902b94536aa1d744e8ff2",
+                "reference": "2125f1121d0c877f642902b94536aa1d744e8ff2",
                 "shasum": ""
             },
             "require": {
@@ -1086,22 +1089,22 @@
                 "sandboxes"
             ],
             "support": {
-                "source": "https://github.com/keboola/sandboxes-api-php-client/tree/6.31.0"
+                "source": "https://github.com/keboola/sandboxes-api-php-client/tree/6.32.0"
             },
-            "time": "2025-02-19T07:20:50+00:00"
+            "time": "2025-11-19T16:15:43+00:00"
         },
         {
             "name": "keboola/storage-api-client",
-            "version": "v14.11.1",
+            "version": "v18.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/storage-api-php-client.git",
-                "reference": "d399a49aba1b333fc890853034846057c2d632ab"
+                "reference": "19392a3ea9f97bee52999fcb43327482d4edeeb1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/storage-api-php-client/zipball/d399a49aba1b333fc890853034846057c2d632ab",
-                "reference": "d399a49aba1b333fc890853034846057c2d632ab",
+                "url": "https://api.github.com/repos/keboola/storage-api-php-client/zipball/19392a3ea9f97bee52999fcb43327482d4edeeb1",
+                "reference": "19392a3ea9f97bee52999fcb43327482d4edeeb1",
                 "shasum": ""
             },
             "require": {
@@ -1110,49 +1113,43 @@
                 "google/cloud-storage": "^1.27",
                 "guzzlehttp/guzzle": "~7.0",
                 "keboola/csv": "^1",
-                "keboola/php-datatypes": "^6.4",
+                "keboola/php-datatypes": "^8.0",
                 "microsoft/azure-storage-blob": "^1.5",
-                "php": ">=7.4",
-                "psr/log": "~1.0",
-                "symfony/filesystem": "^6.0||^5.0||^4.0",
-                "symfony/process": "^6.0||^5.0||^4.0"
+                "php": ">=8.2",
+                "psr/log": "^1.1|^2.0|^3.0",
+                "symfony/filesystem": "^7.0||^6.0||^5.0||^4.0",
+                "symfony/process": "^7.0||^6.0||^5.0||^4.0"
             },
             "require-dev": {
-                "brianium/paratest": "2.*|6.*",
-                "ext-pdo": "*",
-                "ext-pdo_pgsql": "*",
-                "keboola/coding-standard": "^14.0",
-                "keboola/php-csv-db-import": "^6",
-                "keboola/phpunit-retry-annotations": "^0.4",
-                "keboola/retry": "^0.5.0",
-                "keboola/table-backend-utils": "^1",
-                "phpcompatibility/php-compatibility": "*",
+                "ext-curl": "*",
+                "keboola/coding-standard": "^15.0",
                 "phpstan/phpstan": "^1",
                 "phpstan/phpstan-phpunit": "^1.0",
-                "phpunit/phpunit": "^7.0|^8.0|^9.0",
+                "phpunit/phpunit": "^9.0|^10",
                 "rector/rector": "^0.12.23",
-                "squizlabs/php_codesniffer": "^3"
+                "squizlabs/php_codesniffer": "^3",
+                "tomasfejfar/phpstan-phpunit": "^0.1.0"
             },
             "type": "library",
             "autoload": {
                 "files": [
                     "src/Keboola/StorageApi/createSimpleJobPollDelay.php"
                 ],
-                "psr-0": {
-                    "Keboola\\StorageApi": "src/"
+                "psr-4": {
+                    "Keboola\\StorageApi\\": "src/Keboola/StorageApi/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
-            "description": "Keboola Storage API PHP CLient",
+            "description": "Keboola Storage API PHP Client",
             "homepage": "http://keboola.com",
             "support": {
                 "issues": "https://github.com/keboola/storage-api-php-client/issues",
-                "source": "https://github.com/keboola/storage-api-php-client/tree/v14.11.1"
+                "source": "https://github.com/keboola/storage-api-php-client/tree/v18.5.0"
             },
-            "time": "2023-08-02T11:55:55+00:00"
+            "time": "2025-10-24T10:16:29+00:00"
         },
         {
             "name": "microsoft/azure-storage-blob",
@@ -1679,30 +1676,30 @@
         },
         {
             "name": "psr/log",
-            "version": "1.1.4",
+            "version": "3.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-fig/log.git",
-                "reference": "d49695b909c3b7628b6289db5479a1c204601f11"
+                "reference": "f16e1d5863e37f8d8c2a01719f5b34baa2b714d3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-fig/log/zipball/d49695b909c3b7628b6289db5479a1c204601f11",
-                "reference": "d49695b909c3b7628b6289db5479a1c204601f11",
+                "url": "https://api.github.com/repos/php-fig/log/zipball/f16e1d5863e37f8d8c2a01719f5b34baa2b714d3",
+                "reference": "f16e1d5863e37f8d8c2a01719f5b34baa2b714d3",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.3.0"
+                "php": ">=8.0.0"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.1.x-dev"
+                    "dev-master": "3.x-dev"
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "Psr\\Log\\": "Psr/Log/"
+                    "Psr\\Log\\": "src"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -1723,9 +1720,9 @@
                 "psr-3"
             ],
             "support": {
-                "source": "https://github.com/php-fig/log/tree/1.1.4"
+                "source": "https://github.com/php-fig/log/tree/3.0.2"
             },
-            "time": "2021-05-03T11:20:27+00:00"
+            "time": "2024-09-11T13:17:53+00:00"
         },
         {
             "name": "ralouphie/getallheaders",
@@ -2023,38 +2020,34 @@
         },
         {
             "name": "symfony/config",
-            "version": "v5.4.26",
+            "version": "v6.4.28",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/config.git",
-                "reference": "8109892f27beed9252bd1f1c1880aeb4ad842650"
+                "reference": "15947c18ef3ddb0b2f4ec936b9e90e2520979f62"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/config/zipball/8109892f27beed9252bd1f1c1880aeb4ad842650",
-                "reference": "8109892f27beed9252bd1f1c1880aeb4ad842650",
+                "url": "https://api.github.com/repos/symfony/config/zipball/15947c18ef3ddb0b2f4ec936b9e90e2520979f62",
+                "reference": "15947c18ef3ddb0b2f4ec936b9e90e2520979f62",
                 "shasum": ""
             },
             "require": {
-                "php": ">=7.2.5",
-                "symfony/deprecation-contracts": "^2.1|^3",
-                "symfony/filesystem": "^4.4|^5.0|^6.0",
-                "symfony/polyfill-ctype": "~1.8",
-                "symfony/polyfill-php80": "^1.16",
-                "symfony/polyfill-php81": "^1.22"
+                "php": ">=8.1",
+                "symfony/deprecation-contracts": "^2.5|^3",
+                "symfony/filesystem": "^5.4|^6.0|^7.0",
+                "symfony/polyfill-ctype": "~1.8"
             },
             "conflict": {
-                "symfony/finder": "<4.4"
+                "symfony/finder": "<5.4",
+                "symfony/service-contracts": "<2.5"
             },
             "require-dev": {
-                "symfony/event-dispatcher": "^4.4|^5.0|^6.0",
-                "symfony/finder": "^4.4|^5.0|^6.0",
-                "symfony/messenger": "^4.4|^5.0|^6.0",
-                "symfony/service-contracts": "^1.1|^2|^3",
-                "symfony/yaml": "^4.4|^5.0|^6.0"
-            },
-            "suggest": {
-                "symfony/yaml": "To use the yaml reference dumper"
+                "symfony/event-dispatcher": "^5.4|^6.0|^7.0",
+                "symfony/finder": "^5.4|^6.0|^7.0",
+                "symfony/messenger": "^5.4|^6.0|^7.0",
+                "symfony/service-contracts": "^2.5|^3",
+                "symfony/yaml": "^5.4|^6.0|^7.0"
             },
             "type": "library",
             "autoload": {
@@ -2082,7 +2075,7 @@
             "description": "Helps you find, load, combine, autofill and validate configuration values of any kind",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/config/tree/v5.4.26"
+                "source": "https://github.com/symfony/config/tree/v6.4.28"
             },
             "funding": [
                 {
@@ -2094,11 +2087,15 @@
                     "type": "github"
                 },
                 {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
                     "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-07-19T20:21:11+00:00"
+            "time": "2025-11-01T19:52:02+00:00"
         },
         {
             "name": "symfony/console",
@@ -3178,6 +3175,59 @@
     ],
     "packages-dev": [
         {
+            "name": "phpstan/phpstan",
+            "version": "2.1.33",
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/9e800e6bee7d5bd02784d4c6069b48032d16224f",
+                "reference": "9e800e6bee7d5bd02784d4c6069b48032d16224f",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.4|^8.0"
+            },
+            "conflict": {
+                "phpstan/phpstan-shim": "*"
+            },
+            "bin": [
+                "phpstan",
+                "phpstan.phar"
+            ],
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "bootstrap.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "PHPStan - PHP Static Analysis Tool",
+            "keywords": [
+                "dev",
+                "static analysis"
+            ],
+            "support": {
+                "docs": "https://phpstan.org/user-guide/getting-started",
+                "forum": "https://github.com/phpstan/phpstan/discussions",
+                "issues": "https://github.com/phpstan/phpstan/issues",
+                "security": "https://github.com/phpstan/phpstan/security/policy",
+                "source": "https://github.com/phpstan/phpstan-src"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/ondrejmirtes",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/phpstan",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-12-05T10:24:31+00:00"
+        },
+        {
             "name": "squizlabs/php_codesniffer",
             "version": "3.12.0",
             "source": {
@@ -3264,12 +3314,12 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.2"
+        "php": "^8.3"
     },
-    "platform-dev": [],
-    "plugin-api-version": "2.6.0"
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
 }

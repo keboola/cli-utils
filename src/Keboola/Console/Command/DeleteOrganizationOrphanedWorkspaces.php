@@ -17,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteOrganizationOrphanedWorkspaces extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:delete-organization-workspaces')
@@ -52,11 +52,17 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument('manageToken');
+        assert(is_string($manageToken));
         $organizationId = $input->getArgument('organizationId');
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument('hostnameSuffix'));
+        assert(is_string($organizationId));
+        $organizationId = is_numeric($organizationId) ? (int) $organizationId : (int) $organizationId;
+        $organizationId = (int) $organizationId;
+        $hostnameSuffix = $input->getArgument('hostnameSuffix');
+        assert(is_string($hostnameSuffix));
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
         $organization = $manageClient->getOrganization($organizationId);
@@ -68,13 +74,21 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             )
         );
 
-        $storageUrl = 'https://connection.' . $input->getArgument('hostnameSuffix');
+        $storageUrl = 'https://connection.' . $hostnameSuffix;
 
         $orphanComponent = $input->getArgument('orphanComponent');
+        assert(is_string($orphanComponent));
         $componentDesc = empty($orphanComponent) ? '(empty/blank)' : $orphanComponent;
         $output->writeln(sprintf('Targeting workspaces with component: %s', $componentDesc));
-        
-        $force = $input->getOption('force');
+
+        $untilDateStr = $input->getArgument('untilDate');
+        assert(is_string($untilDateStr));
+        $untilDate = strtotime($untilDateStr);
+        if ($untilDate === false) {
+            throw new \InvalidArgumentException(sprintf('Invalid date format: %s', $untilDateStr));
+        }
+
+        $force = (bool) $input->getOption('force');
         if ($force) {
             $output->writeln('Force option is set, doing it for real');
         } else {
@@ -98,6 +112,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                     $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
                     continue;
                 }
+                throw $e;
             }
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
@@ -131,7 +146,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                     $shouldDropWorkspace = $this->isWorkspaceOrphaned(
                         $workspace,
                         $orphanComponent,
-                        strtotime($input->getArgument('untilDate'))
+                        $untilDate
                     );
                     if ($shouldDropWorkspace) {
                         $output->writeln('Deleting orphaned workspace ' . $workspace['id']);
@@ -182,8 +197,13 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                 $totalDeletedWorkspaces
             )
         );
+
+        return 0;
     }
 
+    /**
+     * @param array<string, mixed> $workspace
+     */
     private function isWorkspaceOrphaned(array $workspace, string $component, int $untilDate): bool
     {
         // If no component is specified, only workspaces with no component qualify
@@ -195,7 +215,9 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             return false;
         }
         // Skip workspaces created after or on the cutoff date
-        if (strtotime($workspace['created']) >= $untilDate) {
+        $createdDate = $workspace['created'];
+        assert(is_string($createdDate));
+        if (strtotime($createdDate) >= $untilDate) {
             return false;
         }
         // If all conditions pass, the workspace qualifies

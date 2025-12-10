@@ -17,7 +17,7 @@ class MassProjectExtendExpiration extends Command
     const ARGUMENT_TOKEN_STACK = 'token-stack';
     const ARGUMENT_EXPIRATION_DAYS = 'extend-days';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:mass-project-remove-expiration')
@@ -29,13 +29,15 @@ class MassProjectExtendExpiration extends Command
     }
 
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
+        assert(is_string($sourceFile));
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));
         $expirationDays = $input->getArgument(self::ARGUMENT_EXPIRATION_DAYS);
+        assert(is_string($expirationDays));
         $output->writeln(sprintf('Expiration days "%s"', $expirationDays));
-        $force = $input->getOption(self::OPTION_FORCE);
+        $force = (bool) $input->getOption(self::OPTION_FORCE);
         $output->writeln($force ? 'FORCE MODE' : 'DRY RUN');
 
         if ($force) {
@@ -60,9 +62,13 @@ class MassProjectExtendExpiration extends Command
         if (!file_exists($sourceFile)) {
             throw new \Exception(sprintf('Cannot open "%s"', $sourceFile));
         }
-        $projectsText = trim(file_get_contents($sourceFile));
+        $fileContents = file_get_contents($sourceFile);
+        if ($fileContents === false) {
+            throw new \Exception(sprintf('Cannot read "%s"', $sourceFile));
+        }
+        $projectsText = trim($fileContents);
         if (!$projectsText) {
-            return;
+            return 0;
         }
 
         $projects = [];
@@ -113,5 +119,7 @@ class MassProjectExtendExpiration extends Command
                 ));
             }
         }
+
+        return 0;
     }
 }

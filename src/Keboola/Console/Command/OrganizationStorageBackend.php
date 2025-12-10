@@ -16,7 +16,7 @@ class OrganizationStorageBackend extends Command
     const ARGUMENT_STORAGE_BACKEND_ID = 'storageBackendId';
     const ARGUMENT_HOSTNAME_SUFFIX = 'hostnameSuffix';
     const OPTION_FORCE = 'force';
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:set-organization-storage-backend')
@@ -44,12 +44,19 @@ class OrganizationStorageBackend extends Command
     }
 
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $storageBackendId = $input->getArgument(self::ARGUMENT_STORAGE_BACKEND_ID);
+        assert(is_string($storageBackendId));
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        assert(is_string($manageToken));
         $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX));
+        assert(is_string($organizationId));
+        $organizationId = is_numeric($organizationId) ? (int) $organizationId : (int) $organizationId;
+        $organizationId = (int) $organizationId;
+        $hostnameSuffix = $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        assert(is_string($hostnameSuffix));
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
 
@@ -63,7 +70,7 @@ class OrganizationStorageBackend extends Command
                 $storageBackendId
             )
         );
-        $force = $input->getOption(self::OPTION_FORCE);
+        $force = (bool) $input->getOption(self::OPTION_FORCE);
         $output->writeln($force ? 'FORCE MODE' : 'DRY RUN');
         foreach ($projects as $project) {
             $output->writeln(
@@ -84,5 +91,7 @@ class OrganizationStorageBackend extends Command
             }
         }
         $output->writeln('All done.');
+        
+        return 0;
     }
 }

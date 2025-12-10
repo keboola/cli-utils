@@ -11,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class RemoveUserFromOrganizationProjects extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:remove-user-from-organization-projects')
@@ -40,12 +40,19 @@ class RemoveUserFromOrganizationProjects extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument('manageToken');
+        assert(is_string($manageToken));
         $organizationId = $input->getArgument('organizationId');
+        assert(is_string($organizationId));
+        $organizationId = is_numeric($organizationId) ? (int) $organizationId : (int) $organizationId;
+        $organizationId = (int) $organizationId;
         $userEmail = $input->getArgument('userEmail');
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument('hostnameSuffix'));
+        assert(is_string($userEmail));
+        $hostnameSuffix = $input->getArgument('hostnameSuffix');
+        assert(is_string($hostnameSuffix));
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
 
@@ -91,12 +98,19 @@ class RemoveUserFromOrganizationProjects extends Command
                 $affectedProjects
             )
         );
+
+        return 0;
     }
 
+    /**
+     * @param array<int, array<string, mixed>> $projectUsers
+     */
     private function isUserInProject(int $userId, array $projectUsers): bool
     {
         foreach ($projectUsers as $projectUser) {
-            if ((int) $projectUser['id'] === $userId) {
+            $projectUserId = $projectUser['id'];
+            assert(is_int($projectUserId) || is_string($projectUserId) || is_numeric($projectUserId));
+            if ((int) $projectUserId === $userId) {
                 return true;
             }
         }

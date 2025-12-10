@@ -42,9 +42,13 @@ class ProjectsRemoveFeature extends Command
     public function execute(InputInterface $input, OutputInterface $output): ?int
     {
         $apiToken = $input->getArgument('token');
+        assert(is_string($apiToken));
         $apiUrl = $input->getArgument('url');
+        assert(is_string($apiUrl));
         $featureName = $input->getArgument('feature');
+        assert(is_string($featureName));
         $projects = $input->getArgument('projects');
+        assert(is_string($projects));
         $allProjects = strtolower($projects) === 'all';
 
         $force = (bool) $input->getOption('force');
@@ -105,6 +109,9 @@ class ProjectsRemoveFeature extends Command
         }
     }
 
+    /**
+     * @param array<int, string> $projectIds
+     */
     private function removeFeatureFromSelectedProjects(
         Client $client,
         OutputInterface $output,
@@ -128,6 +135,9 @@ class ProjectsRemoveFeature extends Command
         }
     }
 
+    /**
+     * @param array<string, mixed> $projectInfo
+     */
     private function removeFeatureFromProject(
         Client $client,
         OutputInterface $output,
@@ -142,7 +152,9 @@ class ProjectsRemoveFeature extends Command
             return;
         }
 
-        if (!in_array($featureName, $projectInfo['features'], true)) {
+        $features = $projectInfo['features'];
+        assert(is_array($features));
+        if (!in_array($featureName, $features, true)) {
             $output->writeln('doesn\'t have the feature, <comment>skipping</comment>');
             $this->projectsWithoutFeature++;
 

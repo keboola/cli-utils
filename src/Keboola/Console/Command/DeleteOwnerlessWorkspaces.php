@@ -17,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteOwnerlessWorkspaces extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:delete-ownerless-workspaces')
@@ -42,11 +42,14 @@ class DeleteOwnerlessWorkspaces extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = $input->getArgument('storageToken');
-        $url = 'https://connection.' . $input->getArgument('hostnameSuffix');
-        $sandboxesUrl = 'https://sandboxes.' . $input->getArgument('hostnameSuffix');
+        assert(is_string($token));
+        $hostnameSuffix = $input->getArgument('hostnameSuffix');
+        assert(is_string($hostnameSuffix));
+        $url = 'https://connection.' . $hostnameSuffix;
+        $sandboxesUrl = 'https://sandboxes.' . $hostnameSuffix;
         $includeShared = (bool) $input->getOption('includeShared');
         $force = (bool) $input->getOption('force');
 
@@ -73,8 +76,11 @@ class DeleteOwnerlessWorkspaces extends Command
         /** @var Sandbox $sandbox */
         foreach ($sandboxes as $sandbox) {
             try {
-                $tokensClient->getToken($sandbox->getTokenId());
-                continue; // token exists so no need to do anything
+                $tokenId = $sandbox->getTokenId();
+                if ($tokenId !== null) {
+                    $tokensClient->getToken((int) $tokenId);
+                    continue; // token exists so no need to do anything
+                }
             } catch (\Throwable $exception) {
                 if ($exception->getCode() !== 404) {
                     throw $exception;
@@ -116,6 +122,8 @@ class DeleteOwnerlessWorkspaces extends Command
             $totalDeletedSandboxes,
             $totalDeletedStorageWorkspaces
         ));
+
+        return 0;
     }
 
     private function deleteStorageWorkspace(
@@ -124,7 +132,7 @@ class DeleteOwnerlessWorkspaces extends Command
         OutputInterface $output
     ): void {
         try {
-            $workspacesClient->deleteWorkspace($workspaceId);
+            $workspacesClient->deleteWorkspace((int) $workspaceId);
         } catch (\Throwable $clientException) {
             $output->writeln(
                 sprintf(

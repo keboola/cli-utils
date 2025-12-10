@@ -17,15 +17,15 @@ class ProjectsAddFeature extends Command
     const ARG_TOKEN = 'token';
     const OPT_FORCE = 'force';
 
-    protected $maintainersChecked = 0;
+    protected int $maintainersChecked = 0;
 
-    protected $orgsChecked = 0;
+    protected int $orgsChecked = 0;
 
-    protected $projectsDisabled = 0;
+    protected int $projectsDisabled = 0;
 
-    protected $projectsWithFeature = 0;
+    protected int $projectsWithFeature = 0;
 
-    protected $projectsUpdated = 0;
+    protected int $projectsUpdated = 0;
 
     protected function configure(): void
     {
@@ -47,16 +47,28 @@ class ProjectsAddFeature extends Command
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $projectInfo
+     */
     protected function addFeatureToProject(Client $client, OutputInterface $output, array $projectInfo, string $featureName, bool $force): void
     {
-        $output->writeln("Adding feature to project " . $projectInfo['id']);
+        $projectId = $projectInfo['id'];
+        assert(is_string($projectId));
+        $projectId = is_numeric($projectId) ? (int) $projectId : (int) $projectId;
+        $output->writeln("Adding feature to project " . $projectId);
 
         // Disabled projects
         if (isset($projectInfo["isDisabled"]) && $projectInfo["isDisabled"]) {
-            $output->writeln(" - project disabled: " . $projectInfo["disabled"]["reason"]);
+            $disabled = $projectInfo["disabled"];
+            assert(is_array($disabled));
+            $disabledReason = $disabled["reason"];
+            assert(is_string($disabledReason));
+            $output->writeln(" - project disabled: " . $disabledReason);
             $this->projectsDisabled++;
         } else {
-            if (in_array($featureName, $projectInfo["features"], true)) {
+            $features = $projectInfo["features"];
+            assert(is_array($features));
+            if (in_array($featureName, $features, true)) {
                 $output->writeln(" - feature '{$featureName}' is already set.");
                 $this->projectsWithFeature++;
             } else {
@@ -64,7 +76,9 @@ class ProjectsAddFeature extends Command
                     $client->addProjectFeature($projectInfo['id'], $featureName);
                     $output->writeln(" - feature '{$featureName}' successfully added.");
                 } else {
-                    $output->writeln(sprintf(' - feature "%s" DOES NOT exist in the project %s yet. Enable force mode with -f option', $featureName, $projectInfo['id']));
+                    $projectIdForDisplay = $projectInfo['id'];
+                    assert(is_string($projectIdForDisplay) || is_int($projectIdForDisplay));
+                    $output->writeln(sprintf(' - feature "%s" DOES NOT exist in the project %s yet. Enable force mode with -f option', $featureName, $projectIdForDisplay));
                 }
                 $this->projectsUpdated++;
             }
@@ -89,6 +103,9 @@ class ProjectsAddFeature extends Command
         }
     }
 
+    /**
+     * @param array<int, string> $projectIds
+     */
     protected function addFeatureToSelectedProjects(Client $client, OutputInterface $output, string $featureName, array $projectIds, bool $force): void
     {
         foreach ($projectIds as $projectId) {

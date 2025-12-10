@@ -3,6 +3,7 @@
 namespace Keboola\Console\Command;
 
 use Keboola\JobQueueClient\Client as QueueClient;
+use Keboola\JobQueueClient\JobStatuses;
 use Keboola\JobQueueClient\ListJobsOptions;
 use Keboola\ManageApi\Client as ManageClient;
 use Keboola\StorageApi\Client as StorageClient;
@@ -23,7 +24,7 @@ class OrganizationIntoMaintenanceMode extends Command
     const ARGUMENT_HOSTNAME_SUFFIX = 'hostnameSuffix';
     const OPTION_FORCE = 'force';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:set-organization-maintenance-mode')
@@ -59,9 +60,10 @@ class OrganizationIntoMaintenanceMode extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $maintenanceMode = $input->getArgument(self::ARGUMENT_MAINTENANCE_MODE);
+        assert(is_string($maintenanceMode));
         if (!in_array($maintenanceMode, ['on', 'off'])) {
             throw new \Exception(sprintf(
                 'The argument "%s" must be either "on" or "off", not "%s"',
@@ -70,10 +72,16 @@ class OrganizationIntoMaintenanceMode extends Command
             ));
         }
         $manageToken = $input->getArgument(self::ARGUMENT_MANAGE_TOKEN);
+        assert(is_string($manageToken));
         $reason = $input->getArgument(self::ARGUMENT_REASON);
         $estimatedEndTime = $input->getArgument(self::ARGUMENT_ESTIMATED_END_TIME);
         $organizationId = $input->getArgument(self::ARGUMENT_ORGANIZATION_ID);
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX));
+        assert(is_string($organizationId));
+        $organizationId = is_numeric($organizationId) ? (int) $organizationId : (int) $organizationId;
+        $organizationId = (int) $organizationId;
+        $hostnameSuffix = $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
+        assert(is_string($hostnameSuffix));
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
 
         $manageClient = new ManageClient(['token' => $manageToken, 'url' => $kbcUrl]);
 
@@ -111,7 +119,7 @@ class OrganizationIntoMaintenanceMode extends Command
                 $thereAreRunningJobs = $this->areThereRunningJobs(
                     $manageClient,
                     $project['id'],
-                    $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX),
+                    $hostnameSuffix,
                     $output
                 );
                 if ($thereAreRunningJobs) {
@@ -139,6 +147,8 @@ class OrganizationIntoMaintenanceMode extends Command
             }
         }
         $output->writeln('All done.');
+
+        return 0;
     }
 
     private function areThereRunningJobs(
@@ -160,23 +170,35 @@ class OrganizationIntoMaintenanceMode extends Command
         $runningJobsListOptions = new ListJobsOptions();
         // created, waiting, processing, terminating
         $runningJobsListOptions->setStatuses([
-            ListJobsOptions::STATUS_CREATED,
-            ListJobsOptions::STATUS_WAITING,
-            ListJobsOptions::STATUS_PROCESSING,
-            ListJobsOptions::STATUS_TERMINATING
+            JobStatuses::CREATED,
+            JobStatuses::WAITING,
+            JobStatuses::PROCESSING,
+            JobStatuses::TERMINATING
         ]);
         $runningJobs = $jobsClient->listJobs($runningJobsListOptions);
-        $output->writeln(
-            sprintf(
-                'Found %d running jobs.  Please terminate them and then re-run',
-                count($runningJobs)
-            )
-        );
-        foreach ($runningJobs as $runningJob) {
+        $runningJobsCount = count($runningJobs);
+
+        if ($runningJobsCount > 1) {
             $output->writeln(
-                $runningJob['url'] . ' is ' . $runningJob['status']
+                sprintf(
+                    'Found %d running jobs.  Please terminate them and then re-run',
+                    $runningJobsCount,
+                )
+            );
+            foreach ($runningJobs as $runningJob) {
+                $output->writeln(
+                    $runningJob['url'] . ' is ' . $runningJob['status']
+                );
+            }
+        } else {
+            $output->writeln(
+                sprintf(
+                    'Found %d running jobs.',
+                    $runningJobsCount,
+                )
             );
         }
+
         // drop the token
         $tokensClient = new Tokens(
             new StorageClient([
@@ -186,6 +208,6 @@ class OrganizationIntoMaintenanceMode extends Command
         );
         $tokensClient->dropToken($storageToken['id']);
 
-        return count($runningJobs) > 0;
+        return $runningJobsCount > 0;
     }
 }

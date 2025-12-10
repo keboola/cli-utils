@@ -15,7 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteProjectSandboxes extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:delete-project-sandboxes')
@@ -40,11 +40,14 @@ class DeleteProjectSandboxes extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = $input->getArgument('storageToken');
-        $url = 'https://connection.' . $input->getArgument('hostnameSuffix');
-        $sandboxesUrl = 'https://sandboxes.' . $input->getArgument('hostnameSuffix');
+        assert(is_string($token));
+        $hostnameSuffix = $input->getArgument('hostnameSuffix');
+        assert(is_string($hostnameSuffix));
+        $url = 'https://connection.' . $hostnameSuffix;
+        $sandboxesUrl = 'https://sandboxes.' . $hostnameSuffix;
         $includeShared = (bool) $input->getOption('includeShared');
         $force = (bool) $input->getOption('force');
 
@@ -83,7 +86,7 @@ class DeleteProjectSandboxes extends Command
                 if (!empty($sandbox->getPhysicalId())) {
                     if ($force) {
                         try {
-                            $workspacesClient->deleteWorkspace($sandbox->getPhysicalId());
+                            $workspacesClient->deleteWorkspace((int) $sandbox->getPhysicalId());
                             $totalDeletedStorageWorkspaces++;
                         } catch (Exception $exception) {
                             if ($exception->getCode() === 404) {
@@ -98,7 +101,7 @@ class DeleteProjectSandboxes extends Command
                 $output->writeln('Deleting staging storage workspace ' . $sandbox->getPhysicalId());
                 $totalDeletedStorageWorkspaces++;
                 if ($force) {
-                    $workspacesClient->deleteWorkspace($sandbox->getStagingWorkspaceId(), [], true);
+                    $workspacesClient->deleteWorkspace((int) $sandbox->getStagingWorkspaceId(), [], true);
                 }
             }
 
@@ -114,5 +117,7 @@ class DeleteProjectSandboxes extends Command
             $totalDeletedSandboxes,
             $totalDeletedStorageWorkspaces
         ));
+
+        return 0;
     }
 }

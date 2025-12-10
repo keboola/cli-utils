@@ -20,7 +20,7 @@ class SetDataRetention extends Command
     /**
      * Configure command, set parameters definition and help.
      */
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:set-data-retention')
@@ -29,7 +29,7 @@ class SetDataRetention extends Command
             ->addOption('url', null, InputOption::VALUE_REQUIRED, 'API URL', 'https://connection.keboola.com');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $client = new Client([
             'token' => $input->getArgument('token'),
@@ -46,8 +46,8 @@ class SetDataRetention extends Command
             if ($lineNumber === 0) {
                 $this->validateHeader($row);
             } else {
-                $projectId = (int) trim($row[0]);
-                $dataRetentionTimeInDays = (int) trim($row[1]);
+                $projectId = (int) trim((string) $row[0]);
+                $dataRetentionTimeInDays = (int) trim((string) $row[1]);
                 try {
                     $client->updateProject($projectId, ['dataRetentionTimeInDays' => $dataRetentionTimeInDays]);
                     $output->writeln("Updated project " . $projectId . " to data retention period " . $dataRetentionTimeInDays);
@@ -59,9 +59,14 @@ class SetDataRetention extends Command
         }
 
         $output->writeln("All done.");
+
+        return 0;
     }
 
-    private function validateHeader($header)
+    /**
+     * @param array<int, string|null> $header
+     */
+    private function validateHeader(array $header): void
     {
         $expectedHeader = ['projectId', 'dataRetentionTimeInDays'];
         if ($header !== $expectedHeader) {

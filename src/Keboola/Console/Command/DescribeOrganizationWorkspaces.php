@@ -16,7 +16,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DescribeOrganizationWorkspaces extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:describe-organization-workspaces')
@@ -44,12 +44,19 @@ class DescribeOrganizationWorkspaces extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $manageToken = $input->getArgument('manageToken');
+        assert(is_string($manageToken));
         $organizationId = $input->getArgument('organizationId');
+        assert(is_string($organizationId));
+        $organizationId = is_numeric($organizationId) ? (int) $organizationId : (int) $organizationId;
+        $organizationId = (int) $organizationId;
         $outputFile = $input->getArgument('outputFile');
-        $kbcUrl = sprintf('https://connection.%s', $input->getArgument('hostnameSuffix'));
+        assert(is_string($outputFile));
+        $hostnameSuffix = $input->getArgument('hostnameSuffix');
+        assert(is_string($hostnameSuffix));
+        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
         $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
         $organization = $manageClient->getOrganization($organizationId);
         $projects = $organization['projects'];
@@ -60,7 +67,7 @@ class DescribeOrganizationWorkspaces extends Command
             )
         );
 
-        $storageUrl = 'https://connection.' . $input->getArgument('hostnameSuffix');
+        $storageUrl = 'https://connection.' . $hostnameSuffix;
 
         $totalWorkspaces = 0;
 
@@ -94,6 +101,7 @@ class DescribeOrganizationWorkspaces extends Command
                     $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
                     continue;
                 }
+                throw $e;
             }
 
             $storageClient = new StorageApiClient([
@@ -159,5 +167,7 @@ class DescribeOrganizationWorkspaces extends Command
                 $totalWorkspaces
             )
         );
+
+        return 0;
     }
 }

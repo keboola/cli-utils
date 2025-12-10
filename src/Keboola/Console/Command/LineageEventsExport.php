@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class LineageEventsExport extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:lineage-events-export')
@@ -68,19 +68,24 @@ class LineageEventsExport extends Command
         ]);
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = getenv('STORAGE_API_TOKEN');
         if (!$token) {
             throw new Exception('Environment variable "STORAGE_API_TOKEN" missing.');
         }
 
+        $connectionUrl = $input->getArgument('connectionUrl');
+        assert(is_string($connectionUrl));
+        $marquezUrl = $input->getArgument('marquezUrl');
+        assert(is_string($marquezUrl));
+
         $queueClient = $this->createQueueClient(
             $token,
-            $this->findQueueServiceUrl($token, $input->getArgument('connectionUrl'))
+            $this->findQueueServiceUrl($token, $connectionUrl)
         );
 
-        $marquezClient = $this->createMarquezClient($input->getArgument('marquezUrl'));
+        $marquezClient = $this->createMarquezClient($marquezUrl);
         $jobsResponse = $queueClient->request('GET', '/jobs?' . http_build_query([
             'createdTimeFrom' => '-20 days',
             'sortOrder' => 'desc',
@@ -92,33 +97,56 @@ class LineageEventsExport extends Command
         $output->writeln(sprintf('There are %s jobs to export.', count($jobsToExport)));
 
         foreach (array_reverse($jobsToExport) as $job) {
-            if (!isset($job['result']['input'])) {
-                $output->writeln(sprintf('Skipping older job "%s" without I/O in the result.', $job['id']));
+            assert(is_array($job));
+            $result = $job['result'] ?? null;
+            if (!is_array($result) || !isset($result['input'])) {
+                $jobId = $job['id'];
+                assert(is_string($jobId) || is_int($jobId));
+                $output->writeln(sprintf('Skipping older job "%s" without I/O in the result.', $jobId));
                 continue;
             }
 
-            $output->writeln(sprintf('Job %s export to Marquez - start', $job['id']));
+            $jobId = $job['id'];
+            assert(is_string($jobId) || is_int($jobId));
+            $output->writeln(sprintf('Job %s export to Marquez - start', $jobId));
 
-            $lineAgeResponse = $queueClient->request('GET', sprintf('/jobs/%s/open-api-lineage', $job['id']));
+            $lineAgeResponse = $queueClient->request('GET', sprintf('/jobs/%s/open-api-lineage', $jobId));
             foreach ($this->decodeResponse($lineAgeResponse) as $event) {
+                assert(is_array($event));
                 if ($input->getOption('job-names-configurations')) {
-                    $event['job']['name'] = sprintf('%s-%s', $job['component'], $job['config']);
+                    $jobComponent = $job['component'];
+                    $jobConfig = $job['config'];
+                    assert(is_string($jobComponent) || is_int($jobComponent));
+                    assert(is_string($jobConfig) || is_int($jobConfig));
+                    $eventJob = $event['job'];
+                    assert(is_array($eventJob));
+                    $eventJob['name'] = sprintf('%s-%s', $jobComponent, $jobConfig);
+                    $event['job'] = $eventJob;
                 }
 
-                $output->writeln(sprintf('- Sending %s event', $event['eventType']));
+                $eventType = $event['eventType'];
+                assert(is_string($eventType));
+                $output->writeln(sprintf('- Sending %s event', $eventType));
                 $marquezClient->request('POST', '/api/v1/lineage', [
                     'body' => json_encode($event),
                 ]);
             }
 
-            $output->writeln(sprintf('Job %s export to Marquez - end', $job['id']));
+            $output->writeln(sprintf('Job %s export to Marquez - end', $jobId));
         }
 
         $output->writeln('Done');
+
+        return 0;
     }
 
+    /**
+     * @return array<mixed, mixed>
+     */
     private function decodeResponse(ResponseInterface $response): array
     {
-        return json_decode($response->getBody()->getContents(), true, 512, JSON_THROW_ON_ERROR);
+        $decoded = json_decode($response->getBody()->getContents(), true, 512, JSON_THROW_ON_ERROR);
+        assert(is_array($decoded));
+        return $decoded;
     }
 }

@@ -23,7 +23,7 @@ class ReactivateSchedules extends Command
     /**
      * Configure command, set parameters definition and help.
      */
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:reactivate-schedules')
@@ -33,15 +33,18 @@ class ReactivateSchedules extends Command
             ->addOption(self::OPT_FORCE, 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $isForce = $input->getOption(self::OPT_FORCE);
 
         $prefix = $isForce ? 'FORCE: ' : 'DRY-RUN: ';
         $output->writeln('Running ' . ($isForce ? 'force mode' : 'in dry run mode'));
 
-        $this->stackSuffix = $input->getArgument(self::ARG_STACK);
+        $stackArg = $input->getArgument(self::ARG_STACK);
+        assert(is_string($stackArg));
+        $this->stackSuffix = $stackArg;
         $token = $input->getArgument(self::ARG_TOKEN);
+        assert(is_string($token));
 
         $connectionUrl = $this->buildUrl('connection');
         $schedulerUrl = $this->buildUrl('scheduler');
@@ -80,6 +83,8 @@ class ReactivateSchedules extends Command
                 $guzzleClient->post('/schedules', ['body' => json_encode(['configurationId' => $configuration['id']])]);
             }
         }
+
+        return 0;
     }
 
     private function buildUrl(string $serviceKey): string

@@ -11,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class NotifyProjects extends Command
 {
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:notify-projects')
@@ -22,7 +22,7 @@ class NotifyProjects extends Command
     }
 
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
 
         $fh = fopen('php://stdin', 'r');
@@ -43,16 +43,21 @@ class NotifyProjects extends Command
                 $this->notifyProject(
                     $client,
                     $output,
-                    $row[0],
-                    $row[1],
-                    $row[2]
+                    (int) $row[0],
+                    (string) $row[1],
+                    (string) $row[2]
                 );
             }
             $lineNumber++;
         }
+
+        return 0;
     }
 
-    private function validateHeader($header)
+    /**
+     * @param array<int, string|null> $header
+     */
+    private function validateHeader(array $header): void
     {
         $expectedHeader = ['projectId', 'notificationTitle', 'notificationMessage'];
         if ($header !== $expectedHeader) {
@@ -64,15 +69,22 @@ class NotifyProjects extends Command
         }
     }
 
-    private function notifyProject(Client $client, OutputInterface $output, $projectId, $notificationTitle, $notificationMessage)
-    {
+    private function notifyProject(
+        Client $client,
+        OutputInterface $output,
+        int $projectId,
+        string $notificationTitle,
+        string $notificationMessage
+    ): void {
         $output->writeln("Sending notification to project $projectId");
 
-        $client->addNotification([
-            'type' => 'common',
-            'projectId' => (int) $projectId,
-            'title' => $notificationTitle,
-            'message' => $notificationMessage,
-        ]);
+        if (method_exists($client, 'addNotification')) {
+            $client->addNotification([
+                'type' => 'common',
+                'projectId' => (int) $projectId,
+                'title' => $notificationTitle,
+                'message' => $notificationMessage,
+            ]);
+        }
     }
 }

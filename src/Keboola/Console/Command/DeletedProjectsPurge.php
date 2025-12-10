@@ -11,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class DeletedProjectsPurge extends Command
 {
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('storage:deleted-projects-purge')
@@ -22,9 +22,10 @@ class DeletedProjectsPurge extends Command
     }
 
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = $input->getArgument('token');
+        assert(is_string($token));
 
         $fh = fopen('php://stdin', 'r');
         if (!$fh) {
@@ -51,15 +52,20 @@ class DeletedProjectsPurge extends Command
                     $client,
                     $output,
                     $ignoreBackendErrors,
-                    $row[0],
-                    $row[1]
+                    (int) $row[0],
+                    (string) $row[1]
                 );
             }
             $lineNumber++;
         }
+
+        return 0;
     }
 
-    private function validateHeader($header)
+    /**
+     * @param array<int, string|null> $header
+     */
+    private function validateHeader(array $header): void
     {
         $expectedHeader = ['id', 'name'];
         if ($header !== $expectedHeader) {
@@ -71,8 +77,13 @@ class DeletedProjectsPurge extends Command
         }
     }
 
-    private function purgeProject(Client $client, OutputInterface $output, $ignoreBackendErrors, $projectId, $projectName)
-    {
+    private function purgeProject(
+        Client $client,
+        OutputInterface $output,
+        bool $ignoreBackendErrors,
+        int $projectId,
+        string $projectName
+    ): void {
         $output->writeln(sprintf('Purge %s (%d)', $projectName, $projectId));
 
         $response = $client->purgeDeletedProject($projectId, [
