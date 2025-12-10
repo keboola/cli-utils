@@ -176,17 +176,29 @@ class OrganizationIntoMaintenanceMode extends Command
             JobStatuses::TERMINATING
         ]);
         $runningJobs = $jobsClient->listJobs($runningJobsListOptions);
-        $output->writeln(
-            sprintf(
-                'Found %d running jobs.  Please terminate them and then re-run',
-                count($runningJobs)
-            )
-        );
-        foreach ($runningJobs as $runningJob) {
+        $runningJobsCount = count($runningJobs);
+
+        if ($runningJobsCount > 1) {
             $output->writeln(
-                $runningJob['url'] . ' is ' . $runningJob['status']
+                sprintf(
+                    'Found %d running jobs.  Please terminate them and then re-run',
+                    $runningJobsCount,
+                )
+            );
+            foreach ($runningJobs as $runningJob) {
+                $output->writeln(
+                    $runningJob['url'] . ' is ' . $runningJob['status']
+                );
+            }
+        } else {
+            $output->writeln(
+                sprintf(
+                    'Found %d running jobs.',
+                    $runningJobsCount,
+                )
             );
         }
+
         // drop the token
         $tokensClient = new Tokens(
             new StorageClient([
@@ -196,6 +208,6 @@ class OrganizationIntoMaintenanceMode extends Command
         );
         $tokensClient->dropToken($storageToken['id']);
 
-        return count($runningJobs) > 0;
+        return $runningJobsCount > 0;
     }
 }
