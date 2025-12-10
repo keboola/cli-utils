@@ -67,7 +67,7 @@ class QueueMassTerminateJobs extends Command
             $storageToken
         );
 
-        $statusEnum = match($status) {
+        $statusEnum = match ($status) {
             'created' => JobStatuses::CREATED,
             'waiting' => JobStatuses::WAITING,
             default => JobStatuses::PROCESSING,

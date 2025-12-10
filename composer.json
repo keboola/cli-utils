@@ -30,6 +30,7 @@
    	},
     "scripts": {
         "phpstan": "phpstan analyse --memory-limit=512M",
-        "phpcs": "phpcs --standard=PSR2 -n src/"
+        "phpcs": "phpcs --standard=PSR2 -n src/",
+        "phpcbf": "phpcbf --standard=PSR2 -n src/"
     }
 }

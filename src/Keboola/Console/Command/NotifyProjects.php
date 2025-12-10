@@ -75,8 +75,7 @@ class NotifyProjects extends Command
         int $projectId,
         string $notificationTitle,
         string $notificationMessage
-    ): void
-    {
+    ): void {
         $output->writeln("Sending notification to project $projectId");
 
         if (method_exists($client, 'addNotification')) {
