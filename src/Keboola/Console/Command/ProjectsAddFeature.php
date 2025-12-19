@@ -11,11 +11,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class ProjectsAddFeature extends Command
 {
-    const ARG_FEATURE = 'feature';
-    const ARG_PROJECTS = 'projects';
-    const ARG_URL = 'url';
-    const ARG_TOKEN = 'token';
-    const OPT_FORCE = 'force';
+    const string ARG_FEATURE = 'feature';
+    const string ARG_PROJECTS = 'projects';
+    const string ARG_URL = 'url';
+    const string ARG_TOKEN = 'token';
+    const string OPT_FORCE = 'force';
 
     protected int $maintainersChecked = 0;
 

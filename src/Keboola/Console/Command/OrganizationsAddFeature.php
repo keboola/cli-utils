@@ -10,21 +10,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class OrganizationsAddFeature extends ProjectsAddFeature
 {
-    const string ARG_FEATURE = 'feature';
     const string ARG_ORGANIZATIONS = 'organizations';
-    const string ARG_URL = 'url';
-    const string ARG_TOKEN = 'token';
-    const string OPT_FORCE = 'force';
-
-    protected int $maintainersChecked = 0;
-
-    protected int $orgsChecked = 0;
-
-    protected int $projectsDisabled = 0;
-
-    protected int $projectsWithFeature = 0;
-
-    protected int $projectsUpdated = 0;
 
     protected function configure(): void
     {
