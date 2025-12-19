@@ -48,25 +48,26 @@ class ProjectsAddFeature extends Command
     }
 
     /**
-     * @param array<string, mixed> $projectInfo
+     * @param array{
+     *     id: int,
+     *     isDisabled?: bool,
+     *     disabled: array{reason: string},
+     *     features: string[]
+     * } $projectInfo
      */
     protected function addFeatureToProject(Client $client, OutputInterface $output, array $projectInfo, string $featureName, bool $force): void
     {
         $projectId = (string) $projectInfo['id'];
-        $projectId = is_numeric($projectId) ? (int) $projectId : (int) $projectId;
         $output->writeln("Adding feature to project " . $projectId);
 
         // Disabled projects
         if (isset($projectInfo["isDisabled"]) && $projectInfo["isDisabled"]) {
             $disabled = $projectInfo["disabled"];
-            assert(is_array($disabled));
             $disabledReason = $disabled["reason"];
-            assert(is_string($disabledReason));
             $output->writeln(" - project disabled: " . $disabledReason);
             $this->projectsDisabled++;
         } else {
             $features = $projectInfo["features"];
-            assert(is_array($features));
             if (in_array($featureName, $features, true)) {
                 $output->writeln(" - feature '{$featureName}' is already set.");
                 $this->projectsWithFeature++;
@@ -76,7 +77,6 @@ class ProjectsAddFeature extends Command
                     $output->writeln(" - feature '{$featureName}' successfully added.");
                 } else {
                     $projectIdForDisplay = $projectInfo['id'];
-                    assert(is_string($projectIdForDisplay) || is_int($projectIdForDisplay));
                     $output->writeln(sprintf(' - feature "%s" DOES NOT exist in the project %s yet. Enable force mode with -f option', $featureName, $projectIdForDisplay));
                 }
                 $this->projectsUpdated++;
@@ -96,6 +96,14 @@ class ProjectsAddFeature extends Command
 
                 $projects = $client->listOrganizationProjects($organization['id']);
                 foreach ($projects as $project) {
+                    /**
+                     * @var array{
+                     *     id: int,
+                     *     isDisabled?: bool,
+                     *     disabled: array{reason: string},
+                     *     features: string[]
+                     * } $project
+                     */
                     $this->addFeatureToProject($client, $output, $project, $feature, $force);
                 }
             }
@@ -110,6 +118,14 @@ class ProjectsAddFeature extends Command
         foreach ($projectIds as $projectId) {
             try {
                 $project = $client->getProject($projectId);
+                /**
+                 * @var array{
+                 *     id: int,
+                 *     isDisabled?: bool,
+                 *     disabled: array{reason: string},
+                 *     features: string[]
+                 * } $project
+                 */
                 $this->addFeatureToProject($client, $output, $project, $featureName, $force);
             } catch (ClientException $e) {
                 $output->writeln("Error while handling project {$projectId} : " . $e->getMessage());

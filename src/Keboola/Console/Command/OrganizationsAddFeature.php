@@ -63,8 +63,8 @@ class OrganizationsAddFeature extends ProjectsAddFeature
     /**
      * @param OutputInterface $output
      * @param bool $force
-     * @param int[] $successFullOrgs
-     * @param int[] $failedOrgs
+     * @param string[] $successFullOrgs
+     * @param string[] $failedOrgs
      * @return void
      */
     private function printResult(OutputInterface $output, bool $force, array $successFullOrgs, array $failedOrgs): void
