@@ -63,16 +63,15 @@ class OrganizationsAddFeature extends ProjectsAddFeature
     {
         $failedOrgsString = (count($failedOrgs) > 0) ? \sprintf(' (%s)', implode(', ', $failedOrgs)) : '';
         $output->writeln(sprintf(
-                "Processed %d organizations and %s failed\n"
+            "Processed %d organizations and %s failed\n"
                 . "%d projects where disabled\n"
                 . "%d projects have the feature already\n"
                 . '%d ' . ($force ? "projects updated" : "projects can be updated in force mode") . "\n",
-                count($successFullOrgs),
-                count($failedOrgs) . $failedOrgsString,
-                $this->projectsDisabled,
-                $this->projectsWithFeature,
-                $this->projectsUpdated,
-            )
-        );
+            count($successFullOrgs),
+            count($failedOrgs) . $failedOrgsString,
+            $this->projectsDisabled,
+            $this->projectsWithFeature,
+            $this->projectsUpdated,
+        ));
     }
 }
