@@ -39,10 +39,8 @@ class OrganizationStorageBackend extends Command
                 InputArgument::OPTIONAL,
                 'Keboola Connection Hostname Suffix',
                 'keboola.com'
-            )
-        ;
+            );
     }
-
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
@@ -80,18 +78,49 @@ class OrganizationStorageBackend extends Command
                     $storageBackendId
                 )
             );
-            $params = [$project['id'], $storageBackendId];
+            $params = [(string) $project['id'], (string) $storageBackendId];
             if ($force) {
                 $params[] = '--force';
-                $manageClient->runCommand([
+                $result = $manageClient->runCommand([
                     'command' => 'manage:switch-storage-backend',
-                    'parameters' => $params
+                    'parameters' => $params,
                 ]);
-                $manageClient->assignProjectStorageBackend($project['id'], $storageBackendId);
+                $output->writeln(sprintf('INFO: Storage backend switch for project "%s" in progress using command "%s".', $project['id'], $result['commandExecutionId']));
+
+                if ($this->waitForProjectToMigrate($manageClient, $project['id'], (int) $storageBackendId, $output)) {
+                    $output->writeln(sprintf('SUSCCESS: Storage backend switch for project "%s" in progress using command "%s".', $project['id'], $result['commandExecutionId']));
+                    // wait a second so the lock can be released
+                    sleep(5);
+                } else {
+                    $output->writeln(sprintf('ERROR: Storage backend switch for project "%s" to backend "%s" timed out.', $project['id'], $storageBackendId));
+                }
             }
         }
         $output->writeln('All done.');
-        
+
         return 0;
+    }
+
+    private function waitForProjectToMigrate(
+        Client $manageClient,
+        int $projectId,
+        int $requestedProjectId,
+        OutputInterface $output,
+    ): bool {
+        $timeout = 300;
+        $start = time();
+        while (time() - $start < $timeout) {
+            $projectDetail = $manageClient->getProject($projectId);
+            $currentBackednId = (int) $projectDetail['backends']['snowflake']['id'];
+
+            if ($currentBackednId === $requestedProjectId) {
+                $output->writeln(sprintf(' - Project "%s" migrated successfully to backend "%s".', $projectId, $requestedProjectId));
+                return true;
+            }
+            $output->writeln(sprintf(' - Project "%s" did not migrate to backend "%s" yet...waiting', $projectId, $requestedProjectId));
+            sleep(2);
+        }
+
+        return false;
     }
 }
