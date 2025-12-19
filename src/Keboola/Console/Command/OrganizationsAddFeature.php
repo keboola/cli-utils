@@ -46,8 +46,9 @@ class OrganizationsAddFeature extends ProjectsAddFeature
             } catch (ClientException $e) {
                 $output->writeln(sprintf('ERROR: Cannot proceed org "%s" due "%s"', $orgId, $e->getMessage()));
                 $failedOrgs[] = $orgId;
+                continue;
             }
-            $output->writeln(sprintf('Adding feature to organization "%s" ("%s")', $orgDetail['id'], $orgDetail['name']));
+            $output->writeln(sprintf('Adding feature to organization "%s" ("%s")', $orgId, $orgDetail['name']));
             $projectIds = array_map(fn($prj) => $prj['id'], $orgDetail['projects']);
             $this->addFeatureToSelectedProjects($client, $output, $featureName, $projectIds, $force);
             $successFullOrgs[] = $orgId;
@@ -59,6 +60,13 @@ class OrganizationsAddFeature extends ProjectsAddFeature
         return 0;
     }
 
+    /**
+     * @param OutputInterface $output
+     * @param bool $force
+     * @param int[] $successFullOrgs
+     * @param int[] $failedOrgs
+     * @return void
+     */
     private function printResult(OutputInterface $output, bool $force, array $successFullOrgs, array $failedOrgs): void
     {
         $failedOrgsString = (count($failedOrgs) > 0) ? \sprintf(' (%s)', implode(', ', $failedOrgs)) : '';
