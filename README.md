@@ -44,6 +44,18 @@ By in argument `<projects>` you can
 
 Note: the feature has to exist before calling, and it has to be type of `project`
 
+### Add Feature on all projects in Organization
+Adds a project feature to all projects in selected organizations
+
+```
+php cli.php manage:organizations-add-feature [-f|--force] <token> <url> <featureName> <organizations>
+```
+By in argument `<projects>` you can
+- select projects to add the feature to by specifying organization IDs separated by a comma (e.g. `1,2,3,4`)
+  -  `manage:organizations-add-feature  <token> <url> <featureName> 1,2,3`
+
+Note: the feature has to exist before calling, and it has to be type of `project`
+
 ### Bulk Project Remove Feature
 Removes a project feature from multiple projects
 
