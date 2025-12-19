@@ -89,6 +89,8 @@ class OrganizationStorageBackend extends Command
 
                 if ($this->waitForProjectToMigrate($manageClient, $project['id'], (int) $storageBackendId, $output)) {
                     $output->writeln(sprintf('SUSCCESS: Storage backend switch for project "%s" in progress using command "%s".', $project['id'], $result['commandExecutionId']));
+                    // wait a second so the lock can be released
+                    sleep(5);
                 } else {
                     $output->writeln(sprintf('ERROR: Storage backend switch for project "%s" to backend "%s" timed out.', $project['id'], $storageBackendId));
                 }
