@@ -1,0 +1,79 @@
+<?php
+
+namespace Keboola\Console\Command;
+
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+
+class OrganizationsAddFeature extends ProjectsAddFeature
+{
+    const string ARG_FEATURE = 'feature';
+    const string ARG_ORGANIZATIONS = 'organizations';
+    const string ARG_URL = 'url';
+    const string ARG_TOKEN = 'token';
+    const string OPT_FORCE = 'force';
+
+    protected int $maintainersChecked = 0;
+
+    protected int $orgsChecked = 0;
+
+    protected int $projectsDisabled = 0;
+
+    protected int $projectsWithFeature = 0;
+
+    protected int $projectsUpdated = 0;
+
+    protected function configure(): void
+    {
+        $this
+            ->setName('manage:organizations-add-feature')
+            ->setDescription('Add feature to all projects in organizations.')
+            ->addArgument(self::ARG_TOKEN, InputArgument::REQUIRED, 'manage token')
+            ->addArgument(self::ARG_URL, InputArgument::REQUIRED, 'Stack URL')
+            ->addArgument(self::ARG_FEATURE, InputArgument::REQUIRED, 'feature')
+            ->addArgument(self::ARG_ORGANIZATIONS, InputArgument::REQUIRED, 'list of IDs separated by comma')
+            ->addOption(self::OPT_FORCE, 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run');
+    }
+
+    public function execute(InputInterface $input, OutputInterface $output): ?int
+    {
+        $args = $input->getArguments();
+        $force = (bool) $input->getOption(self::OPT_FORCE);
+        $featureName = $args[self::ARG_FEATURE];
+        $orgIDsArg = $args[self::ARG_ORGANIZATIONS];
+        $client = $this->createClient($args[self::ARG_URL], $args[self::ARG_TOKEN]);
+
+        if (!$this->checkIfFeatureExists($client, $featureName)) {
+            $output->writeln(sprintf('Feature %s does NOT exist', $featureName));
+            return 1;
+        }
+
+        $orgIds = array_filter(explode(',', $orgIDsArg), 'is_numeric');
+        foreach ($orgIds as $orgId) {
+            $orgDetail = $client->getOrganization($orgId);
+            $output->writeln(sprintf('Adding feature to organization "%s" ("%s")', $orgDetail['id'], $orgDetail['name']));
+            $projectIds = array_map(fn($prj) => $prj['id'], $orgDetail['projects']);
+            $this->addFeatureToSelectedProjects($client, $output, $featureName, $projectIds, $force);
+        }
+
+        $output->writeln("\nDONE with following results:\n");
+        $this->printResult($output, $force);
+
+        return 0;
+    }
+
+    private function printResult(OutputInterface $output, bool $force): void
+    {
+        $output->writeln(sprintf(
+                "%d projects where disabled\n"
+                . "%d projects have the feature already\n"
+                . '%d ' . ($force ? "projects updated" : "projects can be updated in force mode") . "\n",
+                $this->projectsDisabled,
+                $this->projectsWithFeature,
+                $this->projectsUpdated
+            )
+        );
+    }
+}
