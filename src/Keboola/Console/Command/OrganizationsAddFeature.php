@@ -2,6 +2,7 @@
 
 namespace Keboola\Console\Command;
 
+use Keboola\ManageApi\ClientException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -50,29 +51,41 @@ class OrganizationsAddFeature extends ProjectsAddFeature
             return 1;
         }
 
+        $failedOrgs = [];
+        $successFullOrgs = [];
         $orgIds = array_filter(explode(',', $orgIDsArg), 'is_numeric');
         foreach ($orgIds as $orgId) {
-            $orgDetail = $client->getOrganization($orgId);
+            try {
+                $orgDetail = $client->getOrganization($orgId);
+            } catch (ClientException $e) {
+                $output->writeln(sprintf('ERROR: Cannot proceed org "%s" due "%s"', $orgId, $e->getMessage()));
+                $failedOrgs[] = $orgId;
+            }
             $output->writeln(sprintf('Adding feature to organization "%s" ("%s")', $orgDetail['id'], $orgDetail['name']));
             $projectIds = array_map(fn($prj) => $prj['id'], $orgDetail['projects']);
             $this->addFeatureToSelectedProjects($client, $output, $featureName, $projectIds, $force);
+            $successFullOrgs[] = $orgId;
         }
 
         $output->writeln("\nDONE with following results:\n");
-        $this->printResult($output, $force);
+        $this->printResult($output, $force, $successFullOrgs, $failedOrgs);
 
         return 0;
     }
 
-    private function printResult(OutputInterface $output, bool $force): void
+    private function printResult(OutputInterface $output, bool $force, array $successFullOrgs, array $failedOrgs): void
     {
+        $failedOrgsString = (count($failedOrgs) > 0) ? \sprintf(' (%s)', implode(', ', $failedOrgs)) : '';
         $output->writeln(sprintf(
-                "%d projects where disabled\n"
+                "Processed %d organizations and %s failed\n"
+                . "%d projects where disabled\n"
                 . "%d projects have the feature already\n"
                 . '%d ' . ($force ? "projects updated" : "projects can be updated in force mode") . "\n",
+                count($successFullOrgs),
+                count($failedOrgs) . $failedOrgsString,
                 $this->projectsDisabled,
                 $this->projectsWithFeature,
-                $this->projectsUpdated
+                $this->projectsUpdated,
             )
         );
     }
