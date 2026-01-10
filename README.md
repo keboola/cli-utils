@@ -251,6 +251,29 @@ Run command:
 
 Use number of days or 0 as show to remove expiration completely. By default, it's dry-run. Override with `-f` parameter.
 
+### Bulk Delete Projects
+
+Delete all projects specified by project IDs using the Manage API. By default, the command runs in dry-run mode and only reports what would be deleted. Use the `--force` flag to actually perform deletions.
+
+```
+php cli.php manage:delete-projects [-f|--force] <token> <url> <projects>
+```
+Arguments:
+- `token` (required): Manage API token.
+- `url` (required): Stack URL, including `https://`.
+- `projects` (required): Comma-separated list of project IDs to delete (e.g. `1,7,146`).
+
+Options:
+- `--force` / `-f`: Actually delete the projects. Without this flag, the command only reports what would be deleted (dry-run).
+
+Behavior:
+- For each project ID, checks if the project exists and is not already disabled.
+- In dry-run mode, lists the projects that would be deleted.
+- With `--force`, deletes each project and confirms deletion.
+- Prints a summary of disabled, deleted, and failed projects.
+- If run without `--force`, reminds the user that it was a dry run.
+
+
 ### Purge deleted projects
 Purge already deleted projects (remove residual metadata, optionally ignoring backend errors) using a Manage API token and a CSV piped via STDIN.
 
