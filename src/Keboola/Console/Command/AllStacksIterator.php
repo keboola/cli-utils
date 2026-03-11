@@ -24,7 +24,7 @@ class AllStacksIterator extends Command
             ->addArgument(self::ARG_PARAMS, InputArgument::REQUIRED, 'params');
     }
 
-    public function execute(InputInterface $input, OutputInterface $output): ?int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $commandName = $input->getArgument(self::ARG_COMMAND);
         assert(is_string($commandName));

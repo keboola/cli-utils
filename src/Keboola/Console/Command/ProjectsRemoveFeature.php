@@ -39,7 +39,7 @@ class ProjectsRemoveFeature extends Command
         ;
     }
 
-    public function execute(InputInterface $input, OutputInterface $output): ?int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $apiToken = $input->getArgument('token');
         assert(is_string($apiToken));

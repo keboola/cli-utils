@@ -102,14 +102,23 @@ class AddFeature extends Command
         }
     }
 
-    public function execute(InputInterface $input, OutputInterface $output): ?int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $args = $input->getArguments();
         $force = (bool) $input->getOption(self::OPT_FORCE);
+        $url = $input->getArgument(self::ARG_URL);
+        assert(is_string($url));
+        $token = $input->getArgument(self::ARG_TOKEN);
+        assert(is_string($token));
+        $featureName = $input->getArgument(self::ARG_FEATURE_NAME);
+        assert(is_string($featureName));
+        $featureTitle = $input->getArgument(self::ARG_FEATURE_TITLE);
+        assert(is_string($featureTitle));
+        $featureDesc = $input->getArgument(self::ARG_FEATURE_DESC);
+        assert(is_string($featureDesc));
 
-        $client = $this->createClient($args[self::ARG_URL], $args[self::ARG_TOKEN]);
-        $this->createFeature($client, $args[self::ARG_FEATURE_NAME], $args[self::ARG_FEATURE_TITLE], $args[self::ARG_FEATURE_DESC], $force, $output);
-        $this->addFeature($client, $args[self::ARG_FEATURE_NAME], $force, $output);
+        $client = $this->createClient($url, $token);
+        $this->createFeature($client, $featureName, $featureTitle, $featureDesc, $force, $output);
+        $this->addFeature($client, $featureName, $force, $output);
 
         return 0;
     }
