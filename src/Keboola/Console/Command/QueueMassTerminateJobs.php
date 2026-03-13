@@ -9,15 +9,15 @@ use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\JobStatuses;
 use Keboola\JobQueueClient\ListJobsOptions;
 use Keboola\StorageApi\Client as StorageClient;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[AsCommand(name: 'queue:terminate-project-jobs')]
 class QueueMassTerminateJobs extends Command
 {
-    protected static $defaultName = 'queue:terminate-project-jobs';
-
     const ARGUMENT_STORAGE_TOKEN = 'storage-token';
     const ARGUMENT_CONNECTION_URL = 'connection-url';
     const ARGUMENT_JOB_STATUS = 'job-status';

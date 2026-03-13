@@ -122,12 +122,17 @@ class UpdateDataRetention extends Command
         }
     }
 
-    public function execute(InputInterface $input, OutputInterface $output): ?int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $args = $input->getArguments();
         $force = (bool) $input->getOption(self::OPT_FORCE);
-        $dataRetentionTimeInDays = (int) $args[self::ARG_DATA_RETENTION];
-        $client = $this->createClient($args[self::ARG_URL], $args[self::ARG_TOKEN]);
+        $url = $input->getArgument(self::ARG_URL);
+        assert(is_string($url));
+        $token = $input->getArgument(self::ARG_TOKEN);
+        assert(is_string($token));
+        $dataRetention = $input->getArgument(self::ARG_DATA_RETENTION);
+        assert(is_string($dataRetention));
+        $dataRetentionTimeInDays = (int) $dataRetention;
+        $client = $this->createClient($url, $token);
 
         if ($force) {
             $output->writeln('Force mode enabled. Projects will be updated.');

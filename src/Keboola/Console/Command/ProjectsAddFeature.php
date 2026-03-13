@@ -144,14 +144,19 @@ class ProjectsAddFeature extends Command
         return false;
     }
 
-    public function execute(InputInterface $input, OutputInterface $output): ?int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $args = $input->getArguments();
         $force = (bool) $input->getOption(self::OPT_FORCE);
-        $featureName = $args[self::ARG_FEATURE];
-        $projectsOption = $args[self::ARG_PROJECTS];
+        $featureName = $input->getArgument(self::ARG_FEATURE);
+        assert(is_string($featureName));
+        $projectsOption = $input->getArgument(self::ARG_PROJECTS);
+        assert(is_string($projectsOption));
+        $url = $input->getArgument(self::ARG_URL);
+        assert(is_string($url));
+        $token = $input->getArgument(self::ARG_TOKEN);
+        assert(is_string($token));
         $checkAllProjects = strtolower($projectsOption) === 'all';
-        $client = $this->createClient($args[self::ARG_URL], $args[self::ARG_TOKEN]);
+        $client = $this->createClient($url, $token);
 
         if (!$this->checkIfFeatureExists($client, $featureName)) {
             $output->writeln(sprintf('Feature %s does NOT exist', $featureName));
