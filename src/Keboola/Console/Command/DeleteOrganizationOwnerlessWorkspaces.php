@@ -53,6 +53,9 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
         assert(is_string($manageToken));
         $organizationId = $input->getArgument('organizationId');
         assert(is_string($organizationId));
+        if (!ctype_digit($organizationId)) {
+            throw new \InvalidArgumentException('Argument "organizationId" must be a numeric string.');
+        }
         $organizationId = (int) $organizationId;
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
@@ -131,11 +134,21 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                     if ($tokenId !== null) {
                         $tokensClient->getToken((int) $tokenId);
                         $workingTokens++;
-                        $output->writeln('Working token ' . $tokenId);
+                        if ($output->isVerbose()) {
+                            $output->writeln('Working token ' . $tokenId);
+                        }
                         continue; // token exists so no need to do anything
                     }
                 } catch (\Throwable $exception) {
-                    if (!in_array($exception->getCode(), [403, 404])) {
+                    if ($exception->getCode() === 403) {
+                        $output->writeln(sprintf(
+                            'WARN: Access denied checking token %s for sandbox %s, skipping',
+                            $tokenId,
+                            $sandbox->getId(),
+                        ));
+                        continue;
+                    }
+                    if ($exception->getCode() !== 404) {
                         throw $exception;
                     }
                 }
