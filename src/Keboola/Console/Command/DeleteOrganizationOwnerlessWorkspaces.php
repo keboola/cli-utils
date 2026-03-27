@@ -143,7 +143,7 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                     if ($exception->getCode() === 403) {
                         $output->writeln(sprintf(
                             'WARN: Access denied checking token %s for sandbox %s, skipping',
-                            $tokenId,
+                            $sandbox->getTokenId(),
                             $sandbox->getId(),
                         ));
                         continue;
