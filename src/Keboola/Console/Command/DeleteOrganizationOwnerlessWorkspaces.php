@@ -129,8 +129,8 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
             $workingTokens = 0;
             /** @var Sandbox $sandbox */
             foreach ($sandboxes as $sandbox) {
+                $tokenId = $sandbox->getTokenId();
                 try {
-                    $tokenId = $sandbox->getTokenId();
                     if ($tokenId !== null) {
                         $tokensClient->getToken((int) $tokenId);
                         $workingTokens++;
