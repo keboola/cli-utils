@@ -3,11 +3,10 @@
 namespace Keboola\Console\Command;
 
 use Keboola\ManageApi\Client;
-use Keboola\Sandboxes\Api\Client as SandboxesClient;
-use Keboola\Sandboxes\Api\Sandbox;
+use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
+use Keboola\StorageApi\Components;
 use Keboola\StorageApi\Tokens;
-use Keboola\StorageApi\Workspaces;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,7 +20,7 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
     {
         $this
             ->setName('manage:delete-organization-ownerless-workspaces')
-            ->setDescription('Bulk delete ownerless workspaces (sandboxes with inactive token owner) across all projects in an organization.')
+            ->setDescription('Bulk delete ownerless workspaces (sessions with inactive user) across all projects in an organization.')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.')
             ->addOption(
                 'includeShared',
@@ -61,7 +60,7 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
         assert(is_string($hostnameSuffix));
 
         $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
-        $sandboxesUrl = sprintf('https://sandboxes.%s', $hostnameSuffix);
+        $editorUrl = sprintf('https://editor.%s', $hostnameSuffix);
 
         $includeShared = (bool) $input->getOption('includeShared');
         $force = (bool) $input->getOption('force');
@@ -78,9 +77,8 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
             $output->writeln('This is just a dry-run, nothing will be actually deleted');
         }
 
-        $totalDeletedSandboxes = 0;
-        $totalDeletedStorageWorkspaces = 0;
-        /** @var array<int|string, array<int, array{sandboxId: string, physicalId: string, tokenId: string}>> $summary */
+        $totalDeleted = 0;
+        /** @var array<int|string, array<int, array{sessionId: string, componentId: string, configurationId: string, userId: string}>> $summary */
         $summary = [];
 
         foreach ($projects as $project) {
@@ -113,90 +111,69 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                 'backoffMaxTries' => 1,
                 'logger' => new ConsoleLogger($output),
             ]);
-            $workspacesClient = new Workspaces($storageClient);
             $tokensClient = new Tokens($storageClient);
-            $sandboxesClient = new SandboxesClient(
-                $sandboxesUrl,
-                $storageToken['token'],
-            );
+            $editorClient = new EditorServiceClient($editorUrl, $storageToken['token']);
 
-            $projectDeletedSandboxes = 0;
-            $projectDeletedStorageWorkspaces = 0;
-            $projectKey = sprintf('%s (%s)', $project['name'], $project['id']);
-            $summary[$projectKey] = [];
-
-            $sandboxes = $sandboxesClient->list();
-            $workingTokens = 0;
-            /** @var Sandbox $sandbox */
-            foreach ($sandboxes as $sandbox) {
-                $tokenId = $sandbox->getTokenId();
-                try {
-                    if ($tokenId !== null) {
-                        $tokensClient->getToken((int) $tokenId);
-                        $workingTokens++;
-                        if ($output->isVerbose()) {
-                            $output->writeln('Working token ' . $tokenId);
-                        }
-                        continue; // token exists so no need to do anything
-                    }
-                } catch (\Throwable $exception) {
-                    if ($exception->getCode() === 403) {
-                        $output->writeln(sprintf(
-                            'WARN: Access denied checking token %s for sandbox %s, skipping',
-                            $sandbox->getTokenId(),
-                            $sandbox->getId(),
-                        ));
-                        continue;
-                    }
-                    if ($exception->getCode() !== 404) {
-                        throw $exception;
-                    }
-                }
-
-                if (!$includeShared && $sandbox->getShared()) {
-                    continue;
-                }
-
-                $physicalId = '';
-                if (!in_array($sandbox->getType(), Sandbox::CONTAINER_TYPES)) {
-                    if (empty($sandbox->getPhysicalId())) {
-                        $output->writeln('No underlying storage workspace found for sandboxId ' . $sandbox->getId());
-                    } else {
-                        $physicalId = $sandbox->getPhysicalId();
-                        $output->writeln('Deleting inactive storage workspace ' . $physicalId);
-                        $projectDeletedStorageWorkspaces++;
-                        if ($force) {
-                            $this->deleteStorageWorkspace($workspacesClient, $physicalId, $output);
-                        }
-                    }
-                } elseif (!empty($sandbox->getStagingWorkspaceId())) {
-                    $physicalId = $sandbox->getStagingWorkspaceId();
-                    $output->writeln('Deleting inactive staging storage workspace ' . $physicalId);
-                    $projectDeletedStorageWorkspaces++;
-                    if ($force) {
-                        $this->deleteStorageWorkspace($workspacesClient, $physicalId, $output);
-                    }
-                }
-
-                $summary[$projectKey][] = [
-                    'sandboxId' => $sandbox->getId(),
-                    'physicalId' => $physicalId,
-                    'tokenId' => (string) ($sandbox->getTokenId() ?? ''),
-                ];
-
-                $projectDeletedSandboxes++;
-                if ($force) {
-                    $sandboxesClient->delete($sandbox->getId());
+            // Build a set of active user IDs from project tokens
+            $activeUserIds = [];
+            foreach ($tokensClient->listTokens() as $projectToken) {
+                if (isset($projectToken['admin']['id'])) {
+                    $activeUserIds[$projectToken['admin']['id']] = true;
                 }
             }
 
-            $output->writeln('Working tokens ' . $workingTokens);
+            $projectDeleted = 0;
+            $projectKey = sprintf('%s (%s)', $project['name'], $project['id']);
+            $summary[$projectKey] = [];
+
+            foreach ($editorClient->listSessions() as $session) {
+                $userId = $session['userId'] ?? null;
+                if ($userId !== null && isset($activeUserIds[$userId])) {
+                    if ($output->isVerbose()) {
+                        $output->writeln('Active user ' . $userId);
+                    }
+                    continue;
+                }
+
+                if (!$includeShared && !empty($session['shared'])) {
+                    continue;
+                }
+
+                $branchId = (string) $session['branchId'];
+                $componentId = $session['componentId'];
+                $configurationId = $session['configurationId'];
+
+                $output->writeln(sprintf(
+                    'Deleting configuration %s/%s (branch %s) for session %s',
+                    $componentId,
+                    $configurationId,
+                    $branchId,
+                    $session['id'],
+                ));
+
+                $summary[$projectKey][] = [
+                    'sessionId' => $session['id'],
+                    'componentId' => $componentId,
+                    'configurationId' => $configurationId,
+                    'userId' => (string) ($userId ?? ''),
+                ];
+
+                $projectDeleted++;
+                if ($force) {
+                    $branchClient = new BranchAwareClient($branchId, [
+                        'token' => $storageToken['token'],
+                        'url' => $kbcUrl,
+                    ]);
+                    $components = new Components($branchClient);
+                    $components->deleteConfiguration($componentId, $configurationId);
+                    $components->deleteConfiguration($componentId, $configurationId);
+                }
+            }
 
             $output->writeln(sprintf(
-                'Project %s: %d sandboxes deleted, %d storage workspaces deleted',
+                'Project %s: %d sessions deleted',
                 $project['id'],
-                $projectDeletedSandboxes,
-                $projectDeletedStorageWorkspaces,
+                $projectDeleted,
             ));
 
             try {
@@ -209,50 +186,33 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                 ));
             }
 
-            $totalDeletedSandboxes += $projectDeletedSandboxes;
-            $totalDeletedStorageWorkspaces += $projectDeletedStorageWorkspaces;
+            $totalDeleted += $projectDeleted;
         }
 
         // Print summary
         $output->writeln('');
         $output->writeln(sprintf('=== Summary for organization %s ===', $organization['name'] ?? $organizationId));
-        foreach ($summary as $projectKey => $workspaces) {
-            if (count($workspaces) === 0) {
+        foreach ($summary as $projectKey => $sessions) {
+            if (count($sessions) === 0) {
                 continue;
             }
             $output->writeln(sprintf('  Project: %s', $projectKey));
-            foreach ($workspaces as $workspace) {
+            foreach ($sessions as $session) {
                 $output->writeln(sprintf(
-                    '    - SandboxId: %s, PhysicalId: %s, TokenId: %s',
-                    $workspace['sandboxId'],
-                    $workspace['physicalId'] ?: '(none)',
-                    $workspace['tokenId'] ?: '(none)',
+                    '    - SessionId: %s, Configuration: %s/%s, UserId: %s',
+                    $session['sessionId'],
+                    $session['componentId'],
+                    $session['configurationId'],
+                    $session['userId'] ?: '(none)',
                 ));
             }
         }
         $output->writeln('');
         $output->writeln(sprintf(
-            'Grand total: %d sandboxes deleted and %d storage workspaces deleted',
-            $totalDeletedSandboxes,
-            $totalDeletedStorageWorkspaces,
+            'Grand total: %d sessions deleted',
+            $totalDeleted,
         ));
 
         return 0;
-    }
-
-    private function deleteStorageWorkspace(
-        Workspaces $workspacesClient,
-        string $workspaceId,
-        OutputInterface $output,
-    ): void {
-        try {
-            $workspacesClient->deleteWorkspace((int) $workspaceId);
-        } catch (\Throwable $clientException) {
-            $output->writeln(sprintf(
-                'Error deleting workspace %s:%s',
-                $workspaceId,
-                $clientException->getMessage(),
-            ));
-        }
     }
 }

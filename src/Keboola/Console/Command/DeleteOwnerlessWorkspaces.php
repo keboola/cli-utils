@@ -2,12 +2,10 @@
 
 namespace Keboola\Console\Command;
 
-use Keboola\Sandboxes\Api\Client as SandboxesClient;
-use Keboola\Sandboxes\Api\Exception\ClientException;
-use Keboola\Sandboxes\Api\Sandbox;
+use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
+use Keboola\StorageApi\Components;
 use Keboola\StorageApi\Tokens;
-use Keboola\StorageApi\Workspaces;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -49,7 +47,7 @@ class DeleteOwnerlessWorkspaces extends Command
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
         $url = 'https://connection.' . $hostnameSuffix;
-        $sandboxesUrl = 'https://sandboxes.' . $hostnameSuffix;
+        $editorUrl = 'https://editor.' . $hostnameSuffix;
         $includeShared = (bool) $input->getOption('includeShared');
         $force = (bool) $input->getOption('force');
 
@@ -59,88 +57,61 @@ class DeleteOwnerlessWorkspaces extends Command
             'backoffMaxTries' => 1,
             'logger' => new ConsoleLogger($output),
         ]);
-        $workspacesClient = new Workspaces($storageClient);
         $tokensClient = new Tokens($storageClient);
-        $sandboxesClient = new SandboxesClient(
-            $sandboxesUrl,
-            $token
-        );
+        $editorClient = new EditorServiceClient($editorUrl, $token);
+
         if ($force) {
             $output->writeln('Force option is set, doing it for real');
         } else {
             $output->writeln('This is just a dry-run, nothing will be actually deleted');
         }
-        $totalDeletedSandboxes = 0;
-        $totalDeletedStorageWorkspaces = 0;
-        $sandboxes = $sandboxesClient->list();
-        /** @var Sandbox $sandbox */
-        foreach ($sandboxes as $sandbox) {
-            try {
-                $tokenId = $sandbox->getTokenId();
-                if ($tokenId !== null) {
-                    $tokensClient->getToken((int) $tokenId);
-                    continue; // token exists so no need to do anything
-                }
-            } catch (\Throwable $exception) {
-                if ($exception->getCode() !== 404) {
-                    throw $exception;
-                }
+
+        // Build a set of active user IDs from project tokens
+        $activeUserIds = [];
+        foreach ($tokensClient->listTokens() as $projectToken) {
+            if (isset($projectToken['admin']['id'])) {
+                $activeUserIds[$projectToken['admin']['id']] = true;
+            }
+        }
+
+        $totalDeleted = 0;
+
+        foreach ($editorClient->listSessions() as $session) {
+            $userId = $session['userId'] ?? null;
+            if ($userId !== null && isset($activeUserIds[$userId])) {
+                continue; // user is still active
             }
 
-            // check if we should skip shared sandboxes
-            if (!$includeShared && $sandbox->getShared()) {
+            if (!$includeShared && !empty($session['shared'])) {
                 continue;
             }
 
-            if (!in_array($sandbox->getType(), Sandbox::CONTAINER_TYPES)) {
-                // it is a database workspace
-                if (empty($sandbox->getPhysicalId())) {
-                    $output->writeln('No underlying storage workspace found for sandboxId ' . $sandbox->getId());
-                } else {
-                    $output->writeln('Deleting inactive storage workspace ' . $sandbox->getPhysicalId());
-                    $totalDeletedStorageWorkspaces++;
-                    if ($force) {
-                        $this->deleteStorageWorkspace($workspacesClient, $sandbox->getPhysicalId(), $output);
-                    }
-                }
-            } elseif (!empty($sandbox->getStagingWorkspaceId())) {
-                $output->writeln('Deleting inactive staging storage workspace ' . $sandbox->getStagingWorkspaceId());
-                $totalDeletedStorageWorkspaces++;
-                if ($force) {
-                    $this->deleteStorageWorkspace($workspacesClient, $sandbox->getStagingWorkspaceId(), $output);
-                }
-            }
+            $branchId = (string) $session['branchId'];
+            $componentId = $session['componentId'];
+            $configurationId = $session['configurationId'];
 
-            $totalDeletedSandboxes++;
+            $output->writeln(sprintf(
+                'Deleting configuration %s/%s (branch %s) for session %s',
+                $componentId,
+                $configurationId,
+                $branchId,
+                $session['id'],
+            ));
+
+            $totalDeleted++;
             if ($force) {
-                $sandboxesClient->delete($sandbox->getId());
+                $branchClient = new BranchAwareClient($branchId, [
+                    'token' => $token,
+                    'url' => $url,
+                ]);
+                $components = new Components($branchClient);
+                $components->deleteConfiguration($componentId, $configurationId);
+                $components->deleteConfiguration($componentId, $configurationId);
             }
         }
 
-        $output->writeln(sprintf(
-            '%d sandboxes deleted and %d storage workspaces deleted',
-            $totalDeletedSandboxes,
-            $totalDeletedStorageWorkspaces
-        ));
+        $output->writeln(sprintf('%d sessions deleted', $totalDeleted));
 
         return 0;
-    }
-
-    private function deleteStorageWorkspace(
-        Workspaces $workspacesClient,
-        string $workspaceId,
-        OutputInterface $output
-    ): void {
-        try {
-            $workspacesClient->deleteWorkspace((int) $workspaceId);
-        } catch (\Throwable $clientException) {
-            $output->writeln(
-                sprintf(
-                    'Error deleting workspace %s:%s',
-                    $workspaceId,
-                    $clientException->getMessage()
-                )
-            );
-        }
     }
 }
