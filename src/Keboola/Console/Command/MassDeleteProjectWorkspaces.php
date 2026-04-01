@@ -88,10 +88,7 @@ class MassDeleteProjectWorkspaces extends Command
             // index sessions by workspaceSchema for quick lookup
             $sessionsBySchema = [];
             foreach ($editorClient->listSessions() as $session) {
-                $schema = isset($session['workspaceSchema']) ? (string) $session['workspaceSchema'] : null;
-                if ($schema !== null) {
-                    $sessionsBySchema[$schema] = $session;
-                }
+                $sessionsBySchema[$session['workspaceSchema']] = $session;
             }
 
             $notFound = [];
@@ -102,40 +99,36 @@ class MassDeleteProjectWorkspaces extends Command
                 }
 
                 $session = $sessionsBySchema[$schema];
-                $branchId = (string) $session['branchId'];
-                $componentId = (string) $session['componentId'];
-                $configurationId = (string) $session['configurationId'];
-                $sessionId = (string) $session['id'];
 
                 $output->writeln(sprintf(
                     'Session "%s" with schema "%s" found — configuration %s/%s (branch %s).',
-                    $sessionId,
+                    $session['id'],
                     $schema,
-                    $componentId,
-                    $configurationId,
-                    $branchId,
+                    $session['componentId'],
+                    $session['configurationId'],
+                    $session['branchId'],
                 ));
 
                 if ($force) {
-                    $branchClient = new BranchAwareClient($branchId, [
+                    $branchClient = new BranchAwareClient($session['branchId'], [
                         'token' => $storageToken,
                         'url' => $connectionUrl,
                     ]);
                     $components = new Components($branchClient);
-                    $components->deleteConfiguration($componentId, $configurationId);
-                    $components->deleteConfiguration($componentId, $configurationId);
+                    $components->deleteConfiguration($session['componentId'], $session['configurationId']);
+                    $components->deleteConfiguration($session['componentId'], $session['configurationId']);
 
                     $output->writeln(sprintf(
                         'Deleted configuration %s/%s for schema "%s".',
-                        $componentId,
-                        $configurationId,
+                        $session['componentId'],
+                        $session['configurationId'],
                         $schema,
                     ));
                 } else {
                     $output->writeln(sprintf(
                         '[DRY-RUN] Would delete configuration %s/%s for schema "%s".',
-                        $componentId,
-                        $configurationId,
+                        $session['componentId'],
+                        $session['configurationId'],
                         $schema,
                     ));
                 }

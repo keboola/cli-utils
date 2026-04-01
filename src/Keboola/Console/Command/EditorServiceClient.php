@@ -19,7 +19,7 @@ class EditorServiceClient
     }
 
     /**
-     * @return array<int, array<string, mixed>>
+     * @return list<array{id: string, userId: string, branchId: string, componentId: string, configurationId: string, workspaceSchema: string, shared: bool, status: string}>
      */
     public function listSessions(): array
     {

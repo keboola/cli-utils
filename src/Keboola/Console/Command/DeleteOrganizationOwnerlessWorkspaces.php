@@ -127,47 +127,41 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
             $summary[$projectKey] = [];
 
             foreach ($editorClient->listSessions() as $session) {
-                $userId = isset($session['userId']) ? (string) $session['userId'] : null;
-                if ($userId !== null && isset($activeUserIds[$userId])) {
+                if (isset($activeUserIds[$session['userId']])) {
                     if ($output->isVerbose()) {
-                        $output->writeln('Active user ' . $userId);
+                        $output->writeln('Active user ' . $session['userId']);
                     }
                     continue;
                 }
 
-                if (!$includeShared && !empty($session['shared'])) {
+                if (!$includeShared && $session['shared']) {
                     continue;
                 }
 
-                $branchId = (string) $session['branchId'];
-                $componentId = (string) $session['componentId'];
-                $configurationId = (string) $session['configurationId'];
-                $sessionId = (string) $session['id'];
-
                 $output->writeln(sprintf(
                     'Deleting configuration %s/%s (branch %s) for session %s',
-                    $componentId,
-                    $configurationId,
-                    $branchId,
-                    $sessionId,
+                    $session['componentId'],
+                    $session['configurationId'],
+                    $session['branchId'],
+                    $session['id'],
                 ));
 
                 $summary[$projectKey][] = [
-                    'sessionId' => $sessionId,
-                    'componentId' => $componentId,
-                    'configurationId' => $configurationId,
-                    'userId' => $userId ?? '',
+                    'sessionId' => $session['id'],
+                    'componentId' => $session['componentId'],
+                    'configurationId' => $session['configurationId'],
+                    'userId' => $session['userId'],
                 ];
 
                 $projectDeleted++;
                 if ($force) {
-                    $branchClient = new BranchAwareClient($branchId, [
+                    $branchClient = new BranchAwareClient($session['branchId'], [
                         'token' => $storageToken['token'],
                         'url' => $kbcUrl,
                     ]);
                     $components = new Components($branchClient);
-                    $components->deleteConfiguration($componentId, $configurationId);
-                    $components->deleteConfiguration($componentId, $configurationId);
+                    $components->deleteConfiguration($session['componentId'], $session['configurationId']);
+                    $components->deleteConfiguration($session['componentId'], $session['configurationId']);
                 }
             }
 
