@@ -88,7 +88,7 @@ class MassDeleteProjectWorkspaces extends Command
             // index sessions by workspaceSchema for quick lookup
             $sessionsBySchema = [];
             foreach ($editorClient->listSessions() as $session) {
-                $schema = $session['workspaceSchema'] ?? null;
+                $schema = isset($session['workspaceSchema']) ? (string) $session['workspaceSchema'] : null;
                 if ($schema !== null) {
                     $sessionsBySchema[$schema] = $session;
                 }
@@ -103,12 +103,13 @@ class MassDeleteProjectWorkspaces extends Command
 
                 $session = $sessionsBySchema[$schema];
                 $branchId = (string) $session['branchId'];
-                $componentId = $session['componentId'];
-                $configurationId = $session['configurationId'];
+                $componentId = (string) $session['componentId'];
+                $configurationId = (string) $session['configurationId'];
+                $sessionId = (string) $session['id'];
 
                 $output->writeln(sprintf(
                     'Session "%s" with schema "%s" found — configuration %s/%s (branch %s).',
-                    $session['id'],
+                    $sessionId,
                     $schema,
                     $componentId,
                     $configurationId,

@@ -77,7 +77,7 @@ class DeleteOwnerlessWorkspaces extends Command
         $totalDeleted = 0;
 
         foreach ($editorClient->listSessions() as $session) {
-            $userId = $session['userId'] ?? null;
+            $userId = isset($session['userId']) ? (string) $session['userId'] : null;
             if ($userId !== null && isset($activeUserIds[$userId])) {
                 continue; // user is still active
             }
@@ -87,15 +87,16 @@ class DeleteOwnerlessWorkspaces extends Command
             }
 
             $branchId = (string) $session['branchId'];
-            $componentId = $session['componentId'];
-            $configurationId = $session['configurationId'];
+            $componentId = (string) $session['componentId'];
+            $configurationId = (string) $session['configurationId'];
+            $sessionId = (string) $session['id'];
 
             $output->writeln(sprintf(
                 'Deleting configuration %s/%s (branch %s) for session %s',
                 $componentId,
                 $configurationId,
                 $branchId,
-                $session['id'],
+                $sessionId,
             ));
 
             $totalDeleted++;

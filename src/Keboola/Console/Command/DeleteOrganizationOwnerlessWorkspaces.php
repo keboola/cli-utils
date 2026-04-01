@@ -127,7 +127,7 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
             $summary[$projectKey] = [];
 
             foreach ($editorClient->listSessions() as $session) {
-                $userId = $session['userId'] ?? null;
+                $userId = isset($session['userId']) ? (string) $session['userId'] : null;
                 if ($userId !== null && isset($activeUserIds[$userId])) {
                     if ($output->isVerbose()) {
                         $output->writeln('Active user ' . $userId);
@@ -140,22 +140,23 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                 }
 
                 $branchId = (string) $session['branchId'];
-                $componentId = $session['componentId'];
-                $configurationId = $session['configurationId'];
+                $componentId = (string) $session['componentId'];
+                $configurationId = (string) $session['configurationId'];
+                $sessionId = (string) $session['id'];
 
                 $output->writeln(sprintf(
                     'Deleting configuration %s/%s (branch %s) for session %s',
                     $componentId,
                     $configurationId,
                     $branchId,
-                    $session['id'],
+                    $sessionId,
                 ));
 
                 $summary[$projectKey][] = [
-                    'sessionId' => $session['id'],
+                    'sessionId' => $sessionId,
                     'componentId' => $componentId,
                     'configurationId' => $configurationId,
-                    'userId' => (string) ($userId ?? ''),
+                    'userId' => $userId ?? '',
                 ];
 
                 $projectDeleted++;
