@@ -10,7 +10,7 @@
         "keboola/job-queue-api-php-client": "^5.2.0",
         "symfony/config": "^7.4",
         "keboola/php-datatypes": "^8.0",
-        "symfony/http-client": "^8.0"
+        "symfony/http-client": "^7.4"
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "3.*",
