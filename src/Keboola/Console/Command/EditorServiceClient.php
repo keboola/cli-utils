@@ -27,6 +27,8 @@ class EditorServiceClient
             'query' => ['listAll' => '1'],
         ]);
 
-        return $response->toArray();
+        /** @var list<array{id: string, userId: string, branchId: string, componentId: string, configurationId: string, workspaceSchema: string, shared: bool, status: string}> $sessions */
+        $sessions = $response->toArray();
+        return $sessions;
     }
 }
