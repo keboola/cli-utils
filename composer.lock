@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7cfc86d7a2c950f373a2a27577983d92",
+    "content-hash": "24930258e9913cc56c614972807068d3",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1293,39 +1293,38 @@
             "time": "2025-08-27T11:12:26+00:00"
         },
         {
-            "name": "keboola/sandboxes-api-php-client",
-            "version": "6.32.0",
+            "name": "keboola/sandboxes-service-api-client",
+            "version": "dev-odin/AJDA-1942",
             "source": {
                 "type": "git",
-                "url": "https://github.com/keboola/sandboxes-api-php-client.git",
-                "reference": "2125f1121d0c877f642902b94536aa1d744e8ff2"
+                "url": "https://github.com/keboola/sandboxes-service-api-php-client.git",
+                "reference": "c66e051f46b7893e53a41a963e7234d3907bd51d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/sandboxes-api-php-client/zipball/2125f1121d0c877f642902b94536aa1d744e8ff2",
-                "reference": "2125f1121d0c877f642902b94536aa1d744e8ff2",
+                "url": "https://api.github.com/repos/keboola/sandboxes-service-api-php-client/zipball/c66e051f46b7893e53a41a963e7234d3907bd51d",
+                "reference": "c66e051f46b7893e53a41a963e7234d3907bd51d",
                 "shasum": ""
             },
             "require": {
-                "ext-json": "*",
-                "guzzlehttp/guzzle": "~6.0|~7.0",
+                "guzzlehttp/guzzle": "^7.8",
+                "monolog/monolog": "^2.0|^3.0",
                 "php": "^8.2",
-                "psr/log": "^1.1|^2.0|^3.0",
-                "symfony/validator": "^6.0|^7.0"
+                "webmozart/assert": "^1.11"
             },
             "require-dev": {
+                "infection/infection": "^0.27.9",
                 "keboola/coding-standard": "^15.0",
-                "keboola/kbc-manage-api-php-client": "^7.1",
-                "keboola/storage-api-client": "^14.15",
                 "phpstan/phpstan": "^1.10",
                 "phpstan/phpstan-phpunit": "^1.3",
-                "phpunit/phpunit": "^9.6",
-                "vlucas/phpdotenv": "^5.6"
+                "phpstan/phpstan-webmozart-assert": "^1.2",
+                "sempro/phpunit-pretty-print": "^1.4",
+                "symfony/http-client": "^6.4|^7.0"
             },
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "Keboola\\Sandboxes\\Api\\": "src/"
+                    "Keboola\\SandboxesServiceApiClient\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -1334,19 +1333,64 @@
             ],
             "authors": [
                 {
-                    "name": "Jakub Matějka",
-                    "email": "jakub@keboola.com"
+                    "name": "Keboola",
+                    "email": "devel@keboola.com"
                 }
             ],
-            "description": "PHP Client for Keboola Sandboxes API",
-            "keywords": [
-                "keboola",
-                "sandboxes"
-            ],
+            "description": "Keboola Sandboxes Service API client",
             "support": {
-                "source": "https://github.com/keboola/sandboxes-api-php-client/tree/6.32.0"
+                "issues": "https://github.com/keboola/sandboxes-service-api-php-client/issues",
+                "source": "https://github.com/keboola/sandboxes-service-api-php-client/tree/odin/AJDA-1942"
             },
-            "time": "2025-11-19T16:15:43+00:00"
+            "time": "2026-04-24T21:26:08+00:00"
+        },
+        {
+            "name": "keboola/service-client",
+            "version": "1.5.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/keboola/service-client.git",
+                "reference": "0629d1e54b9cbd0fd66bbec01424705464794caf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/keboola/service-client/zipball/0629d1e54b9cbd0fd66bbec01424705464794caf",
+                "reference": "0629d1e54b9cbd0fd66bbec01424705464794caf",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "infection/infection": "^0.29",
+                "keboola/coding-standard": "^15.0.1",
+                "monolog/monolog": "^3.5.0",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^12.1",
+                "symfony/dotenv": "^6.4.4|^7.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Keboola\\ServiceClient\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Keboola",
+                    "email": "devel@keboola.com"
+                }
+            ],
+            "description": "Service Client provides easy way to get Keboola services URLs",
+            "support": {
+                "issues": "https://github.com/keboola/service-client/issues",
+                "source": "https://github.com/keboola/service-client/tree/1.5.1"
+            },
+            "time": "2026-04-14T06:59:15+00:00"
         },
         {
             "name": "keboola/storage-api-client",
@@ -3785,6 +3829,64 @@
                 }
             ],
             "time": "2026-03-06T11:10:17+00:00"
+        },
+        {
+            "name": "webmozart/assert",
+            "version": "1.12.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/webmozarts/assert.git",
+                "reference": "9be6926d8b485f55b9229203f962b51ed377ba68"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/webmozarts/assert/zipball/9be6926d8b485f55b9229203f962b51ed377ba68",
+                "reference": "9be6926d8b485f55b9229203f962b51ed377ba68",
+                "shasum": ""
+            },
+            "require": {
+                "ext-ctype": "*",
+                "ext-date": "*",
+                "ext-filter": "*",
+                "php": "^7.2 || ^8.0"
+            },
+            "suggest": {
+                "ext-intl": "",
+                "ext-simplexml": "",
+                "ext-spl": ""
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.10-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Webmozart\\Assert\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Bernhard Schussek",
+                    "email": "bschussek@gmail.com"
+                }
+            ],
+            "description": "Assertions to validate method input/output with nice error messages.",
+            "keywords": [
+                "assert",
+                "check",
+                "validate"
+            ],
+            "support": {
+                "issues": "https://github.com/webmozarts/assert/issues",
+                "source": "https://github.com/webmozarts/assert/tree/1.12.1"
+            },
+            "time": "2025-10-29T15:56:20+00:00"
         }
     ],
     "packages-dev": [
@@ -3923,7 +4025,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "keboola/sandboxes-service-api-client": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

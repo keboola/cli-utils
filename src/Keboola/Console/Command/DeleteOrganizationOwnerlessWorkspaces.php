@@ -2,10 +2,16 @@
 
 namespace Keboola\Console\Command;
 
+use Keboola\JobQueueClient\Client as JobQueueClient;
+use Keboola\JobQueueClient\JobData;
 use Keboola\ManageApi\Client;
+use Keboola\SandboxesServiceApiClient\ApiClientConfiguration;
+use Keboola\SandboxesServiceApiClient\Apps\AppsApiClient;
+use Keboola\ServiceClient\ServiceClient;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\Components;
+use Keboola\StorageApi\Options\Components\ListComponentConfigurationsOptions;
 use Keboola\StorageApi\Tokens;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -61,6 +67,7 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
 
         $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
         $editorUrl = sprintf('https://editor.%s', $hostnameSuffix);
+        $serviceClient = new ServiceClient($hostnameSuffix);
 
         $includeShared = (bool) $input->getOption('includeShared');
         $force = (bool) $input->getOption('force');
@@ -114,9 +121,11 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
             $tokensClient = new Tokens($storageClient);
             $editorClient = new EditorServiceClient($editorUrl, $storageToken['token']);
 
-            // Build a set of active user IDs from project tokens
+            // Build a set of active user IDs and token IDs from project tokens
             $activeUserIds = [];
+            $activeTokenIds = [];
             foreach ($tokensClient->listTokens() as $projectToken) {
+                $activeTokenIds[$projectToken['id']] = true;
                 if (isset($projectToken['admin']['id'])) {
                     $activeUserIds[$projectToken['admin']['id']] = true;
                 }
@@ -160,13 +169,82 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                         'url' => $kbcUrl,
                     ]);
                     $components = new Components($branchClient);
+                    // First call moves the configuration to trash, second call permanently purges it.
                     $components->deleteConfiguration($session['componentId'], $session['configurationId']);
                     $components->deleteConfiguration($session['componentId'], $session['configurationId']);
                 }
             }
 
+            // Handle Python/R sandboxes via sandbox-service
+            $appsClient = new AppsApiClient(new ApiClientConfiguration(
+                baseUrl: $serviceClient->getSandboxesServiceUrl(),
+                storageToken: $storageToken['token'],
+                userAgent: 'Keboola CLI Utils',
+            ));
+
+            $storageComponents = new Components($storageClient);
+            $sandboxConfigCreatorTokens = [];
+            foreach ($storageComponents->listComponentConfigurations(
+                (new ListComponentConfigurationsOptions())->setComponentId('keboola.sandboxes'),
+            ) as $config) {
+                $sandboxConfigCreatorTokens[$config['id']] = $config['creatorToken']['id'] ?? null;
+            }
+
+            $queueClient = new JobQueueClient($serviceClient->getQueueUrl(), $storageToken['token']);
+
+            foreach ($appsClient->listApps(types: ['python', 'r']) as $app) {
+                $creatorTokenId = $sandboxConfigCreatorTokens[$app->getConfigId()] ?? null;
+                if ($creatorTokenId !== null && isset($activeTokenIds[$creatorTokenId])) {
+                    if ($output->isVerbose()) {
+                        $output->writeln('Active token for app ' . $app->getId());
+                    }
+                    continue;
+                }
+
+                $output->writeln(sprintf(
+                    'Deleting sandbox config keboola.sandboxes/%s (branch %s) for app %s',
+                    $app->getConfigId(),
+                    $app->getBranchId() ?? 'default',
+                    $app->getId(),
+                ));
+
+                $summary[$projectKey][] = [
+                    'sessionId' => $app->getId(),
+                    'componentId' => 'keboola.sandboxes',
+                    'configurationId' => $app->getConfigId(),
+                    'userId' => (string) ($creatorTokenId ?? ''),
+                ];
+
+                $projectDeleted++;
+                if ($force) {
+                    try {
+                        $queueClient->createJob(new JobData(
+                            componentId: 'keboola.sandboxes',
+                            configId: $app->getConfigId(),
+                            configData: [
+                                'parameters' => [
+                                    'task' => 'delete',
+                                    'id' => $app->getId(),
+                                ],
+                            ],
+                            branchId: $app->getBranchId(),
+                        ));
+                    } catch (\Throwable $e) {
+                        $output->writeln(sprintf(
+                            'WARN: Job creation failed for app %s, falling back to direct deletion: %s',
+                            $app->getId(),
+                            $e->getMessage(),
+                        ));
+                        $appsClient->deleteApp($app->getId());
+                        // First call moves the configuration to trash, second call permanently purges it.
+                        $storageComponents->deleteConfiguration('keboola.sandboxes', $app->getConfigId());
+                        $storageComponents->deleteConfiguration('keboola.sandboxes', $app->getConfigId());
+                    }
+                }
+            }
+
             $output->writeln(sprintf(
-                'Project %s: %d sessions deleted',
+                'Project %s: %d sessions/apps deleted',
                 $project['id'],
                 $projectDeleted,
             ));
@@ -204,7 +282,7 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
         }
         $output->writeln('');
         $output->writeln(sprintf(
-            'Grand total: %d sessions deleted',
+            'Grand total: %d sessions/apps deleted',
             $totalDeleted,
         ));
 

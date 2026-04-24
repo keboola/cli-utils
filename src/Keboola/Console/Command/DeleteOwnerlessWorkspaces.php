@@ -2,9 +2,15 @@
 
 namespace Keboola\Console\Command;
 
+use Keboola\JobQueueClient\Client as JobQueueClient;
+use Keboola\JobQueueClient\JobData;
+use Keboola\SandboxesServiceApiClient\ApiClientConfiguration;
+use Keboola\SandboxesServiceApiClient\Apps\AppsApiClient;
+use Keboola\ServiceClient\ServiceClient;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\Components;
+use Keboola\StorageApi\Options\Components\ListComponentConfigurationsOptions;
 use Keboola\StorageApi\Tokens;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -66,9 +72,11 @@ class DeleteOwnerlessWorkspaces extends Command
             $output->writeln('This is just a dry-run, nothing will be actually deleted');
         }
 
-        // Build a set of active user IDs from project tokens
+        // Build a set of active user IDs and token IDs from project tokens
         $activeUserIds = [];
+        $activeTokenIds = [];
         foreach ($tokensClient->listTokens() as $projectToken) {
+            $activeTokenIds[$projectToken['id']] = true;
             if (isset($projectToken['admin']['id'])) {
                 $activeUserIds[$projectToken['admin']['id']] = true;
             }
@@ -105,12 +113,72 @@ class DeleteOwnerlessWorkspaces extends Command
                     'url' => $url,
                 ]);
                 $components = new Components($branchClient);
+                // First call moves the configuration to trash, second call permanently purges it.
                 $components->deleteConfiguration($componentId, $configurationId);
                 $components->deleteConfiguration($componentId, $configurationId);
             }
         }
 
-        $output->writeln(sprintf('%d sessions deleted', $totalDeleted));
+        // Handle Python/R sandboxes via sandbox-service
+        $serviceClient = new ServiceClient($hostnameSuffix);
+        $appsClient = new AppsApiClient(new ApiClientConfiguration(
+            baseUrl: $serviceClient->getSandboxesServiceUrl(),
+            storageToken: $token,
+            userAgent: 'Keboola CLI Utils',
+        ));
+
+        $storageComponents = new Components($storageClient);
+        $sandboxConfigCreatorTokens = [];
+        foreach ($storageComponents->listComponentConfigurations(
+            (new ListComponentConfigurationsOptions())->setComponentId('keboola.sandboxes'),
+        ) as $config) {
+            $sandboxConfigCreatorTokens[$config['id']] = $config['creatorToken']['id'] ?? null;
+        }
+
+        $queueClient = new JobQueueClient($serviceClient->getQueueUrl(), $token);
+
+        foreach ($appsClient->listApps(types: ['python', 'r']) as $app) {
+            $creatorTokenId = $sandboxConfigCreatorTokens[$app->getConfigId()] ?? null;
+            if ($creatorTokenId !== null && isset($activeTokenIds[$creatorTokenId])) {
+                continue;
+            }
+
+            $output->writeln(sprintf(
+                'Deleting sandbox config keboola.sandboxes/%s (branch %s) for app %s',
+                $app->getConfigId(),
+                $app->getBranchId() ?? 'default',
+                $app->getId(),
+            ));
+
+            $totalDeleted++;
+            if ($force) {
+                try {
+                    $queueClient->createJob(new JobData(
+                        componentId: 'keboola.sandboxes',
+                        configId: $app->getConfigId(),
+                        configData: [
+                            'parameters' => [
+                                'task' => 'delete',
+                                'id' => $app->getId(),
+                            ],
+                        ],
+                        branchId: $app->getBranchId(),
+                    ));
+                } catch (\Throwable $e) {
+                    $output->writeln(sprintf(
+                        'WARN: Job creation failed for app %s, falling back to direct deletion: %s',
+                        $app->getId(),
+                        $e->getMessage(),
+                    ));
+                    $appsClient->deleteApp($app->getId());
+                    // First call moves the configuration to trash, second call permanently purges it.
+                    $storageComponents->deleteConfiguration('keboola.sandboxes', $app->getConfigId());
+                    $storageComponents->deleteConfiguration('keboola.sandboxes', $app->getConfigId());
+                }
+            }
+        }
+
+        $output->writeln(sprintf('%d sessions/apps deleted', $totalDeleted));
 
         return 0;
     }

@@ -115,6 +115,7 @@ class MassDeleteProjectWorkspaces extends Command
                         'url' => $connectionUrl,
                     ]);
                     $components = new Components($branchClient);
+                    // First call moves the configuration to trash, second call permanently purges it.
                     $components->deleteConfiguration($session['componentId'], $session['configurationId']);
                     $components->deleteConfiguration($session['componentId'], $session['configurationId']);
 
