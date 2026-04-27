@@ -64,6 +64,7 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
         $organizationId = (int) $organizationId;
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
+        assert($hostnameSuffix !== '');
 
         $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
         $editorUrl = sprintf('https://editor.%s', $hostnameSuffix);

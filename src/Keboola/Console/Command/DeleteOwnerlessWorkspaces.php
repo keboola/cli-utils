@@ -50,8 +50,10 @@ class DeleteOwnerlessWorkspaces extends Command
     {
         $token = $input->getArgument('storageToken');
         assert(is_string($token));
+        assert($token !== '');
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
+        assert($hostnameSuffix !== '');
         $url = 'https://connection.' . $hostnameSuffix;
         $editorUrl = 'https://editor.' . $hostnameSuffix;
         $includeShared = (bool) $input->getOption('includeShared');
