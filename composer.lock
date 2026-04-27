@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d44ece76899970e99f35a12443287b84",
+    "content-hash": "24930258e9913cc56c614972807068d3",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1293,39 +1293,38 @@
             "time": "2025-08-27T11:12:26+00:00"
         },
         {
-            "name": "keboola/sandboxes-api-php-client",
-            "version": "6.32.0",
+            "name": "keboola/sandboxes-service-api-client",
+            "version": "dev-odin/AJDA-1942",
             "source": {
                 "type": "git",
-                "url": "https://github.com/keboola/sandboxes-api-php-client.git",
-                "reference": "2125f1121d0c877f642902b94536aa1d744e8ff2"
+                "url": "https://github.com/keboola/sandboxes-service-api-php-client.git",
+                "reference": "c66e051f46b7893e53a41a963e7234d3907bd51d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/sandboxes-api-php-client/zipball/2125f1121d0c877f642902b94536aa1d744e8ff2",
-                "reference": "2125f1121d0c877f642902b94536aa1d744e8ff2",
+                "url": "https://api.github.com/repos/keboola/sandboxes-service-api-php-client/zipball/c66e051f46b7893e53a41a963e7234d3907bd51d",
+                "reference": "c66e051f46b7893e53a41a963e7234d3907bd51d",
                 "shasum": ""
             },
             "require": {
-                "ext-json": "*",
-                "guzzlehttp/guzzle": "~6.0|~7.0",
+                "guzzlehttp/guzzle": "^7.8",
+                "monolog/monolog": "^2.0|^3.0",
                 "php": "^8.2",
-                "psr/log": "^1.1|^2.0|^3.0",
-                "symfony/validator": "^6.0|^7.0"
+                "webmozart/assert": "^1.11"
             },
             "require-dev": {
+                "infection/infection": "^0.27.9",
                 "keboola/coding-standard": "^15.0",
-                "keboola/kbc-manage-api-php-client": "^7.1",
-                "keboola/storage-api-client": "^14.15",
                 "phpstan/phpstan": "^1.10",
                 "phpstan/phpstan-phpunit": "^1.3",
-                "phpunit/phpunit": "^9.6",
-                "vlucas/phpdotenv": "^5.6"
+                "phpstan/phpstan-webmozart-assert": "^1.2",
+                "sempro/phpunit-pretty-print": "^1.4",
+                "symfony/http-client": "^6.4|^7.0"
             },
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "Keboola\\Sandboxes\\Api\\": "src/"
+                    "Keboola\\SandboxesServiceApiClient\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -1334,19 +1333,64 @@
             ],
             "authors": [
                 {
-                    "name": "Jakub Matějka",
-                    "email": "jakub@keboola.com"
+                    "name": "Keboola",
+                    "email": "devel@keboola.com"
                 }
             ],
-            "description": "PHP Client for Keboola Sandboxes API",
-            "keywords": [
-                "keboola",
-                "sandboxes"
-            ],
+            "description": "Keboola Sandboxes Service API client",
             "support": {
-                "source": "https://github.com/keboola/sandboxes-api-php-client/tree/6.32.0"
+                "issues": "https://github.com/keboola/sandboxes-service-api-php-client/issues",
+                "source": "https://github.com/keboola/sandboxes-service-api-php-client/tree/odin/AJDA-1942"
             },
-            "time": "2025-11-19T16:15:43+00:00"
+            "time": "2026-04-24T21:26:08+00:00"
+        },
+        {
+            "name": "keboola/service-client",
+            "version": "1.5.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/keboola/service-client.git",
+                "reference": "0629d1e54b9cbd0fd66bbec01424705464794caf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/keboola/service-client/zipball/0629d1e54b9cbd0fd66bbec01424705464794caf",
+                "reference": "0629d1e54b9cbd0fd66bbec01424705464794caf",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "infection/infection": "^0.29",
+                "keboola/coding-standard": "^15.0.1",
+                "monolog/monolog": "^3.5.0",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^12.1",
+                "symfony/dotenv": "^6.4.4|^7.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Keboola\\ServiceClient\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Keboola",
+                    "email": "devel@keboola.com"
+                }
+            ],
+            "description": "Service Client provides easy way to get Keboola services URLs",
+            "support": {
+                "issues": "https://github.com/keboola/service-client/issues",
+                "source": "https://github.com/keboola/service-client/tree/1.5.1"
+            },
+            "time": "2026-04-14T06:59:15+00:00"
         },
         {
             "name": "keboola/storage-api-client",
@@ -2764,6 +2808,185 @@
             "time": "2026-02-25T16:50:00+00:00"
         },
         {
+            "name": "symfony/http-client",
+            "version": "v7.4.8",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/http-client.git",
+                "reference": "01933e626c3de76bea1e22641e205e78f6a34342"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/http-client/zipball/01933e626c3de76bea1e22641e205e78f6a34342",
+                "reference": "01933e626c3de76bea1e22641e205e78f6a34342",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2",
+                "psr/log": "^1|^2|^3",
+                "symfony/deprecation-contracts": "^2.5|^3",
+                "symfony/http-client-contracts": "~3.4.4|^3.5.2",
+                "symfony/polyfill-php83": "^1.29",
+                "symfony/service-contracts": "^2.5|^3"
+            },
+            "conflict": {
+                "amphp/amp": "<2.5",
+                "amphp/socket": "<1.1",
+                "php-http/discovery": "<1.15",
+                "symfony/http-foundation": "<6.4"
+            },
+            "provide": {
+                "php-http/async-client-implementation": "*",
+                "php-http/client-implementation": "*",
+                "psr/http-client-implementation": "1.0",
+                "symfony/http-client-implementation": "3.0"
+            },
+            "require-dev": {
+                "amphp/http-client": "^4.2.1|^5.0",
+                "amphp/http-tunnel": "^1.0|^2.0",
+                "guzzlehttp/promises": "^1.4|^2.0",
+                "nyholm/psr7": "^1.0",
+                "php-http/httplug": "^1.0|^2.0",
+                "psr/http-client": "^1.0",
+                "symfony/amphp-http-client-meta": "^1.0|^2.0",
+                "symfony/cache": "^6.4|^7.0|^8.0",
+                "symfony/dependency-injection": "^6.4|^7.0|^8.0",
+                "symfony/http-kernel": "^6.4|^7.0|^8.0",
+                "symfony/messenger": "^6.4|^7.0|^8.0",
+                "symfony/process": "^6.4|^7.0|^8.0",
+                "symfony/rate-limiter": "^6.4|^7.0|^8.0",
+                "symfony/stopwatch": "^6.4|^7.0|^8.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\Component\\HttpClient\\": ""
+                },
+                "exclude-from-classmap": [
+                    "/Tests/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Provides powerful methods to fetch HTTP resources synchronously or asynchronously",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "http"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/http-client/tree/v7.4.8"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-03-30T12:55:43+00:00"
+        },
+        {
+            "name": "symfony/http-client-contracts",
+            "version": "v3.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/http-client-contracts.git",
+                "reference": "75d7043853a42837e68111812f4d964b01e5101c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/http-client-contracts/zipball/75d7043853a42837e68111812f4d964b01e5101c",
+                "reference": "75d7043853a42837e68111812f4d964b01e5101c",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.1"
+            },
+            "type": "library",
+            "extra": {
+                "thanks": {
+                    "url": "https://github.com/symfony/contracts",
+                    "name": "symfony/contracts"
+                },
+                "branch-alias": {
+                    "dev-main": "3.6-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\Contracts\\HttpClient\\": ""
+                },
+                "exclude-from-classmap": [
+                    "/Test/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Generic abstractions related to HTTP clients",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "abstractions",
+                "contracts",
+                "decoupling",
+                "interfaces",
+                "interoperability",
+                "standards"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/http-client-contracts/tree/v3.6.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2025-04-29T11:18:49+00:00"
+        },
+        {
             "name": "symfony/polyfill-ctype",
             "version": "v1.33.0",
             "source": {
@@ -3606,6 +3829,64 @@
                 }
             ],
             "time": "2026-03-06T11:10:17+00:00"
+        },
+        {
+            "name": "webmozart/assert",
+            "version": "1.12.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/webmozarts/assert.git",
+                "reference": "9be6926d8b485f55b9229203f962b51ed377ba68"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/webmozarts/assert/zipball/9be6926d8b485f55b9229203f962b51ed377ba68",
+                "reference": "9be6926d8b485f55b9229203f962b51ed377ba68",
+                "shasum": ""
+            },
+            "require": {
+                "ext-ctype": "*",
+                "ext-date": "*",
+                "ext-filter": "*",
+                "php": "^7.2 || ^8.0"
+            },
+            "suggest": {
+                "ext-intl": "",
+                "ext-simplexml": "",
+                "ext-spl": ""
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.10-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Webmozart\\Assert\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Bernhard Schussek",
+                    "email": "bschussek@gmail.com"
+                }
+            ],
+            "description": "Assertions to validate method input/output with nice error messages.",
+            "keywords": [
+                "assert",
+                "check",
+                "validate"
+            ],
+            "support": {
+                "issues": "https://github.com/webmozarts/assert/issues",
+                "source": "https://github.com/webmozarts/assert/tree/1.12.1"
+            },
+            "time": "2025-10-29T15:56:20+00:00"
         }
     ],
     "packages-dev": [
@@ -3744,7 +4025,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "keboola/sandboxes-service-api-client": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
