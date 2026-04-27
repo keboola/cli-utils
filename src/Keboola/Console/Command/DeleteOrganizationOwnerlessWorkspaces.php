@@ -10,6 +10,7 @@ use Keboola\SandboxesServiceApiClient\Apps\AppsApiClient;
 use Keboola\ServiceClient\ServiceClient;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
+use Keboola\StorageApi\ClientException as StorageClientException;
 use Keboola\StorageApi\Components;
 use Keboola\StorageApi\Options\Components\ListComponentConfigurationsOptions;
 use Keboola\StorageApi\Tokens;
@@ -172,7 +173,13 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                     $components = new Components($branchClient);
                     // First call moves the configuration to trash, second call permanently purges it.
                     $components->deleteConfiguration($session['componentId'], $session['configurationId']);
-                    $components->deleteConfiguration($session['componentId'], $session['configurationId']);
+                    try {
+                        $components->deleteConfiguration($session['componentId'], $session['configurationId']);
+                    } catch (StorageClientException $e) {
+                        if ($e->getStringCode() !== 'storage.components.cannotDeleteConfiguration') {
+                            throw $e;
+                        }
+                    }
                 }
             }
 
@@ -184,21 +191,34 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
             ));
 
             $storageComponents = new Components($storageClient);
-            $sandboxConfigCreatorTokens = [];
+            $sandboxConfigMap = [];
             foreach ($storageComponents->listComponentConfigurations(
                 (new ListComponentConfigurationsOptions())->setComponentId('keboola.sandboxes'),
             ) as $config) {
-                $sandboxConfigCreatorTokens[$config['id']] = $config['creatorToken']['id'] ?? null;
+                $sandboxConfigMap[$config['id']] = [
+                    'creatorTokenId' => $config['creatorToken']['id'] ?? null,
+                    'shared' => (bool) ($config['configuration']['runtime']['shared'] ?? false),
+                ];
             }
 
             $queueClient = new JobQueueClient($serviceClient->getQueueUrl(), $storageToken['token']);
 
             foreach ($appsClient->listApps(types: ['python', 'r']) as $app) {
-                $creatorTokenId = $sandboxConfigCreatorTokens[$app->getConfigId()] ?? null;
+                $configInfo = $sandboxConfigMap[$app->getConfigId()] ?? null;
+                $creatorTokenId = $configInfo['creatorTokenId'] ?? null;
                 if ($creatorTokenId !== null && isset($activeTokenIds[$creatorTokenId])) {
                     if ($output->isVerbose()) {
                         $output->writeln('Active token for app ' . $app->getId());
                     }
+                    continue;
+                }
+
+                if (!$includeShared && ($configInfo['shared'] ?? false)) {
+                    $output->writeln(sprintf(
+                        'Skipping shared sandbox config keboola.sandboxes/%s for app %s',
+                        $app->getConfigId(),
+                        $app->getId(),
+                    ));
                     continue;
                 }
 
@@ -213,7 +233,7 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                     'sessionId' => $app->getId(),
                     'componentId' => 'keboola.sandboxes',
                     'configurationId' => $app->getConfigId(),
-                    'userId' => (string) ($creatorTokenId ?? ''),
+                    'userId' => (string) ($configInfo['creatorTokenId'] ?? ''),
                 ];
 
                 $projectDeleted++;
@@ -239,7 +259,13 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                         $appsClient->deleteApp($app->getId());
                         // First call moves the configuration to trash, second call permanently purges it.
                         $storageComponents->deleteConfiguration('keboola.sandboxes', $app->getConfigId());
-                        $storageComponents->deleteConfiguration('keboola.sandboxes', $app->getConfigId());
+                        try {
+                            $storageComponents->deleteConfiguration('keboola.sandboxes', $app->getConfigId());
+                        } catch (StorageClientException $e) {
+                            if ($e->getStringCode() !== 'storage.components.cannotDeleteConfiguration') {
+                                throw $e;
+                            }
+                        }
                     }
                 }
             }

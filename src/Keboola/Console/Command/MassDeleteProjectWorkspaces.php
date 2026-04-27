@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Keboola\Csv\CsvFile;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client;
+use Keboola\StorageApi\ClientException as StorageClientException;
 use Keboola\StorageApi\Components;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -117,7 +118,13 @@ class MassDeleteProjectWorkspaces extends Command
                     $components = new Components($branchClient);
                     // First call moves the configuration to trash, second call permanently purges it.
                     $components->deleteConfiguration($session['componentId'], $session['configurationId']);
-                    $components->deleteConfiguration($session['componentId'], $session['configurationId']);
+                    try {
+                        $components->deleteConfiguration($session['componentId'], $session['configurationId']);
+                    } catch (StorageClientException $e) {
+                        if ($e->getStringCode() !== 'storage.components.cannotDeleteConfiguration') {
+                            throw $e;
+                        }
+                    }
 
                     $output->writeln(sprintf(
                         'Deleted configuration %s/%s for schema "%s".',
