@@ -64,6 +64,7 @@ class DeleteOrphanedWorkspaces extends Command
         }
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
+        assert($hostnameSuffix !== '');
         $serviceClient = new ServiceClient($hostnameSuffix);
         $url = $serviceClient->getConnectionServiceUrl();
 

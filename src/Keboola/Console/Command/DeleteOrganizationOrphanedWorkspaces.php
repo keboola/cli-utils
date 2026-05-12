@@ -63,6 +63,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
         $organizationId = (int) $organizationId;
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
+        assert($hostnameSuffix !== '');
         $serviceClient = new ServiceClient($hostnameSuffix);
         $connectionUrl = $serviceClient->getConnectionServiceUrl();
 

@@ -57,6 +57,7 @@ class DescribeOrganizationWorkspaces extends Command
         assert(is_string($outputFile));
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
+        assert($hostnameSuffix !== '');
         $serviceClient = new ServiceClient($hostnameSuffix);
         $connectionUrl = $serviceClient->getConnectionServiceUrl();
         $manageClient = new Client(['token' => $manageToken, 'url' => $connectionUrl]);

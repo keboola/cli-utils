@@ -82,6 +82,7 @@ class OrganizationIntoMaintenanceMode extends Command
         $organizationId = (int) $organizationId;
         $hostnameSuffix = $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
         assert(is_string($hostnameSuffix));
+        assert($hostnameSuffix !== '');
         $serviceClient = new ServiceClient($hostnameSuffix);
 
         $manageClient = new ManageClient(['token' => $manageToken, 'url' => $serviceClient->getConnectionServiceUrl()]);

@@ -53,6 +53,7 @@ class RemoveUserFromOrganizationProjects extends Command
         assert(is_string($userEmail));
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
+        assert($hostnameSuffix !== '');
         $serviceClient = new ServiceClient($hostnameSuffix);
 
         $manageClient = new Client(['token' => $manageToken, 'url' => $serviceClient->getConnectionServiceUrl()]);

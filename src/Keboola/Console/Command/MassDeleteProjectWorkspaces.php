@@ -38,6 +38,7 @@ class MassDeleteProjectWorkspaces extends Command
     {
         $stackSuffix = $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
         assert(is_string($stackSuffix));
+        assert($stackSuffix !== '');
         $serviceClient = new ServiceClient($stackSuffix);
         $connectionUrl = $serviceClient->getConnectionServiceUrl();
         $editorUrl = $serviceClient->getEditorServiceUrl();
