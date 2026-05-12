@@ -6,6 +6,7 @@ use Keboola\JobQueueClient\Client as QueueClient;
 use Keboola\JobQueueClient\JobStatuses;
 use Keboola\JobQueueClient\ListJobsOptions;
 use Keboola\ManageApi\Client as ManageClient;
+use Keboola\ServiceClient\ServiceClient;
 use Keboola\StorageApi\Client as StorageClient;
 use Keboola\StorageApi\Tokens;
 use Symfony\Component\Console\Command\Command;
@@ -81,9 +82,10 @@ class OrganizationIntoMaintenanceMode extends Command
         $organizationId = (int) $organizationId;
         $hostnameSuffix = $input->getArgument(self::ARGUMENT_HOSTNAME_SUFFIX);
         assert(is_string($hostnameSuffix));
-        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
+        assert($hostnameSuffix !== '');
+        $serviceClient = new ServiceClient($hostnameSuffix);
 
-        $manageClient = new ManageClient(['token' => $manageToken, 'url' => $kbcUrl]);
+        $manageClient = new ManageClient(['token' => $manageToken, 'url' => $serviceClient->getConnectionServiceUrl()]);
 
         $organization = $manageClient->getOrganization($organizationId);
         $projects = $organization['projects'];
@@ -119,7 +121,7 @@ class OrganizationIntoMaintenanceMode extends Command
                 $thereAreRunningJobs = $this->areThereRunningJobs(
                     $manageClient,
                     $project['id'],
-                    $hostnameSuffix,
+                    $serviceClient,
                     $output
                 );
                 if ($thereAreRunningJobs) {
@@ -154,7 +156,7 @@ class OrganizationIntoMaintenanceMode extends Command
     private function areThereRunningJobs(
         ManageClient    $manageClient,
         string          $projectId,
-        string          $hostnameSuffix,
+        ServiceClient   $serviceClient,
         OutputInterface $output
     ): bool {
 
@@ -164,7 +166,7 @@ class OrganizationIntoMaintenanceMode extends Command
             ['description' => 'Maintenance: Terminating Jobs prior to disabling projects']
         );
         $jobsClient = new QueueClient(
-            sprintf('https://queue.%s', $hostnameSuffix),
+            $serviceClient->getQueueUrl(),
             $storageToken['token']
         );
         $runningJobsListOptions = new ListJobsOptions();
@@ -203,7 +205,7 @@ class OrganizationIntoMaintenanceMode extends Command
         $tokensClient = new Tokens(
             new StorageClient([
                 'token' => $storageToken['token'],
-                'url' => sprintf('https://connection.%s', $hostnameSuffix),
+                'url' => $serviceClient->getConnectionServiceUrl(),
             ])
         );
         $tokensClient->dropToken($storageToken['id']);

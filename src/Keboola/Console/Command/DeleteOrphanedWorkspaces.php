@@ -4,6 +4,7 @@ namespace Keboola\Console\Command;
 
 use InvalidArgumentException;
 use Keboola\ManageApi\Client;
+use Keboola\ServiceClient\ServiceClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\ClientException;
 use Keboola\StorageApi\DevBranches;
@@ -63,7 +64,9 @@ class DeleteOrphanedWorkspaces extends Command
         }
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
-        $url = 'https://connection.' . $hostnameSuffix;
+        assert($hostnameSuffix !== '');
+        $serviceClient = new ServiceClient($hostnameSuffix);
+        $url = $serviceClient->getConnectionServiceUrl();
 
         $storageClient = new StorageApiClient([
             'token' => $token,
