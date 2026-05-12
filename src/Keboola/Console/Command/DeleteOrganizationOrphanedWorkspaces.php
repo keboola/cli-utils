@@ -3,6 +3,7 @@ namespace Keboola\Console\Command;
 
 use Keboola\ManageApi\Client;
 use Keboola\ManageApi\ClientException;
+use Keboola\ServiceClient\ServiceClient;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\DevBranches;
@@ -62,9 +63,10 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
         $organizationId = (int) $organizationId;
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
-        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
+        $serviceClient = new ServiceClient($hostnameSuffix);
+        $connectionUrl = $serviceClient->getConnectionServiceUrl();
 
-        $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
+        $manageClient = new Client(['token' => $manageToken, 'url' => $connectionUrl]);
         $organization = $manageClient->getOrganization($organizationId);
         $projects = $organization['projects'];
         $output->writeln(
@@ -73,8 +75,6 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                 count($projects)
             )
         );
-
-        $storageUrl = 'https://connection.' . $hostnameSuffix;
 
         $orphanComponent = $input->getArgument('orphanComponent');
         assert(is_string($orphanComponent));
@@ -116,7 +116,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             }
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
-                'url' => $storageUrl,
+                'url' => $connectionUrl,
                 'logger' => new ConsoleLogger($output),
             ]);
             $devBranches = new DevBranches($storageClient);
@@ -135,7 +135,7 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                 $branchId = $branch['id'];
                 $branchStorageClient = new BranchAwareClient($branchId, [
                     'token' => $storageToken['token'],
-                    'url' => $storageUrl,
+                    'url' => $connectionUrl,
                     'backoffMaxTries' => 1,
                 ]);
                 $workspacesClient = new Workspaces($branchStorageClient);

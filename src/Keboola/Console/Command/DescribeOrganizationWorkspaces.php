@@ -3,6 +3,7 @@ namespace Keboola\Console\Command;
 
 use Keboola\Csv\CsvFile;
 use Keboola\ManageApi\Client;
+use Keboola\ServiceClient\ServiceClient;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\DevBranches;
@@ -56,8 +57,9 @@ class DescribeOrganizationWorkspaces extends Command
         assert(is_string($outputFile));
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
-        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
-        $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
+        $serviceClient = new ServiceClient($hostnameSuffix);
+        $connectionUrl = $serviceClient->getConnectionServiceUrl();
+        $manageClient = new Client(['token' => $manageToken, 'url' => $connectionUrl]);
         $organization = $manageClient->getOrganization($organizationId);
         $projects = $organization['projects'];
         $output->writeln(
@@ -66,8 +68,6 @@ class DescribeOrganizationWorkspaces extends Command
                 count($projects)
             )
         );
-
-        $storageUrl = 'https://connection.' . $hostnameSuffix;
 
         $totalWorkspaces = 0;
 
@@ -106,7 +106,7 @@ class DescribeOrganizationWorkspaces extends Command
 
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
-                'url' => $storageUrl,
+                'url' => $connectionUrl,
                 'logger' => new ConsoleLogger($output),
             ]);
             $devBranches = new DevBranches($storageClient);
@@ -123,7 +123,7 @@ class DescribeOrganizationWorkspaces extends Command
                 $branchId = $branch['id'];
                 $branchStorageClient = new BranchAwareClient($branchId, [
                     'token' => $storageToken['token'],
-                    'url' => $storageUrl,
+                    'url' => $connectionUrl,
                 ]);
                 $workspacesClient = new Workspaces($branchStorageClient);
                 $workspaceList = $workspacesClient->listWorkspaces();

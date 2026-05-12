@@ -6,6 +6,7 @@ namespace Keboola\Console\Command;
 
 use InvalidArgumentException;
 use Keboola\Csv\CsvFile;
+use Keboola\ServiceClient\ServiceClient;
 use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client;
 use Keboola\StorageApi\ClientException as StorageClientException;
@@ -37,8 +38,9 @@ class MassDeleteProjectWorkspaces extends Command
     {
         $stackSuffix = $input->getArgument(self::ARGUMENT_STACK_SUFFIX);
         assert(is_string($stackSuffix));
-        $connectionUrl = 'https://connection.' . $stackSuffix;
-        $editorUrl = 'https://editor.' . $stackSuffix;
+        $serviceClient = new ServiceClient($stackSuffix);
+        $connectionUrl = $serviceClient->getConnectionServiceUrl();
+        $editorUrl = $serviceClient->getEditorServiceUrl();
         $sourceFile = $input->getArgument(self::ARGUMENT_SOURCE_FILE);
         assert(is_string($sourceFile));
         $output->writeln(sprintf('Fetching projects from "%s"', $sourceFile));

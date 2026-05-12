@@ -3,6 +3,7 @@
 namespace Keboola\Console\Command;
 
 use Keboola\ManageApi\Client;
+use Keboola\ServiceClient\ServiceClient;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -52,9 +53,9 @@ class RemoveUserFromOrganizationProjects extends Command
         assert(is_string($userEmail));
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
-        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
+        $serviceClient = new ServiceClient($hostnameSuffix);
 
-        $manageClient = new Client(['token' => $manageToken, 'url' => $kbcUrl]);
+        $manageClient = new Client(['token' => $manageToken, 'url' => $serviceClient->getConnectionServiceUrl()]);
 
         $organization = $manageClient->getOrganization($organizationId);
 

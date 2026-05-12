@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "24930258e9913cc56c614972807068d3",
+    "content-hash": "7687a2df94ddc6afa27a6c1fab3c2827",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1294,16 +1294,16 @@
         },
         {
             "name": "keboola/sandboxes-service-api-client",
-            "version": "dev-odin/AJDA-1942",
+            "version": "1.8.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/sandboxes-service-api-php-client.git",
-                "reference": "c66e051f46b7893e53a41a963e7234d3907bd51d"
+                "reference": "426aa8e39cab2ba8b0f33f23edabbb1150793d2c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/sandboxes-service-api-php-client/zipball/c66e051f46b7893e53a41a963e7234d3907bd51d",
-                "reference": "c66e051f46b7893e53a41a963e7234d3907bd51d",
+                "url": "https://api.github.com/repos/keboola/sandboxes-service-api-php-client/zipball/426aa8e39cab2ba8b0f33f23edabbb1150793d2c",
+                "reference": "426aa8e39cab2ba8b0f33f23edabbb1150793d2c",
                 "shasum": ""
             },
             "require": {
@@ -1340,9 +1340,9 @@
             "description": "Keboola Sandboxes Service API client",
             "support": {
                 "issues": "https://github.com/keboola/sandboxes-service-api-php-client/issues",
-                "source": "https://github.com/keboola/sandboxes-service-api-php-client/tree/odin/AJDA-1942"
+                "source": "https://github.com/keboola/sandboxes-service-api-php-client/tree/1.8.0"
             },
-            "time": "2026-04-24T21:26:08+00:00"
+            "time": "2026-05-12T13:24:12+00:00"
         },
         {
             "name": "keboola/service-client",
@@ -4025,9 +4025,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "keboola/sandboxes-service-api-client": 20
-    },
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

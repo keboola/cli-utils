@@ -67,9 +67,9 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
         assert(is_string($hostnameSuffix));
         assert($hostnameSuffix !== '');
 
-        $kbcUrl = sprintf('https://connection.%s', $hostnameSuffix);
-        $editorUrl = sprintf('https://editor.%s', $hostnameSuffix);
         $serviceClient = new ServiceClient($hostnameSuffix);
+        $kbcUrl = $serviceClient->getConnectionServiceUrl();
+        $editorUrl = $serviceClient->getEditorServiceUrl();
 
         $includeShared = (bool) $input->getOption('includeShared');
         $force = (bool) $input->getOption('force');
@@ -123,7 +123,8 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
             $tokensClient = new Tokens($storageClient);
             $editorClient = new EditorServiceClient($editorUrl, $storageToken['token']);
 
-            // Build a set of active user IDs and token IDs from project tokens
+            // Editor sessions are bound to userId (stable for the user's lifetime in the system).
+            // Sandbox configs are bound to creatorToken.id, which is re-issued on every project leave+rejoin.
             $activeUserIds = [];
             $activeTokenIds = [];
             foreach ($tokensClient->listTokens() as $projectToken) {
@@ -190,7 +191,9 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                 }
             }
 
-            // Handle Python/R sandboxes via sandbox-service
+            // Handle Python/R sandboxes via sandbox-service.
+            // Configs are bound to creatorToken.id, not userId: a user who leaves and rejoins gets a new token,
+            // so their old sandbox configs are reaped here even if the user is back — intentional, matches original behavior.
             $appsClient = new AppsApiClient(new ApiClientConfiguration(
                 baseUrl: $serviceClient->getSandboxesServiceUrl(),
                 storageToken: $storageToken['token'],
@@ -258,6 +261,8 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
                             branchId: $app->getBranchId(),
                         ));
                     } catch (\Throwable $e) {
+                        // The job normally deletes the app on success; if it fails the app may be partially
+                        // deleted, so finish cleanup directly rather than leaving it in an inconsistent state.
                         $output->writeln(sprintf(
                             'WARN: Job creation failed for app %s, falling back to direct deletion: %s',
                             $app->getId(),
