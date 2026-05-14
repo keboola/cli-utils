@@ -70,17 +70,10 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
         $manageClient = new Client(['token' => $manageToken, 'url' => $connectionUrl]);
         $organization = $manageClient->getOrganization($organizationId);
         $projects = $organization['projects'];
-        $output->writeln(
-            sprintf(
-                'Checking workspaces for "%d" projects',
-                count($projects)
-            )
-        );
 
         $orphanComponent = $input->getArgument('orphanComponent');
         assert(is_string($orphanComponent));
         $componentDesc = empty($orphanComponent) ? '(empty/blank)' : $orphanComponent;
-        $output->writeln(sprintf('Targeting workspaces with component: %s', $componentDesc));
 
         $untilDateStr = $input->getArgument('untilDate');
         assert(is_string($untilDateStr));
@@ -90,16 +83,30 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
         }
 
         $force = (bool) $input->getOption('force');
-        if ($force) {
-            $output->writeln('Force option is set, doing it for real');
-        } else {
-            $output->writeln('This is just a dry-run, nothing will be actually deleted');
-        }
 
+        // ====================================================================
+        // Configuration summary
+        // ====================================================================
+        $this->writeBlock($output, 'Configuration', [
+            sprintf('Organization ID:    %d', $organizationId),
+            sprintf('Projects to check:  %d', count($projects)),
+            sprintf('Target component:   %s', $componentDesc),
+            sprintf('Until date:         %s (%s)', $untilDateStr, date('Y-m-d H:i:s', $untilDate)),
+            sprintf('Mode:               %s', $force ? 'FORCE (workspaces will be deleted)' : 'DRY-RUN (nothing will be deleted)'),
+        ]);
+
+        $totalProjectsProcessed = 0;
+        $totalProjectsSkipped = 0;
         $totalWorkspaces = 0;
         $totalDeletedWorkspaces = 0;
+        $totalSkippedWorkspaces = 0;
+        $totalDeleteErrors = 0;
+        /** @var array<string, int> $skippedComponentCounts */
+        $skippedComponentCounts = [];
 
         foreach ($projects as $project) {
+            $this->writeBlock($output, sprintf('Project %s : %s', $project['id'], $project['name']));
+
             try {
                 $storageToken = $manageClient->createProjectStorageToken(
                     $project['id'],
@@ -110,11 +117,14 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                 );
             } catch (\Throwable $e) {
                 if ($e->getCode() === 403) {
-                    $output->writeln(sprintf("WARN: Access denied to project: %s", $project['id']));
+                    $output->writeln(sprintf('  WARN: Access denied to project %s, skipping.', $project['id']));
+                    $output->writeln('');
+                    $totalProjectsSkipped++;
                     continue;
                 }
                 throw $e;
             }
+
             $storageClient = new StorageApiClient([
                 'token' => $storageToken['token'],
                 'url' => $connectionUrl,
@@ -123,15 +133,11 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
             $devBranches = new DevBranches($storageClient);
             $branchesList = $devBranches->listBranches();
 
-            $output->writeln(
-                sprintf(
-                    'Retrieving workspaces for project %s : %s ',
-                    $project['id'],
-                    $project['name']
-                )
-            );
             $totalProjectWorkspaces = 0;
             $totalProjectDeletedWorkspaces = 0;
+            $totalProjectSkippedWorkspaces = 0;
+            $totalProjectDeleteErrors = 0;
+
             foreach ($branchesList as $branch) {
                 $branchId = $branch['id'];
                 $branchStorageClient = new BranchAwareClient($branchId, [
@@ -141,8 +147,10 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                 ]);
                 $workspacesClient = new Workspaces($branchStorageClient);
                 $workspaceList = $workspacesClient->listWorkspaces();
-                $output->writeln('Found ' . count($workspaceList) . ' workspaces in branch ' . $branch['name']);
+
+                $output->writeln(sprintf('  Branch "%s" (#%s): %d workspace(s)', $branch['name'], $branchId, count($workspaceList)));
                 $totalProjectWorkspaces += count($workspaceList);
+
                 foreach ($workspaceList as $workspace) {
                     $shouldDropWorkspace = $this->isWorkspaceOrphaned(
                         $workspace,
@@ -150,56 +158,106 @@ class DeleteOrganizationOrphanedWorkspaces extends Command
                         $untilDate
                     );
                     if ($shouldDropWorkspace) {
-                        $output->writeln('Deleting orphaned workspace ' . $workspace['id']);
-                        $totalProjectDeletedWorkspaces ++;
+                        $output->writeln(sprintf(
+                            '    - DELETE workspace %s (component: %s, created: %s)',
+                            (string) $workspace['id'],
+                            !empty($workspace['component']) ? $workspace['component'] : '<none>',
+                            $workspace['created']
+                        ));
+                        $totalProjectDeletedWorkspaces++;
                         if ($force) {
                             try {
                                 $workspacesClient->deleteWorkspace($workspace['id']);
                             } catch (\Throwable $clientException) {
-                                $output->writeln(
-                                    sprintf(
-                                        'Error deleting workspace %s:%s',
-                                        (string) $workspace['id'],
-                                        $clientException->getMessage()
-                                    )
-                                );
+                                $output->writeln(sprintf(
+                                    '      ERROR deleting workspace %s: %s',
+                                    (string) $workspace['id'],
+                                    $clientException->getMessage()
+                                ));
+                                $totalProjectDeleteErrors++;
                             }
                         }
                     } else {
-                        $output->writeln(
-                            sprintf(
-                                'Skipping %s workspace %s created on %s',
-                                $workspace['component'],
-                                (string) $workspace['id'],
-                                $workspace['created']
-                            )
-                        );
+                        $componentKey = !empty($workspace['component']) ? $workspace['component'] : '<none>';
+                        $output->writeln(sprintf(
+                            '    - SKIP   workspace %s (component: %s, created: %s)',
+                            (string) $workspace['id'],
+                            $componentKey,
+                            $workspace['created']
+                        ));
+                        $totalProjectSkippedWorkspaces++;
+                        $skippedComponentCounts[$componentKey] = ($skippedComponentCounts[$componentKey] ?? 0) + 1;
                     }
                 }
             }
-            $output->writeln(
-                sprintf(
-                    'Project %s had a total of %d workspaces, %d were deleted.',
-                    $project['id'],
-                    $totalProjectWorkspaces,
-                    $totalProjectDeletedWorkspaces
-                )
-            );
+
+            $output->writeln('');
+            $output->writeln(sprintf(
+                '  Project summary: %d workspace(s) total, %d to delete, %d skipped%s',
+                $totalProjectWorkspaces,
+                $totalProjectDeletedWorkspaces,
+                $totalProjectSkippedWorkspaces,
+                $totalProjectDeleteErrors > 0 ? sprintf(', %d delete error(s)', $totalProjectDeleteErrors) : ''
+            ));
+            $output->writeln('');
+
             $tokensClient = new Tokens($storageClient);
             $tokensClient->dropToken($storageToken['id']);
 
+            $totalProjectsProcessed++;
             $totalWorkspaces += $totalProjectWorkspaces;
             $totalDeletedWorkspaces += $totalProjectDeletedWorkspaces;
+            $totalSkippedWorkspaces += $totalProjectSkippedWorkspaces;
+            $totalDeleteErrors += $totalProjectDeleteErrors;
         }
-        $output->writeln(
-            sprintf(
-                'A grand total of %d workspaces, and %d were deleted.',
-                $totalWorkspaces,
-                $totalDeletedWorkspaces
-            )
-        );
+
+        // ====================================================================
+        // Final summary
+        // ====================================================================
+        $summaryLines = [
+            sprintf('Projects processed:    %d', $totalProjectsProcessed),
+            sprintf('Projects skipped:      %d', $totalProjectsSkipped),
+            sprintf('Workspaces found:      %d', $totalWorkspaces),
+            sprintf('Workspaces to delete:  %d', $totalDeletedWorkspaces),
+            sprintf('Workspaces skipped:    %d', $totalSkippedWorkspaces),
+        ];
+        if ($force) {
+            $summaryLines[] = sprintf('Delete errors:         %d', $totalDeleteErrors);
+        } else {
+            $summaryLines[] = 'Mode:                  DRY-RUN (re-run with --force to delete)';
+        }
+
+        if ($skippedComponentCounts !== []) {
+            arsort($skippedComponentCounts);
+            $summaryLines[] = '';
+            $summaryLines[] = 'Skipped workspaces by component:';
+            $maxKeyLen = max(array_map('strlen', array_keys($skippedComponentCounts)));
+            foreach ($skippedComponentCounts as $component => $count) {
+                $summaryLines[] = sprintf('  %-' . $maxKeyLen . 's  %d', $component, $count);
+            }
+        }
+
+        $this->writeBlock($output, 'Final summary', $summaryLines);
 
         return 0;
+    }
+
+    /**
+     * @param list<string> $lines
+     */
+    private function writeBlock(OutputInterface $output, string $title, array $lines = []): void
+    {
+        $width = max(70, strlen($title) + 4);
+        $separator = str_repeat('=', $width);
+        $output->writeln($separator);
+        $output->writeln('  ' . $title);
+        $output->writeln($separator);
+        foreach ($lines as $line) {
+            $output->writeln('  ' . $line);
+        }
+        if ($lines !== []) {
+            $output->writeln('');
+        }
     }
 
     /**
