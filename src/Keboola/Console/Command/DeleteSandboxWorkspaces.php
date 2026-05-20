@@ -22,7 +22,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteSandboxWorkspaces extends Command
 {
-    private const COMPONENT_ID = 'keboola.sandboxes';
+    private const string COMPONENT_ID = 'keboola.sandboxes';
 
     protected function configure(): void
     {
@@ -206,7 +206,8 @@ class DeleteSandboxWorkspaces extends Command
                     [
                         'description' => 'Maintenance Sandbox Workspace Cleaner',
                         'expiresIn' => 1800,
-                        'canManageTokens' => true,
+                        'canManageBuckets' => true,
+                        'canPurgeTrash' => true,
                     ],
                 );
             } catch (\Throwable $e) {
@@ -347,7 +348,9 @@ class DeleteSandboxWorkspaces extends Command
                     $configDeleted = false;
                     $components = new Components($branchStorageClient);
                     try {
+                        // delete
                         $components->deleteConfiguration(self::COMPONENT_ID, $configurationId);
+                        // purge (from trash)
                         $components->deleteConfiguration(self::COMPONENT_ID, $configurationId);
                         $configDeleted = true;
                         $output->writeln(sprintf(
@@ -356,7 +359,7 @@ class DeleteSandboxWorkspaces extends Command
                             $configurationId,
                         ));
                     } catch (StorageClientException $e) {
-                        if ($e->getStringCode() === 'storage.components.notFound') {
+                        if (str_contains($e->getMessage(), 'not found')) {
                             $output->writeln(sprintf(
                                 '      Configuration %s/%s already gone',
                                 self::COMPONENT_ID,
