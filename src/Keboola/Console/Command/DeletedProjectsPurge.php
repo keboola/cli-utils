@@ -31,7 +31,7 @@ class DeletedProjectsPurge extends Command
         $token = $input->getArgument('token');
         assert(is_string($token));
         $projectIds = $input->getArgument('projectIds');
-        assert(is_string($token));
+        assert(is_string($projectIds));
         $ignoreBackendErrors = (bool) $input->getOption('ignore-backend-errors');
         $force = (bool) $input->getOption('force');
 
