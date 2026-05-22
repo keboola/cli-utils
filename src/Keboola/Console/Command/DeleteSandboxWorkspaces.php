@@ -22,18 +22,25 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteSandboxWorkspaces extends Command
 {
-    private const string COMPONENT_ID = 'keboola.sandboxes';
+    private const string DEFAULT_COMPONENT_ID = 'keboola.sandboxes';
 
     protected function configure(): void
     {
         $this
             ->setName('manage:delete-sandbox-workspaces')
-            ->setDescription(sprintf(
-                'Delete %s workspaces in a project or organization that have no active editor session, '
-                . 'filtered by workspace creation date.',
-                self::COMPONENT_ID,
-            ))
+            ->setDescription(
+                'Delete workspaces of a given component in a project or organization that have no active '
+                . 'editor session, filtered by workspace creation date.',
+            )
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to do it for real.')
+            ->addOption(
+                'component',
+                'c',
+                InputOption::VALUE_REQUIRED,
+                'Component ID whose workspaces should be cleaned (e.g. "keboola.sandboxes", '
+                . '"keboola.snowflake-transformation").',
+                self::DEFAULT_COMPONENT_ID,
+            )
             ->addOption(
                 'project-id',
                 'p',
@@ -90,6 +97,9 @@ class DeleteSandboxWorkspaces extends Command
         $organizationIdOpt = $input->getOption('organization-id');
         assert($projectIdOpt === null || is_string($projectIdOpt));
         assert($organizationIdOpt === null || is_string($organizationIdOpt));
+
+        $componentId = $input->getOption('component');
+        assert(is_string($componentId));
 
         if ($projectIdOpt !== null && $organizationIdOpt !== null) {
             throw new InvalidArgumentException(
@@ -172,7 +182,7 @@ class DeleteSandboxWorkspaces extends Command
 
         $this->writeBlock($output, 'Configuration', [
             sprintf('Target:           %s', $targetDesc),
-            sprintf('Component:        %s', self::COMPONENT_ID),
+            sprintf('Component:        %s', $componentId !== '' ? $componentId : '(none)'),
             sprintf(
                 'Created window:   from %s to %s',
                 date('Y-m-d H:i:s', $createdAfter),
@@ -193,7 +203,7 @@ class DeleteSandboxWorkspaces extends Command
         $totalDeleted = 0;
         $totalDeleteErrors = 0;
 
-        /** @var array<string, list<array{workspaceId: int|string, configurationId: string, branchId: int|string, schema: string, created: string}>> $summary */
+        /** @var array<string, list<array{workspaceId: int|string, configurationId: string, branchId: int|string, schema: string, created: string, loginType: string, ownerEmail: string}>> $summary */
         $summary = [];
 
         foreach ($projects as $project) {
@@ -276,13 +286,24 @@ class DeleteSandboxWorkspaces extends Command
                     $createdTs = strtotime($createdStr);
                     $schema = (string) ($workspace['connection']['schema'] ?? '');
                     $configurationId = (string) ($workspace['configurationId'] ?? '');
+                    $loginType = (string) ($workspace['connection']['loginType'] ?? '');
+                    $ownerEmail = (string) ($workspace['creatorToken']['description'] ?? '');
 
-                    if ($workspaceComponent !== self::COMPONENT_ID) {
+                    $loginTypeForLog = $loginType !== '' ? $loginType : '(none)';
+                    $ownerEmailForLog = $ownerEmail !== '' ? $ownerEmail : '(none)';
+                    $configurationIdForLog = $configurationId !== '' ? $configurationId : '(none)';
+                    $componentForLog = $workspaceComponent !== '' ? $workspaceComponent : '(none)';
+
+                    if ($workspaceComponent !== $componentId) {
                         $output->writeln(sprintf(
-                            '    - SKIP   workspace %s (component "%s" != "%s")',
+                            '    - SKIP   workspace %s (component "%s" != "%s", config %s, '
+                            . 'login %s, owner %s)',
                             (string) $workspaceId,
-                            $workspaceComponent,
-                            self::COMPONENT_ID,
+                            $componentForLog,
+                            $componentId,
+                            $configurationIdForLog,
+                            $loginTypeForLog,
+                            $ownerEmailForLog,
                         ));
                         $projectSkippedComponent++;
                         continue;
@@ -290,9 +311,14 @@ class DeleteSandboxWorkspaces extends Command
 
                     if ($createdTs === false || $createdTs < $createdAfter || $createdTs >= $createdBefore) {
                         $output->writeln(sprintf(
-                            '    - SKIP   workspace %s (created %s outside window)',
+                            '    - SKIP   workspace %s (created %s outside window, component %s, '
+                            . 'config %s, login %s, owner %s)',
                             (string) $workspaceId,
                             $createdStr,
+                            $componentForLog,
+                            $configurationIdForLog,
+                            $loginTypeForLog,
+                            $ownerEmailForLog,
                         ));
                         $projectSkippedDate++;
                         continue;
@@ -300,9 +326,14 @@ class DeleteSandboxWorkspaces extends Command
 
                     if ($configurationId === '') {
                         $output->writeln(sprintf(
-                            '    - SKIP   workspace %s (created %s) — no configurationId, cannot resolve config',
+                            '    - SKIP   workspace %s (created %s, component %s, config %s, '
+                            . 'login %s, owner %s) — no configurationId, cannot resolve config',
                             (string) $workspaceId,
                             $createdStr,
+                            $componentForLog,
+                            $configurationIdForLog,
+                            $loginTypeForLog,
+                            $ownerEmailForLog,
                         ));
                         $projectSkippedComponent++;
                         continue;
@@ -310,26 +341,62 @@ class DeleteSandboxWorkspaces extends Command
 
                     if ($schema !== '' && isset($sessionsBySchema[$schema])) {
                         $session = $sessionsBySchema[$schema];
+
+                        // If the workspace points at a configuration that no longer exists, the editor
+                        // session is stale — delete the workspace anyway.
+                        $configMissing = false;
+                        if ($configurationId !== '') {
+                            try {
+                                (new Components($branchStorageClient))
+                                    ->getConfiguration($componentId, $configurationId);
+                            } catch (StorageClientException $e) {
+                                if ($e->getCode() === 404) {
+                                    $configMissing = true;
+                                } else {
+                                    throw $e;
+                                }
+                            }
+                        }
+
+                        if (!$configMissing) {
+                            $output->writeln(sprintf(
+                                '    - SKIP   workspace %s (created %s, schema %s, component %s, '
+                                . 'config %s, login %s, owner %s) — active editor session %s',
+                                (string) $workspaceId,
+                                $createdStr,
+                                $schema,
+                                $componentForLog,
+                                $configurationIdForLog,
+                                $loginTypeForLog,
+                                $ownerEmailForLog,
+                                $session['id'],
+                            ));
+                            $projectSkippedSession++;
+                            continue;
+                        }
+
                         $output->writeln(sprintf(
-                            '    - SKIP   workspace %s (created %s, schema %s) — active editor session %s',
+                            '    - NOTICE workspace %s has active editor session %s but '
+                            . 'configuration %s/%s no longer exists — proceeding to delete',
                             (string) $workspaceId,
-                            $createdStr,
-                            $schema,
                             $session['id'],
+                            $componentId,
+                            $configurationId,
                         ));
-                        $projectSkippedSession++;
-                        continue;
                     }
 
                     $projectCandidates++;
                     $output->writeln(sprintf(
-                        '    - DELETE workspace %s (created %s, schema "%s", config %s/%s, branch %s)',
+                        '    - DELETE workspace %s (created %s, schema "%s", config %s/%s, branch %s, '
+                        . 'login %s, owner %s)',
                         (string) $workspaceId,
                         $createdStr,
                         $schema,
-                        self::COMPONENT_ID,
+                        $componentId,
                         $configurationId,
                         (string) $branchId,
+                        $loginTypeForLog,
+                        $ownerEmailForLog,
                     ));
 
                     $summary[$projectKey][] = [
@@ -338,6 +405,8 @@ class DeleteSandboxWorkspaces extends Command
                         'branchId' => $branchId,
                         'schema' => $schema,
                         'created' => $createdStr,
+                        'loginType' => $loginType,
+                        'ownerEmail' => $ownerEmail,
                     ];
 
                     if (!$force) {
@@ -349,27 +418,27 @@ class DeleteSandboxWorkspaces extends Command
                     $components = new Components($branchStorageClient);
                     try {
                         // delete
-                        $components->deleteConfiguration(self::COMPONENT_ID, $configurationId);
+                        $components->deleteConfiguration($componentId, $configurationId);
                         // purge (from trash)
-                        $components->deleteConfiguration(self::COMPONENT_ID, $configurationId);
+                        $components->deleteConfiguration($componentId, $configurationId);
                         $configDeleted = true;
                         $output->writeln(sprintf(
                             '      Deleted configuration %s/%s',
-                            self::COMPONENT_ID,
+                            $componentId,
                             $configurationId,
                         ));
                     } catch (StorageClientException $e) {
                         if (str_contains($e->getMessage(), 'not found')) {
                             $output->writeln(sprintf(
                                 '      Configuration %s/%s already gone',
-                                self::COMPONENT_ID,
+                                $componentId,
                                 $configurationId,
                             ));
                             $configDeleted = true;
                         } else {
                             $output->writeln(sprintf(
                                 '      ERROR deleting configuration %s/%s: %s',
-                                self::COMPONENT_ID,
+                                $componentId,
                                 $configurationId,
                                 $e->getMessage(),
                             ));
@@ -441,12 +510,15 @@ class DeleteSandboxWorkspaces extends Command
             $output->writeln(sprintf('  Project: %s', $projectKey));
             foreach ($rows as $row) {
                 $output->writeln(sprintf(
-                    '    - workspaceId=%s configurationId=%s branchId=%s schema=%s created=%s',
+                    '    - workspaceId=%s configurationId=%s branchId=%s schema=%s created=%s '
+                    . 'loginType=%s owner=%s',
                     (string) $row['workspaceId'],
                     $row['configurationId'],
                     (string) $row['branchId'],
                     $row['schema'] !== '' ? $row['schema'] : '(none)',
                     $row['created'],
+                    $row['loginType'] !== '' ? $row['loginType'] : '(none)',
+                    $row['ownerEmail'] !== '' ? $row['ownerEmail'] : '(none)',
                 ));
             }
         }
