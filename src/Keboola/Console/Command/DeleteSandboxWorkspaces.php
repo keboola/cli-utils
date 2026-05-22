@@ -345,16 +345,14 @@ class DeleteSandboxWorkspaces extends Command
                         // If the workspace points at a configuration that no longer exists, the editor
                         // session is stale — delete the workspace anyway.
                         $configMissing = false;
-                        if ($configurationId !== '') {
-                            try {
-                                (new Components($branchStorageClient))
-                                    ->getConfiguration($componentId, $configurationId);
-                            } catch (StorageClientException $e) {
-                                if ($e->getCode() === 404) {
-                                    $configMissing = true;
-                                } else {
-                                    throw $e;
-                                }
+                        try {
+                            (new Components($branchStorageClient))
+                                ->getConfiguration($componentId, $configurationId);
+                        } catch (StorageClientException $e) {
+                            if ($e->getCode() === 404) {
+                                $configMissing = true;
+                            } else {
+                                throw $e;
                             }
                         }
 
