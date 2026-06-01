@@ -203,7 +203,11 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
              *     features: string[]
              * } $project
              */
-            $this->addFeatureToProjectConditionally($client, $output, $project, $conditionFeature, $targetFeature, $force);
+            try {
+                $this->addFeatureToProjectConditionally($client, $output, $project, $conditionFeature, $targetFeature, $force);
+            } catch (ClientException $e) {
+                $output->writeln("Error while handling project {$project['id']} : " . $e->getMessage());
+            }
         }
     }
 
