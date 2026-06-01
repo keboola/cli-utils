@@ -22,6 +22,7 @@ use Keboola\Console\Command\OrganizationStorageBackend;
 use Keboola\Console\Command\QueueMassTerminateJobs;
 use Keboola\Console\Command\ReactivateSchedules;
 use Keboola\Console\Command\ProjectsAddFeature;
+use Keboola\Console\Command\ProjectsAddFeatureConditionally;
 use Keboola\Console\Command\ProjectsRemoveFeature;
 use Keboola\Console\Command\DeletedProjectsPurge;
 use Keboola\Console\Command\NotifyProjects;
@@ -32,6 +33,7 @@ use Keboola\Console\Command\UpdateDataRetention;
 
 $application = new Application();
 $application->add(new ProjectsAddFeature());
+$application->add(new ProjectsAddFeatureConditionally());
 $application->add(new ProjectsRemoveFeature());
 $application->add(new DeletedProjectsPurge());
 $application->add(new NotifyProjects());
