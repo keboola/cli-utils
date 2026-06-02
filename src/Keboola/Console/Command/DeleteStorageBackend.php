@@ -22,13 +22,16 @@ class DeleteStorageBackend extends Command
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $apiToken = $input->getArgument('token');
+        assert(is_string($apiToken));
         $apiUrl = $input->getArgument('url');
+        assert(is_string($apiUrl));
         $ids = $input->getArgument('ids');
+        assert(is_string($ids));
         $force = (bool) $input->getOption('force');
-        $output->writeln('DANGER: Using force mode! Backend will be removed.');
+        $output->writeln($force ? 'DANGER: Using force mode! Backend will be removed.' : 'DRY RUN');
 
         $client = $this->createClient($apiUrl, $apiToken);
 
@@ -50,11 +53,13 @@ class DeleteStorageBackend extends Command
             ));
             if ($force) {
                 $output->writeln('really');
-                $client->removeStorageBackend($id);
+                $client->removeStorageBackend((int) $id);
             } else {
                 $output->writeln('just kidding - dry mode');
             }
         }
+
+        return 0;
     }
 
     private function createClient(string $host, string $token): Client
