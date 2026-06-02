@@ -15,9 +15,9 @@ class DeleteStorageBackend extends Command
     {
         $this
             ->setName('manage:delete-backend')
-            ->setDescription('Set keboola.touch attribute to all tables. This will invalidate async export caches.')
-            ->addArgument('token', InputArgument::REQUIRED, 'storage api token')
-            ->addArgument('ids', InputArgument::REQUIRED, 'list of IDs separated')
+            ->setDescription('Delete storage backends from a stack by their IDs. Dry-run by default.')
+            ->addArgument('token', InputArgument::REQUIRED, 'manage api token')
+            ->addArgument('ids', InputArgument::REQUIRED, 'list of storage backend IDs separated by a comma')
             ->addArgument('url', InputArgument::REQUIRED, 'Stack URL')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run');
     }

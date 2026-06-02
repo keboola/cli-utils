@@ -385,6 +385,25 @@ You can use it to set all projects of an organization to use a storage backend.
     php ./cli.php manage:set-organization-storage-backend [--force/-f] <manage-token> <organization-id> <storage-backend-id> <hostname-suffix> 
     ```
 
+## Delete Storage Backend
+Delete one or more storage backends from a stack by their IDs. Dry-run by default.
+
+- Run the command
+    ```
+    php ./cli.php manage:delete-backend [--force/-f] <manage-token> <backend-ids> <stack-url>
+    ```
+Arguments:
+- manage-token (required) Manage API token for the stack.
+- backend-ids (required) Comma-separated list of storage backend IDs to delete (e.g. `123,456,789`).
+- stack-url (required) Full stack URL, e.g. https://connection.keboola.com.
+
+Options:
+- --force / -f Actually remove the backends. Without it the command runs in dry-run mode and only lists what would be removed.
+
+Behavior:
+- Lists all storage backends on the stack.
+- For each requested ID: skips it (with a message) when no such backend exists; otherwise prints the backend host and owner and (with --force) removes it via the Manage API.
+
 ## Reset Workspace passwords for projects in an organization
 This command is rather specific to BYODB snowflake backend migration.
 It resets all legacy (not keypair type) Snowflake workspace passwords for all projects in an organization.
