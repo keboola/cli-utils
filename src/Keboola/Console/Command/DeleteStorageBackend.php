@@ -11,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class DeleteStorageBackend extends Command
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('manage:delete-backend')
@@ -40,7 +40,8 @@ class DeleteStorageBackend extends Command
         foreach ($allBackends as $backend) {
             $allBackendsAssociative[$backend['id']] = $backend;
         }
-        foreach (explode(',', $ids) as $id) {
+        $backendIds = array_filter(array_map('trim', explode(',', $ids)), 'is_numeric');
+        foreach ($backendIds as $id) {
             if (!array_key_exists($id, $allBackendsAssociative)) {
                 $output->writeln(sprintf('Backend with ID "%s" does not exist, skipping...', $id));
                 continue;
