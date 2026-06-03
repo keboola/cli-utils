@@ -21,10 +21,12 @@ class ForceUnlinkSharedBuckets extends Command
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Use [--force, -f] to actually unlink. Otherwise, dry-run.');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = $input->getArgument('storageToken');
+        assert(is_string($token));
         $url = $input->getArgument('url');
+        assert(is_string($url));
         $isForce = $input->getOption('force');
         $prefix = $isForce ? 'FORCE: ' : 'DRY-RUN: ';
 

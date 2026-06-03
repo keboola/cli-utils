@@ -32,8 +32,11 @@ class DeleteProjects extends Command
     public function execute(InputInterface $input, OutputInterface $output): int
     {
         $apiToken = $input->getArgument('token');
+        assert(is_string($apiToken));
         $apiUrl = $input->getArgument('url');
+        assert(is_string($apiUrl));
         $projects = $input->getArgument('projects');
+        assert(is_string($projects));
 
         $force = (bool) $input->getOption('force');
 
@@ -74,6 +77,9 @@ class DeleteProjects extends Command
         ]);
     }
 
+    /**
+     * @param int[] $projectIds
+     */
     private function deleteProjects(
         Client $client,
         OutputInterface $output,
@@ -98,6 +104,9 @@ class DeleteProjects extends Command
         }
     }
 
+    /**
+     * @param array<string, mixed> $projectInfo
+     */
     private function deleteSingleProject(
         Client $client,
         OutputInterface $output,
@@ -129,8 +138,10 @@ class DeleteProjects extends Command
 
             $this->projectsDeleted++;
         } else {
+            $projectId = $projectInfo['id'];
+            assert(is_string($projectId) || is_int($projectId));
             $output->writeln(
-                sprintf('<info>[DRY-RUN] would delete project "%s"</info>', $projectInfo['id'])
+                sprintf('<info>[DRY-RUN] would delete project "%s"</info>', $projectId)
             );
         }
     }
