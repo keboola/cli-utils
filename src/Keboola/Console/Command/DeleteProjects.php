@@ -1,0 +1,156 @@
+<?php
+
+namespace Keboola\Console\Command;
+
+use Keboola\ManageApi\Client;
+use Keboola\ManageApi\ClientException;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+
+class DeleteProjects extends Command
+{
+    private int $projectNotFound = 0;
+
+    private int $projectsDisabled = 0;
+    private int $projectsFailed = 0;
+    private int $projectsDeleted = 0;
+
+    protected function configure(): void
+    {
+        $this
+            ->setName('manage:delete-projects')
+            ->setDescription('Delete all projects specified by project IDs')
+            ->addArgument('token', InputArgument::REQUIRED, 'manage token')
+            ->addArgument('url', InputArgument::REQUIRED, 'Stack URL. Including https://')
+            ->addArgument('projects', InputArgument::REQUIRED, 'list of IDs separated by comma ("1,7,146")')
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run');
+    }
+
+    public function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $apiToken = $input->getArgument('token');
+        assert(is_string($apiToken));
+        $apiUrl = $input->getArgument('url');
+        assert(is_string($apiUrl));
+        $projects = $input->getArgument('projects');
+        assert(is_string($projects));
+
+        $force = (bool) $input->getOption('force');
+
+        $client = $this->createClient($apiUrl, $apiToken);
+
+        $projectIdStrings = array_map('trim', explode(',', $projects));
+        $invalidProjectIds = array_filter($projectIdStrings, function ($id) {
+            return !is_numeric($id);
+        });
+        if (!empty($invalidProjectIds)) {
+            $output->writeln(
+                sprintf('<error>Invalid project IDs detected: %s</error>', implode(', ', $invalidProjectIds))
+            );
+            $output->writeln('Please check your input for typos or formatting issues. Only numeric project IDs are allowed.');
+
+            return 1;
+        }
+        $projectIds = array_map('intval', $projectIdStrings);
+        $this->deleteProjects($client, $output, $projectIds, $force);
+        $output->writeln('');
+
+        $output->writeln('DONE with following results:');
+        $this->printResult($output);
+
+        if (!$force) {
+            $output->writeln('');
+            $output->writeln('Command was run in <comment>dry-run</comment> mode. To actually apply changes run it with --force flag.');
+        }
+
+        return 0;
+    }
+
+    private function createClient(string $host, string $token): Client
+    {
+        return new Client([
+            'url' => $host,
+            'token' => $token,
+        ]);
+    }
+
+    /**
+     * @param int[] $projectIds
+     */
+    private function deleteProjects(
+        Client $client,
+        OutputInterface $output,
+        array $projectIds,
+        bool $force
+    ): void {
+        foreach ($projectIds as $projectId) {
+            $output->write(sprintf('Project <comment>%s</comment>: ', $projectId));
+
+            try {
+                $project = $client->getProject($projectId);
+                $this->deleteSingleProject($client, $output, $project, $force);
+            } catch (ClientException $e) {
+                if ($e->getCode() === 404) {
+                    $output->writeln('<info>not found - deleted already</info>');
+                    $this->projectNotFound++;
+                } else {
+                    $output->writeln(sprintf('<error>error</error>: %s', $e->getMessage()));
+                    $this->projectsFailed++;
+                }
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $projectInfo
+     */
+    private function deleteSingleProject(
+        Client $client,
+        OutputInterface $output,
+        array $projectInfo,
+        bool $force
+    ): void {
+        if (isset($projectInfo['isDisabled']) && $projectInfo['isDisabled']) {
+            $output->writeln('project is disabled, <comment>skipping</comment>');
+            $this->projectsDisabled++;
+
+            return;
+        }
+
+        if ($force) {
+            $client->deleteProject($projectInfo['id']);
+
+            $projectDetail = $client->getDeletedProject($projectInfo['id']);
+            if (!$projectDetail['isDeleted']) {
+                $output->writeln(
+                    sprintf('<error>project "%s" deletion failed</error>', $projectDetail['id'])
+                );
+                $this->projectsFailed++;
+
+                return;
+            }
+            $output->writeln(
+                sprintf('<info>project "%s" has been deleted</info>', $projectDetail['id'])
+            );
+
+            $this->projectsDeleted++;
+        } else {
+            $projectId = $projectInfo['id'];
+            assert(is_string($projectId) || is_int($projectId));
+            $output->writeln(
+                sprintf('<info>[DRY-RUN] would delete project "%s"</info>', $projectId)
+            );
+        }
+    }
+
+    private function printResult(OutputInterface $output): void
+    {
+        $output->writeln(sprintf('  %d projects disabled', $this->projectsDisabled));
+        $output->writeln(sprintf('  %d projects deleted', $this->projectsDeleted));
+        $output->writeln(sprintf('  %d projects failed', $this->projectsFailed));
+        $output->writeln(sprintf('  %d projects not found', $this->projectNotFound));
+    }
+}

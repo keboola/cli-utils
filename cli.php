@@ -6,6 +6,7 @@ require __DIR__.'/vendor/autoload.php';
 
 use Keboola\Console\Command\AddFeature;
 use Keboola\Console\Command\AllStacksIterator;
+use Keboola\Console\Command\DeleteProjects;
 use Keboola\Console\Command\DeleteStorageBackend;
 use Keboola\Console\Command\DeleteOrganizationOrphanedWorkspaces;
 use Keboola\Console\Command\DeleteOrganizationOwnerlessWorkspaces;
@@ -31,6 +32,7 @@ use Keboola\Console\Command\RemoveUserFromOrganizationProjects;
 use Symfony\Component\Console\Application;
 use Keboola\Console\Command\SetDataRetention;
 use Keboola\Console\Command\UpdateDataRetention;
+use Keboola\Console\Command\ForceUnlinkSharedBuckets;
 
 $application = new Application();
 $application->add(new ProjectsAddFeature());
@@ -57,6 +59,8 @@ $application->add(new DescribeOrganizationWorkspaces());
 $application->add(new MassDeleteProjectWorkspaces());
 $application->add(new UpdateDataRetention());
 $application->add(new OrganizationResetWorkspacePasswords());
+$application->add(new ForceUnlinkSharedBuckets());
 $application->add(new OrganizationsAddFeature());
+$application->add(new DeleteProjects());
 $application->add(new DeleteStorageBackend());
 $application->run();

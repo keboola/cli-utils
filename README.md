@@ -227,6 +227,28 @@ Command execution:
 cat data.csv |  php cli.php storage:notify-projects MANAGETOKEN
 ```
 
+
+### Force Unlink Shared and Linked Buckets
+
+List all buckets in the project and force-unlink those that are both shared and linked. By default, the command runs in dry-run mode and only reports what would be unlinked. Use the `--force` flag to actually perform the unlinking.
+
+```
+php cli.php storage:force-unlink-shared-buckets [--force|-f] <storageToken> <url>
+```
+Arguments:
+- `storageToken` (required): Storage API token for the target project.
+- `url` (required): Stack URL, including `https://`.
+
+Options:
+- `--force` / `-f`: Actually perform the unlinking. Without this flag, the command only reports what would be unlinked (dry-run).
+
+Behavior:
+- Lists all buckets in the project.
+- For each bucket, checks if it is both shared and linked.
+- In dry-run mode, lists the buckets that would be unlinked.
+- With `--force`, unlinks each shared and linked bucket and confirms the action.
+- Prints a summary of unlinked or would-be-unlinked buckets.
+
 ### Mass enablement of dynamic backends for multiple projects
 Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/Enable+Dynamic+Backends#Enable-for-project
 
@@ -270,6 +292,29 @@ Run command:
 `php cli.php manage:mass-project-remove-expiration extend.txt 0`
 
 Use number of days or 0 as show to remove expiration completely. By default, it's dry-run. Override with `-f` parameter.
+
+### Bulk Delete Projects
+
+Delete all projects specified by project IDs using the Manage API. By default, the command runs in dry-run mode and only reports what would be deleted. Use the `--force` flag to actually perform deletions.
+
+```
+php cli.php manage:delete-projects [-f|--force] <token> <url> <projects>
+```
+Arguments:
+- `token` (required): Manage API token.
+- `url` (required): Stack URL, including `https://`.
+- `projects` (required): Comma-separated list of project IDs to delete (e.g. `1,7,146`).
+
+Options:
+- `--force` / `-f`: Actually delete the projects. Without this flag, the command only reports what would be deleted (dry-run).
+
+Behavior:
+- For each project ID, checks if the project exists and is not already disabled.
+- In dry-run mode, lists the projects that would be deleted.
+- With `--force`, deletes each project and confirms deletion.
+- Prints a summary of disabled, deleted, and failed projects.
+- If run without `--force`, reminds the user that it was a dry run.
+
 
 ### Purge deleted projects
 Purge already deleted projects (remove residual metadata, optionally ignoring backend errors) using a Manage API token.
@@ -451,6 +496,7 @@ Behavior:
 - Fetches the organization and user, iterates its projects and lists project users.
 - If the user is a member, logs removal (and performs it if forced).
 - Prints final count of affected projects.
+
 
 # License
 
