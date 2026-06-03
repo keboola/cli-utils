@@ -61,4 +61,6 @@ $application->add(new UpdateDataRetention());
 $application->add(new OrganizationResetWorkspacePasswords());
 $application->add(new ForceUnlinkSharedBuckets());
 $application->add(new OrganizationsAddFeature());
+$application->add(new DeleteProjects());
+$application->add(new DeleteStorageBackend());
 $application->run();
