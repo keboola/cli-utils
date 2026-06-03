@@ -29,7 +29,7 @@ class DeleteProjects extends Command
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run');
     }
 
-    public function execute(InputInterface $input, OutputInterface $output): ?int
+    public function execute(InputInterface $input, OutputInterface $output): int
     {
         $apiToken = $input->getArgument('token');
         $apiUrl = $input->getArgument('url');
@@ -39,7 +39,19 @@ class DeleteProjects extends Command
 
         $client = $this->createClient($apiUrl, $apiToken);
 
-        $projectIds = array_filter(explode(',', $projects), 'is_numeric');
+        $projectIdStrings = array_map('trim', explode(',', $projects));
+        $invalidProjectIds = array_filter($projectIdStrings, function ($id) {
+            return !is_numeric($id);
+        });
+        if (!empty($invalidProjectIds)) {
+            $output->writeln(
+                sprintf('<error>Invalid project IDs detected: %s</error>', implode(', ', $invalidProjectIds))
+            );
+            $output->writeln('Please check your input for typos or formatting issues. Only numeric project IDs are allowed.');
+
+            return 1;
+        }
+        $projectIds = array_map('intval', $projectIdStrings);
         $this->deleteProjects($client, $output, $projectIds, $force);
         $output->writeln('');
 
@@ -105,7 +117,7 @@ class DeleteProjects extends Command
             $projectDetail = $client->getDeletedProject($projectInfo['id']);
             if (!$projectDetail['isDeleted']) {
                 $output->writeln(
-                    sprintf('<err>project "%s" deletion failed</err>', $projectDetail['id'])
+                    sprintf('<error>project "%s" deletion failed</error>', $projectDetail['id'])
                 );
                 $this->projectsFailed++;
 
