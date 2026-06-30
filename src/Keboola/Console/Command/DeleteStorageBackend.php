@@ -3,6 +3,7 @@
 namespace Keboola\Console\Command;
 
 use Keboola\ManageApi\Client;
+use Keboola\ManageApi\ClientException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -53,8 +54,13 @@ class DeleteStorageBackend extends Command
                 $allBackendsAssociative[$id]['owner']
             ));
             if ($force) {
-                $output->writeln('really');
-                $client->removeStorageBackend((int) $id);
+                try {
+                    $client->removeStorageBackend((int) $id);
+                    $output->writeln(sprintf(' - Backend "%s" succesfully removed.', $id));
+
+                } catch (ClientException $e) {
+                    $output->writeln(sprintf(' - Error while removing backend "%s": %s', $id, $e->getMessage()));
+                }
             } else {
                 $output->writeln('just kidding - dry mode');
             }
