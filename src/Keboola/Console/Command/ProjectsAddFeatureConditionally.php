@@ -26,7 +26,7 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
     {
         $this
             ->setName('manage:projects-add-feature-conditionally')
-            ->setDescription('Add a target feature to projects that already have a given condition feature')
+            ->setDescription('Add a target feature to projects based on whether they have a given condition feature')
             ->addArgument(self::ARG_TOKEN, InputArgument::REQUIRED, 'manage token')
             ->addArgument(self::ARG_URL, InputArgument::REQUIRED, 'Stack URL')
             ->addArgument(self::ARG_CONDITION_FEATURE, InputArgument::REQUIRED, 'feature a project must already have')
@@ -166,7 +166,7 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
             $output->writeln(sprintf(
                 ' - condition feature "%s" %s set, skipping.',
                 $conditionFeature,
-                $hasCondition ? 'IS' : 'is NOT'
+                $hasCondition ? 'is' : 'is not'
             ));
             $this->projectsSkippedByCondition++;
             $output->write("\n");
