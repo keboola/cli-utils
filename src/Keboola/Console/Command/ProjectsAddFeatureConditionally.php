@@ -29,7 +29,11 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
             ->setDescription('Add a target feature to projects based on whether they have a given condition feature')
             ->addArgument(self::ARG_TOKEN, InputArgument::REQUIRED, 'manage token')
             ->addArgument(self::ARG_URL, InputArgument::REQUIRED, 'Stack URL')
-            ->addArgument(self::ARG_CONDITION_FEATURE, InputArgument::REQUIRED, 'feature a project must already have')
+            ->addArgument(
+                self::ARG_CONDITION_FEATURE,
+                InputArgument::REQUIRED,
+                'condition feature(s), comma-separated for multiple; evaluated together (see --condition-mode)'
+            )
             ->addArgument(self::ARG_TARGET_FEATURE, InputArgument::REQUIRED, 'feature to add')
             ->addOption(
                 self::OPT_MAINTAINER_ID,
@@ -66,8 +70,16 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $force = (bool) $input->getOption(self::OPT_FORCE);
-        $conditionFeature = $input->getArgument(self::ARG_CONDITION_FEATURE);
-        assert(is_string($conditionFeature));
+        $conditionFeaturesArg = $input->getArgument(self::ARG_CONDITION_FEATURE);
+        assert(is_string($conditionFeaturesArg));
+        $conditionFeatures = array_values(array_filter(
+            array_map('trim', explode(',', $conditionFeaturesArg)),
+            fn($feature) => $feature !== ''
+        ));
+        if (count($conditionFeatures) === 0) {
+            $output->writeln('ERROR: At least one condition feature must be provided.');
+            return 1;
+        }
         $targetFeature = $input->getArgument(self::ARG_TARGET_FEATURE);
         assert(is_string($targetFeature));
         $url = $input->getArgument(self::ARG_URL);
@@ -102,9 +114,11 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
 
         $client = $this->createClient($url, $token);
 
-        if (!$this->checkIfFeatureExists($client, $conditionFeature)) {
-            $output->writeln(sprintf('Condition feature %s does NOT exist', $conditionFeature));
-            return 1;
+        foreach ($conditionFeatures as $conditionFeature) {
+            if (!$this->checkIfFeatureExists($client, $conditionFeature)) {
+                $output->writeln(sprintf('Condition feature %s does NOT exist', $conditionFeature));
+                return 1;
+            }
         }
         if (!$this->checkIfFeatureExists($client, $targetFeature)) {
             $output->writeln(sprintf('Target feature %s does NOT exist', $targetFeature));
@@ -113,15 +127,15 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
 
         if ($projectId !== null) {
             assert(is_string($projectId));
-            $this->processProject($client, $output, $projectId, $conditionFeature, $targetFeature, $conditionMode, $force);
+            $this->processProject($client, $output, $projectId, $conditionFeatures, $targetFeature, $conditionMode, $force);
         } elseif ($organizationId !== null) {
             assert(is_string($organizationId));
-            $this->processOrganization($client, $output, $organizationId, $conditionFeature, $targetFeature, $conditionMode, $force);
+            $this->processOrganization($client, $output, $organizationId, $conditionFeatures, $targetFeature, $conditionMode, $force);
         } elseif ($maintainerId !== null) {
             assert(is_string($maintainerId));
-            $this->processMaintainer($client, $output, $maintainerId, $conditionFeature, $targetFeature, $conditionMode, $force);
+            $this->processMaintainer($client, $output, $maintainerId, $conditionFeatures, $targetFeature, $conditionMode, $force);
         } else {
-            $this->processAllProjects($client, $output, $conditionFeature, $targetFeature, $conditionMode, $force);
+            $this->processAllProjects($client, $output, $conditionFeatures, $targetFeature, $conditionMode, $force);
         }
 
         $output->writeln("\nDONE with following results:\n");
@@ -137,12 +151,13 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
      *     disabled: array{reason: string},
      *     features: string[]
      * } $projectInfo
+     * @param list<string> $conditionFeatures
      */
     protected function addFeatureToProjectConditionally(
         Client $client,
         OutputInterface $output,
         array $projectInfo,
-        string $conditionFeature,
+        array $conditionFeatures,
         string $targetFeature,
         string $conditionMode,
         bool $force
@@ -159,15 +174,26 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
 
         $features = $projectInfo['features'];
 
-        $hasCondition = in_array($conditionFeature, $features, true);
-        $conditionMet = $conditionMode === self::CONDITION_MODE_PRESENT ? $hasCondition : !$hasCondition;
+        $presentConditions = array_values(array_intersect($conditionFeatures, $features));
+        $missingConditions = array_values(array_diff($conditionFeatures, $features));
+
+        // present: project must have ALL condition features; absent: project must have NONE of them
+        $conditionMet = $conditionMode === self::CONDITION_MODE_PRESENT
+            ? count($missingConditions) === 0
+            : count($presentConditions) === 0;
 
         if (!$conditionMet) {
-            $output->writeln(sprintf(
-                ' - condition feature "%s" %s set, skipping.',
-                $conditionFeature,
-                $hasCondition ? 'is' : 'is not'
-            ));
+            if ($conditionMode === self::CONDITION_MODE_PRESENT) {
+                $output->writeln(sprintf(
+                    ' - condition not met, project is missing feature(s): %s, skipping.',
+                    implode(', ', $missingConditions)
+                ));
+            } else {
+                $output->writeln(sprintf(
+                    ' - condition not met, project has feature(s): %s, skipping.',
+                    implode(', ', $presentConditions)
+                ));
+            }
             $this->projectsSkippedByCondition++;
             $output->write("\n");
             return;
@@ -185,21 +211,22 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
             $output->writeln(sprintf(' - target feature "%s" successfully added.', $targetFeature));
         } else {
             $output->writeln(sprintf(
-                ' - target feature "%s" CAN be added (project %s condition feature "%s"). Enable force mode with -f option.',
-                $targetFeature,
-                $hasCondition ? 'has' : 'does not have',
-                $conditionFeature
+                ' - target feature "%s" CAN be added (condition met). Enable force mode with -f option.',
+                $targetFeature
             ));
         }
         $this->projectsUpdated++;
         $output->write("\n");
     }
 
+    /**
+     * @param list<string> $conditionFeatures
+     */
     protected function processProject(
         Client $client,
         OutputInterface $output,
         string $projectId,
-        string $conditionFeature,
+        array $conditionFeatures,
         string $targetFeature,
         string $conditionMode,
         bool $force
@@ -214,17 +241,20 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
              *     features: string[]
              * } $project
              */
-            $this->addFeatureToProjectConditionally($client, $output, $project, $conditionFeature, $targetFeature, $conditionMode, $force);
+            $this->addFeatureToProjectConditionally($client, $output, $project, $conditionFeatures, $targetFeature, $conditionMode, $force);
         } catch (ClientException $e) {
             $output->writeln("Error while handling project {$projectId} : " . $e->getMessage());
         }
     }
 
+    /**
+     * @param list<string> $conditionFeatures
+     */
     protected function processOrganization(
         Client $client,
         OutputInterface $output,
         string $organizationId,
-        string $conditionFeature,
+        array $conditionFeatures,
         string $targetFeature,
         string $conditionMode,
         bool $force
@@ -241,18 +271,21 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
              * } $project
              */
             try {
-                $this->addFeatureToProjectConditionally($client, $output, $project, $conditionFeature, $targetFeature, $conditionMode, $force);
+                $this->addFeatureToProjectConditionally($client, $output, $project, $conditionFeatures, $targetFeature, $conditionMode, $force);
             } catch (ClientException $e) {
                 $output->writeln("Error while handling project {$project['id']} : " . $e->getMessage());
             }
         }
     }
 
+    /**
+     * @param list<string> $conditionFeatures
+     */
     protected function processMaintainer(
         Client $client,
         OutputInterface $output,
         string $maintainerId,
-        string $conditionFeature,
+        array $conditionFeatures,
         string $targetFeature,
         string $conditionMode,
         bool $force
@@ -264,7 +297,7 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
                 $client,
                 $output,
                 (string) $organization['id'],
-                $conditionFeature,
+                $conditionFeatures,
                 $targetFeature,
                 $conditionMode,
                 $force
@@ -272,10 +305,13 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
         }
     }
 
+    /**
+     * @param list<string> $conditionFeatures
+     */
     protected function processAllProjects(
         Client $client,
         OutputInterface $output,
-        string $conditionFeature,
+        array $conditionFeatures,
         string $targetFeature,
         string $conditionMode,
         bool $force
@@ -286,7 +322,7 @@ class ProjectsAddFeatureConditionally extends ProjectsAddFeature
                 $client,
                 $output,
                 (string) $maintainer['id'],
-                $conditionFeature,
+                $conditionFeatures,
                 $targetFeature,
                 $conditionMode,
                 $force
