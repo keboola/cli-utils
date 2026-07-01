@@ -57,10 +57,10 @@ By in argument `<projects>` you can
 Note: the feature has to exist before calling, and it has to be type of `project`
 
 ### Conditionally Add Feature
-Adds a target feature only to projects that already have a given condition feature.
+Adds a target feature to projects based on whether they have a given condition feature.
 
 ```
-php cli.php manage:projects-add-feature-conditionally [-f|--force] <token> <url> <condition-feature> <target-feature> [--maintainer-id=ID] [--organization-id=ID] [--project-id=ID]
+php cli.php manage:projects-add-feature-conditionally [-f|--force] <token> <url> <condition-feature> <target-feature> [--maintainer-id=ID] [--organization-id=ID] [--project-id=ID] [--condition-mode=present|absent]
 ```
 
 The scope is the whole stack by default. You can narrow it down with one of the mutually exclusive options:
@@ -68,11 +68,16 @@ The scope is the whole stack by default. You can narrow it down with one of the 
 - `--organization-id` – process all projects of one organization
 - `--maintainer-id` – process all projects of all organizations of one maintainer
 
-For each project in scope, the target feature is added only when the project already has the condition feature (and does not yet have the target feature). Disabled projects are skipped.
+The `--condition-mode` option controls how the condition feature is evaluated (default `present`):
+- `present` – add the target feature only to projects that **have** the condition feature
+- `absent` – add the target feature only to projects that **do not have** the condition feature
+
+In both modes projects that already have the target feature are skipped, and disabled projects are skipped.
 
 Examples:
-- `manage:projects-add-feature-conditionally <token> <url> new-billing new-ui` – dry run over the whole stack
+- `manage:projects-add-feature-conditionally <token> <url> new-billing new-ui` – dry run, add `new-ui` to projects that have `new-billing`
 - `manage:projects-add-feature-conditionally -f <token> <url> new-billing new-ui --organization-id=123`
+- `manage:projects-add-feature-conditionally -f <token> <url> legacy-billing new-ui --condition-mode=absent` – add `new-ui` to projects that do NOT have `legacy-billing`
 
 Note: both the condition and target features have to exist before calling, and have to be of type `project`. The options `--maintainer-id`, `--organization-id` and `--project-id` are mutually exclusive.
 
