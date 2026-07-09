@@ -255,6 +255,35 @@ Behavior:
 - With `--force`, unlinks each shared and linked bucket and confirms the action.
 - Prints a summary of unlinked or would-be-unlinked buckets.
 
+### Migrate data-apps orchestrator/flow tasks to data-app-control
+Migrate orchestration/flow tasks that start a data app via the legacy `keboola.data-apps` component so they use
+`keboola.data-app-control` instead (see [AJDA-2445](https://linear.app/keboola/issue/AJDA-2445)). Skips tasks whose
+`keboola.data-apps` parameters look unlike the "start app" shape used in practice (e.g. `create`/`delete`/`terminate`),
+so those are never silently mistransformed. Safe to re-run: already-migrated tasks are skipped.
+
+```
+php cli.php manage:migrate-data-apps-orchestrator-tasks [-f|--force] <token> <url> <projects>
+```
+Arguments:
+- `token` (required): Manage API token.
+- `url` (required): Stack URL, including `https://`.
+- `projects` (required): Comma-separated project IDs (e.g. `1,7,146`), or `all` to run on every project on the stack.
+
+Options:
+- `--force` / `-f`: Actually perform the migration. Without this flag, the command only reports what would change (dry-run).
+
+Behavior:
+- For each target project, creates a temporary Storage API token via the Manage API and lists all configurations of
+  both `keboola.orchestrator` (legacy orchestrations) and `keboola.flow` (next-gen conditional flows) - these are two
+  separate components on stacks with conditional flows enabled, not variants of the same one.
+- Scans each configuration's tasks for ones pointing at `keboola.data-apps` (both inline `configData` and `configId`
+  references to a saved `keboola.data-apps` configuration).
+- Rewrites matching tasks to `keboola.data-app-control` with `parameters.appId` set from the resolved app ID
+  (`configId` references are flattened into inline `configData` rather than creating a new saved configuration).
+- With `--force`, updates the configuration via the Storage API with a `changeDescription`. Without it, only reports
+  what would be migrated.
+- Prints a summary: projects checked/disabled/errored, configurations scanned/touched, tasks migrated/skipped.
+
 ### Mass enablement of dynamic backends for multiple projects
 Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/Enable+Dynamic+Backends#Enable-for-project
 
