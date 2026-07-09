@@ -2,6 +2,7 @@
 
 namespace Keboola\Console\Command;
 
+use Keboola\StorageApi\ClientException;
 use Keboola\StorageApi\Components;
 use Keboola\StorageApi\Options\Components\Configuration;
 use Keboola\StorageApi\Options\Components\ListComponentConfigurationsOptions;
@@ -33,9 +34,13 @@ class DataAppOrchestratorTaskMigrator
             'tasksMigrated' => 0,
             'tasksSkippedUnsupported' => 0,
         ];
+        // Keyed by keboola.data-apps configId, resolved appId or null - scoped to a single project
+        // (config IDs are only unique within a project) to avoid refetching the same referenced
+        // config across multiple tasks/configurations.
+        $configIdCache = [];
 
         foreach (self::FLOW_COMPONENT_IDS as $flowComponentId) {
-            $this->migrateFlowComponentConfigs($components, $output, $projectId, $flowComponentId, $isForce, $counts);
+            $this->migrateFlowComponentConfigs($components, $output, $projectId, $flowComponentId, $isForce, $counts, $configIdCache);
         }
 
         return $counts;
@@ -43,6 +48,7 @@ class DataAppOrchestratorTaskMigrator
 
     /**
      * @param array{configsScanned: int, configsTouched: int, tasksMigrated: int, tasksSkippedUnsupported: int} $counts
+     * @param array<string, string|null> $configIdCache
      */
     private function migrateFlowComponentConfigs(
         Components $components,
@@ -50,7 +56,8 @@ class DataAppOrchestratorTaskMigrator
         string $projectId,
         string $flowComponentId,
         bool $isForce,
-        array &$counts
+        array &$counts,
+        array &$configIdCache
     ): void {
         $prefix = $isForce ? 'FORCE: ' : 'DRY-RUN: ';
 
@@ -86,9 +93,9 @@ class DataAppOrchestratorTaskMigrator
                     $task['name'] ?? ($task['id'] ?? $taskKey)
                 );
 
-                $appId = $this->resolveAppId($components, $task['task']);
+                $appId = $this->resolveAppId($components, $task['task'], $configIdCache);
                 if ($appId === null) {
-                    $output->writeln(sprintf('%sSkipping %s: unsupported task shape', $prefix, $taskLabel));
+                    $output->writeln(sprintf('%sSkipping %s: unsupported task shape or unresolvable app id', $prefix, $taskLabel));
                     $counts['tasksSkippedUnsupported']++;
                     continue;
                 }
@@ -135,8 +142,9 @@ class DataAppOrchestratorTaskMigrator
 
     /**
      * @param array<string, mixed> $legacyTask
+     * @param array<string, string|null> $configIdCache
      */
-    private function resolveAppId(Components $components, array $legacyTask): ?string
+    private function resolveAppId(Components $components, array $legacyTask, array &$configIdCache): ?string
     {
         $configData = $legacyTask['configData'] ?? null;
         if (is_array($configData) && is_array($configData['parameters'] ?? null)) {
@@ -144,15 +152,29 @@ class DataAppOrchestratorTaskMigrator
         }
 
         $configId = $legacyTask['configId'] ?? null;
-        if (is_string($configId) && $configId !== '') {
-            $sibling = $components->getConfiguration(self::LEGACY_COMPONENT_ID, $configId);
-            $siblingConfiguration = is_array($sibling) ? ($sibling['configuration'] ?? null) : null;
-            if (is_array($siblingConfiguration) && is_array($siblingConfiguration['parameters'] ?? null)) {
-                return $this->extractAppId($siblingConfiguration['parameters']);
-            }
+        if (!is_string($configId) || $configId === '') {
+            return null;
         }
 
-        return null;
+        if (array_key_exists($configId, $configIdCache)) {
+            return $configIdCache[$configId];
+        }
+
+        try {
+            $sibling = $components->getConfiguration(self::LEGACY_COMPONENT_ID, $configId);
+        } catch (ClientException $e) {
+            // Referenced config missing/inaccessible - skip just this task rather than aborting
+            // the whole project's migration.
+            return $configIdCache[$configId] = null;
+        }
+
+        $siblingConfiguration = is_array($sibling) ? ($sibling['configuration'] ?? null) : null;
+        $resolved = null;
+        if (is_array($siblingConfiguration) && is_array($siblingConfiguration['parameters'] ?? null)) {
+            $resolved = $this->extractAppId($siblingConfiguration['parameters']);
+        }
+
+        return $configIdCache[$configId] = $resolved;
     }
 
     /**

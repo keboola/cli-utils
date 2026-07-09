@@ -77,7 +77,15 @@ class MigrateDataAppsOrchestratorTasks extends Command
         if ($checkAllProjects) {
             $this->migrateAllProjects($manageClient, $output, $url, $force);
         } else {
-            $projectIds = array_filter(explode(',', $projectsOption), 'is_numeric');
+            $projectIds = $this->parseProjectIds($projectsOption);
+            if ($projectIds === null) {
+                $output->writeln(sprintf(
+                    'Invalid "%s" argument: expected a comma-separated list of numeric project IDs or "all", got "%s"',
+                    self::ARG_PROJECTS,
+                    $projectsOption
+                ));
+                return 1;
+            }
             $this->migrateSelectedProjects($manageClient, $output, $url, $projectIds, $force);
         }
 
@@ -101,6 +109,24 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 }
             }
         }
+    }
+
+    /**
+     * Splits the comma-separated projects argument into a list of numeric project IDs, or returns
+     * null if any entry is not a plain non-negative integer (e.g. "foo", "1.2", "1e3", "").
+     *
+     * @return array<int, string>|null
+     */
+    private function parseProjectIds(string $projectsOption): ?array
+    {
+        $projectIds = array_map('trim', explode(',', $projectsOption));
+        foreach ($projectIds as $projectId) {
+            if (!ctype_digit($projectId)) {
+                return null;
+            }
+        }
+
+        return $projectIds;
     }
 
     /**
@@ -152,6 +178,10 @@ class MigrateDataAppsOrchestratorTasks extends Command
 
     private function printResult(OutputInterface $output, bool $checkAll, bool $force): void
     {
+        // "Checked" means "attempted" here - it must include disabled/errored projects too,
+        // otherwise it undercounts and conflicts with the disabled/error breakdown lines below it.
+        $totalProjectsChecked = $this->projectsChecked + $this->projectsDisabled + $this->projectsError;
+
         $output->writeln(
             ($checkAll ? sprintf(
                 "Checked %d maintainers\n"
@@ -167,7 +197,7 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 . '%d configurations ' . ($force ? 'updated' : 'would be updated in force mode') . "\n"
                 . '%d tasks ' . ($force ? 'migrated' : 'would be migrated in force mode') . "\n"
                 . "%d tasks skipped (unsupported shape)\n",
-                $this->projectsChecked,
+                $totalProjectsChecked,
                 $this->projectsDisabled,
                 $this->projectsError,
                 $this->configsScanned,
