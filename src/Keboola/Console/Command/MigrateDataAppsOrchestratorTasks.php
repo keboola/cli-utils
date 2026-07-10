@@ -8,10 +8,12 @@ use Keboola\StorageApi\Client as StorageClient;
 use Keboola\StorageApi\ClientException as StorageClientException;
 use Keboola\StorageApi\Components;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 class MigrateDataAppsOrchestratorTasks extends Command
 {
@@ -29,6 +31,7 @@ class MigrateDataAppsOrchestratorTasks extends Command
     protected int $configsTouched = 0;
     protected int $tasksMigrated = 0;
     protected int $tasksSkippedUnsupported = 0;
+    protected int $tasksSkippedUnresolvable = 0;
 
     private DataAppOrchestratorTaskMigrator $migrator;
 
@@ -57,6 +60,27 @@ class MigrateDataAppsOrchestratorTasks extends Command
         ]);
     }
 
+    // Cheap safety net against an accidental stack-wide mutation: "all" + "--force" is the highest
+    // blast-radius combination this command supports, so it gets an explicit confirmation on top of
+    // the dry-run default (mirrors the ConfirmationQuestion pattern used by
+    // MassProjectEnableDynamicBackends for a less impactful change).
+    private function confirmStackWideForceRun(InputInterface $input, OutputInterface $output, string $url): bool
+    {
+        /** @var QuestionHelper $helper */
+        $helper = $this->getHelper('question');
+        $question = new ConfirmationQuestion(
+            sprintf(
+                'You are about to migrate keboola.data-apps orchestrator/flow tasks on ALL projects on "%s" with'
+                . ' --force. Continue? (y/n) ',
+                $url
+            ),
+            false,
+            '/^(y|j)/i'
+        );
+
+        return (bool) $helper->ask($input, $output, $question);
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $force = (bool) $input->getOption(self::OPT_FORCE);
@@ -72,6 +96,12 @@ class MigrateDataAppsOrchestratorTasks extends Command
             : 'Running in dry-run mode. No configurations will be updated. Use -f to enable force mode.');
 
         $checkAllProjects = strtolower($projectsOption) === 'all';
+
+        if ($checkAllProjects && $force && !$this->confirmStackWideForceRun($input, $output, $url)) {
+            $output->writeln('Aborted.');
+            return 0;
+        }
+
         $manageClient = $this->createManageClient($url, $token);
 
         if ($checkAllProjects) {
@@ -168,6 +198,7 @@ class MigrateDataAppsOrchestratorTasks extends Command
             $this->configsTouched += $result['configsTouched'];
             $this->tasksMigrated += $result['tasksMigrated'];
             $this->tasksSkippedUnsupported += $result['tasksSkippedUnsupported'];
+            $this->tasksSkippedUnresolvable += $result['tasksSkippedUnresolvable'];
             $this->projectsChecked++;
         } catch (ManageClientException | StorageClientException $e) {
             $output->writeln(sprintf(' - error while processing project "%s": %s', $projectId, $e->getMessage()));
@@ -196,14 +227,16 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 . "Scanned %d orchestrator/flow configurations\n"
                 . '%d configurations ' . ($force ? 'updated' : 'would be updated in force mode') . "\n"
                 . '%d tasks ' . ($force ? 'migrated' : 'would be migrated in force mode') . "\n"
-                . "%d tasks skipped (unsupported shape)\n",
+                . "%d tasks skipped (unsupported shape - expected, no action needed)\n"
+                . "%d tasks skipped as UNRESOLVABLE (needs manual follow-up)\n",
                 $totalProjectsChecked,
                 $this->projectsDisabled,
                 $this->projectsError,
                 $this->configsScanned,
                 $this->configsTouched,
                 $this->tasksMigrated,
-                $this->tasksSkippedUnsupported
+                $this->tasksSkippedUnsupported,
+                $this->tasksSkippedUnresolvable
             )
         );
     }

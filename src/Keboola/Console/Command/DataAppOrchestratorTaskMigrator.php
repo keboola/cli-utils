@@ -23,8 +23,22 @@ class DataAppOrchestratorTaskMigrator
     // is left untouched - those are not used in orchestrations/flows in practice.
     private const SUPPORTED_LEGACY_TASK_VALUES = [null, 'app-start', 'start'];
 
+    // Distinguishes two very different "can't migrate this task" outcomes: UNSUPPORTED_TASK is a
+    // deliberately-skipped, expected case (e.g. create/delete/terminate - never used in flows in
+    // practice); UNRESOLVABLE means the task looked like it *should* migrate but its app id couldn't
+    // be determined (missing/inaccessible configId reference, malformed parameters) - that's a real
+    // problem that needs human follow-up and must never be hidden inside the "unsupported" count.
+    private const REASON_UNSUPPORTED_TASK = 'unsupported-task';
+    private const REASON_UNRESOLVABLE = 'unresolvable';
+
     /**
-     * @return array{configsScanned: int, configsTouched: int, tasksMigrated: int, tasksSkippedUnsupported: int}
+     * @return array{
+     *     configsScanned: int,
+     *     configsTouched: int,
+     *     tasksMigrated: int,
+     *     tasksSkippedUnsupported: int,
+     *     tasksSkippedUnresolvable: int
+     * }
      */
     public function migrateProject(Components $components, OutputInterface $output, string $projectId, bool $isForce): array
     {
@@ -33,8 +47,9 @@ class DataAppOrchestratorTaskMigrator
             'configsTouched' => 0,
             'tasksMigrated' => 0,
             'tasksSkippedUnsupported' => 0,
+            'tasksSkippedUnresolvable' => 0,
         ];
-        // Keyed by keboola.data-apps configId, resolved appId or null - scoped to a single project
+        // Keyed by keboola.data-apps configId, resolved {appId, reason} - scoped to a single project
         // (config IDs are only unique within a project) to avoid refetching the same referenced
         // config across multiple tasks/configurations.
         $configIdCache = [];
@@ -47,8 +62,14 @@ class DataAppOrchestratorTaskMigrator
     }
 
     /**
-     * @param array{configsScanned: int, configsTouched: int, tasksMigrated: int, tasksSkippedUnsupported: int} $counts
-     * @param array<string, string|null> $configIdCache
+     * @param array{
+     *     configsScanned: int,
+     *     configsTouched: int,
+     *     tasksMigrated: int,
+     *     tasksSkippedUnsupported: int,
+     *     tasksSkippedUnresolvable: int
+     * } $counts
+     * @param array<string, array{appId: ?string, reason: ?string}> $configIdCache
      */
     private function migrateFlowComponentConfigs(
         Components $components,
@@ -93,12 +114,23 @@ class DataAppOrchestratorTaskMigrator
                     $task['name'] ?? ($task['id'] ?? $taskKey)
                 );
 
-                $appId = $this->resolveAppId($components, $task['task'], $configIdCache);
-                if ($appId === null) {
-                    $output->writeln(sprintf('%sSkipping %s: unsupported task shape or unresolvable app id', $prefix, $taskLabel));
-                    $counts['tasksSkippedUnsupported']++;
+                $resolution = $this->resolveAppId($components, $task['task'], $configIdCache);
+                if ($resolution['appId'] === null) {
+                    if ($resolution['reason'] === self::REASON_UNRESOLVABLE) {
+                        $output->writeln(sprintf(
+                            '%sSkipping %s: could not resolve app id (missing/inaccessible config reference or invalid'
+                            . ' id) - needs manual follow-up',
+                            $prefix,
+                            $taskLabel
+                        ));
+                        $counts['tasksSkippedUnresolvable']++;
+                    } else {
+                        $output->writeln(sprintf('%sSkipping %s: unsupported task shape', $prefix, $taskLabel));
+                        $counts['tasksSkippedUnsupported']++;
+                    }
                     continue;
                 }
+                $appId = $resolution['appId'];
 
                 $output->writeln(sprintf(
                     '%sMigrating %s: %s -> %s (appId "%s")',
@@ -112,6 +144,11 @@ class DataAppOrchestratorTaskMigrator
                 // Keep every other field (type, mode, delay, retry, variableOverrides, ...) untouched -
                 // the keboola.flow schema requires "type" alongside componentId/mode, and dropping it
                 // silently produced an invalid, unreadable task (caught by live verification on canary-orion).
+                //
+                // configData/parameters IS deliberately replaced wholesale (not merged): the target
+                // component's schema only ever accepts a single "appId" parameter, so there is nothing
+                // in the legacy keboola.data-apps parameters (variableValuesId, storage/runtime overrides,
+                // etc.) that keboola.data-app-control understands or would do anything with.
                 $newTask = $task['task'];
                 $newTask['componentId'] = self::NEW_COMPONENT_ID;
                 unset($newTask['configId']);
@@ -142,9 +179,10 @@ class DataAppOrchestratorTaskMigrator
 
     /**
      * @param array<string, mixed> $legacyTask
-     * @param array<string, string|null> $configIdCache
+     * @param array<string, array{appId: ?string, reason: ?string}> $configIdCache
+     * @return array{appId: ?string, reason: ?string}
      */
-    private function resolveAppId(Components $components, array $legacyTask, array &$configIdCache): ?string
+    private function resolveAppId(Components $components, array $legacyTask, array &$configIdCache): array
     {
         $configData = $legacyTask['configData'] ?? null;
         if (is_array($configData) && is_array($configData['parameters'] ?? null)) {
@@ -153,7 +191,7 @@ class DataAppOrchestratorTaskMigrator
 
         $configId = $legacyTask['configId'] ?? null;
         if (!is_string($configId) || $configId === '') {
-            return null;
+            return ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
         }
 
         if (array_key_exists($configId, $configIdCache)) {
@@ -163,35 +201,37 @@ class DataAppOrchestratorTaskMigrator
         try {
             $sibling = $components->getConfiguration(self::LEGACY_COMPONENT_ID, $configId);
         } catch (ClientException $e) {
-            // Referenced config missing/inaccessible - skip just this task rather than aborting
-            // the whole project's migration.
-            return $configIdCache[$configId] = null;
+            // Referenced config missing/inaccessible - skip just this task (flagged as unresolvable,
+            // not "unsupported") rather than aborting the whole project's migration.
+            return $configIdCache[$configId] = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
         }
 
         $siblingConfiguration = is_array($sibling) ? ($sibling['configuration'] ?? null) : null;
-        $resolved = null;
         if (is_array($siblingConfiguration) && is_array($siblingConfiguration['parameters'] ?? null)) {
-            $resolved = $this->extractAppId($siblingConfiguration['parameters']);
+            $result = $this->extractAppId($siblingConfiguration['parameters']);
+        } else {
+            $result = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
         }
 
-        return $configIdCache[$configId] = $resolved;
+        return $configIdCache[$configId] = $result;
     }
 
     /**
      * @param array<mixed, mixed> $parameters
+     * @return array{appId: ?string, reason: ?string}
      */
-    private function extractAppId(array $parameters): ?string
+    private function extractAppId(array $parameters): array
     {
         $id = $parameters['id'] ?? null;
         if (!is_scalar($id)) {
-            return null;
+            return ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
         }
 
         $task = $parameters['task'] ?? null;
         if (!in_array($task, self::SUPPORTED_LEGACY_TASK_VALUES, true)) {
-            return null;
+            return ['appId' => null, 'reason' => self::REASON_UNSUPPORTED_TASK];
         }
 
-        return (string) $id;
+        return ['appId' => (string) $id, 'reason' => null];
     }
 }

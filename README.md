@@ -280,9 +280,15 @@ Behavior:
   references to a saved `keboola.data-apps` configuration).
 - Rewrites matching tasks to `keboola.data-app-control` with `parameters.appId` set from the resolved app ID
   (`configId` references are flattened into inline `configData` rather than creating a new saved configuration).
+- Tasks that reference a `keboola.data-apps` config that couldn't be resolved (missing/inaccessible `configId`
+  reference, or a malformed/non-scalar app id) are reported separately from deliberately-skipped, expected task
+  shapes (e.g. `create`/`delete`/`terminate`) - the former needs manual follow-up, the latter doesn't.
 - With `--force`, updates the configuration via the Storage API with a `changeDescription`. Without it, only reports
   what would be migrated.
-- Prints a summary: projects checked/disabled/errored, configurations scanned/touched, tasks migrated/skipped.
+- Running with `<projects>` set to `all` together with `--force` asks for interactive confirmation first, as a
+  safety net against an accidental stack-wide mutation.
+- Prints a summary: projects checked/disabled/errored, configurations scanned/touched, tasks migrated/skipped
+  (unsupported vs. unresolvable).
 
 ### Mass enablement of dynamic backends for multiple projects
 Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/Enable+Dynamic+Backends#Enable-for-project
