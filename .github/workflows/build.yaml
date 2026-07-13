@@ -25,6 +25,9 @@ jobs:
     - name: Static analysis
       run: docker compose run --rm app composer phpstan
 
+    - name: Run tests
+      run: docker compose run --rm app composer tests
+
     - name: Push
       if: startsWith(github.ref, 'refs/tags/')
       run: |

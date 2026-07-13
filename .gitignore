@@ -8,3 +8,5 @@ composer.phar
 /.env
 /projects.csv
 *.env.json
+/.phpunit.result.cache
+/phpunit.xml

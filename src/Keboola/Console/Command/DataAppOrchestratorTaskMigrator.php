@@ -1,0 +1,237 @@
+<?php
+
+namespace Keboola\Console\Command;
+
+use Keboola\StorageApi\ClientException;
+use Keboola\StorageApi\Components;
+use Keboola\StorageApi\Options\Components\Configuration;
+use Keboola\StorageApi\Options\Components\ListComponentConfigurationsOptions;
+use Symfony\Component\Console\Output\OutputInterface;
+
+class DataAppOrchestratorTaskMigrator
+{
+    // Legacy orchestrations and next-gen conditional flows are two distinct components
+    // (NOT variants of the same one - verified against a live stack) but store tasks in
+    // the same shape, so both need to be scanned for keboola.data-apps references.
+    private const FLOW_COMPONENT_IDS = ['keboola.orchestrator', 'keboola.flow'];
+    private const LEGACY_COMPONENT_ID = 'keboola.data-apps';
+    private const NEW_COMPONENT_ID = 'keboola.data-app-control';
+    private const CHANGE_DESCRIPTION = 'AJDA-2445: migrate keboola.data-apps orchestrator/flow tasks to keboola.data-app-control';
+
+    // Tasks with no explicit "task" param (the common case for flow-triggered data apps) or an
+    // explicit start variant are safe to migrate. Any other value (delete/terminate/restore/...)
+    // is left untouched - those are not used in orchestrations/flows in practice.
+    private const SUPPORTED_LEGACY_TASK_VALUES = [null, 'app-start', 'start'];
+
+    // Distinguishes two very different "can't migrate this task" outcomes: UNSUPPORTED_TASK is a
+    // deliberately-skipped, expected case (e.g. create/delete/terminate - never used in flows in
+    // practice); UNRESOLVABLE means the task looked like it *should* migrate but its app id couldn't
+    // be determined (missing/inaccessible configId reference, malformed parameters) - that's a real
+    // problem that needs human follow-up and must never be hidden inside the "unsupported" count.
+    private const REASON_UNSUPPORTED_TASK = 'unsupported-task';
+    private const REASON_UNRESOLVABLE = 'unresolvable';
+
+    /**
+     * @return array{
+     *     configsScanned: int,
+     *     configsTouched: int,
+     *     tasksMigrated: int,
+     *     tasksSkippedUnsupported: int,
+     *     tasksSkippedUnresolvable: int
+     * }
+     */
+    public function migrateProject(Components $components, OutputInterface $output, string $projectId, bool $isForce): array
+    {
+        $counts = [
+            'configsScanned' => 0,
+            'configsTouched' => 0,
+            'tasksMigrated' => 0,
+            'tasksSkippedUnsupported' => 0,
+            'tasksSkippedUnresolvable' => 0,
+        ];
+        // Keyed by keboola.data-apps configId, resolved {appId, reason} - scoped to a single project
+        // (config IDs are only unique within a project) to avoid refetching the same referenced
+        // config across multiple tasks/configurations.
+        $configIdCache = [];
+
+        foreach (self::FLOW_COMPONENT_IDS as $flowComponentId) {
+            $this->migrateFlowComponentConfigs($components, $output, $projectId, $flowComponentId, $isForce, $counts, $configIdCache);
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param array{
+     *     configsScanned: int,
+     *     configsTouched: int,
+     *     tasksMigrated: int,
+     *     tasksSkippedUnsupported: int,
+     *     tasksSkippedUnresolvable: int
+     * } $counts
+     * @param array<string, array{appId: ?string, reason: ?string}> $configIdCache
+     */
+    private function migrateFlowComponentConfigs(
+        Components $components,
+        OutputInterface $output,
+        string $projectId,
+        string $flowComponentId,
+        bool $isForce,
+        array &$counts,
+        array &$configIdCache
+    ): void {
+        $prefix = $isForce ? 'FORCE: ' : 'DRY-RUN: ';
+
+        $configurations = $components->listComponentConfigurations(
+            (new ListComponentConfigurationsOptions())
+                ->setComponentId($flowComponentId)
+                ->setIsDeleted(false)
+        );
+
+        foreach ($configurations as $configurationData) {
+            $counts['configsScanned']++;
+            $configurationId = (string) $configurationData['id'];
+            $configuration = $configurationData['configuration'];
+
+            if (!isset($configuration['tasks']) || count($configuration['tasks']) === 0) {
+                continue;
+            }
+
+            $tasks = $configuration['tasks'];
+            $configTouched = false;
+
+            foreach ($tasks as $taskKey => $task) {
+                if (($task['task']['componentId'] ?? null) !== self::LEGACY_COMPONENT_ID) {
+                    continue;
+                }
+
+                $taskLabel = sprintf(
+                    'project "%s", %s config "%s" ("%s"), task "%s"',
+                    $projectId,
+                    $flowComponentId,
+                    $configurationId,
+                    $configurationData['name'] ?? '',
+                    $task['name'] ?? ($task['id'] ?? $taskKey)
+                );
+
+                $resolution = $this->resolveAppId($components, $task['task'], $configIdCache);
+                if ($resolution['appId'] === null) {
+                    if ($resolution['reason'] === self::REASON_UNRESOLVABLE) {
+                        $output->writeln(sprintf(
+                            '%sSkipping %s: could not resolve app id (missing/inaccessible config reference or invalid'
+                            . ' id) - needs manual follow-up',
+                            $prefix,
+                            $taskLabel
+                        ));
+                        $counts['tasksSkippedUnresolvable']++;
+                    } else {
+                        $output->writeln(sprintf('%sSkipping %s: unsupported task shape', $prefix, $taskLabel));
+                        $counts['tasksSkippedUnsupported']++;
+                    }
+                    continue;
+                }
+                $appId = $resolution['appId'];
+
+                $output->writeln(sprintf(
+                    '%sMigrating %s: %s -> %s (appId "%s")',
+                    $prefix,
+                    $taskLabel,
+                    self::LEGACY_COMPONENT_ID,
+                    self::NEW_COMPONENT_ID,
+                    $appId
+                ));
+
+                // Keep every other field (type, mode, delay, retry, variableOverrides, ...) untouched -
+                // the keboola.flow schema requires "type" alongside componentId/mode, and dropping it
+                // silently produced an invalid, unreadable task (caught by live verification on canary-orion).
+                //
+                // configData/parameters IS deliberately replaced wholesale (not merged): the target
+                // component's schema only ever accepts a single "appId" parameter, so there is nothing
+                // in the legacy keboola.data-apps parameters (variableValuesId, storage/runtime overrides,
+                // etc.) that keboola.data-app-control understands or would do anything with.
+                $newTask = $task['task'];
+                $newTask['componentId'] = self::NEW_COMPONENT_ID;
+                unset($newTask['configId']);
+                $newTask['configData'] = ['parameters' => ['appId' => $appId]];
+                $tasks[$taskKey]['task'] = $newTask;
+                $configTouched = true;
+                $counts['tasksMigrated']++;
+            }
+
+            if (!$configTouched) {
+                continue;
+            }
+
+            $counts['configsTouched']++;
+            $configuration['tasks'] = $tasks;
+
+            if ($isForce) {
+                $components->updateConfiguration(
+                    (new Configuration())
+                        ->setComponentId($flowComponentId)
+                        ->setConfigurationId($configurationId)
+                        ->setConfiguration($configuration)
+                        ->setChangeDescription(self::CHANGE_DESCRIPTION)
+                );
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $legacyTask
+     * @param array<string, array{appId: ?string, reason: ?string}> $configIdCache
+     * @return array{appId: ?string, reason: ?string}
+     */
+    private function resolveAppId(Components $components, array $legacyTask, array &$configIdCache): array
+    {
+        $configData = $legacyTask['configData'] ?? null;
+        if (is_array($configData) && is_array($configData['parameters'] ?? null)) {
+            return $this->extractAppId($configData['parameters']);
+        }
+
+        $configId = $legacyTask['configId'] ?? null;
+        if (!is_string($configId) || $configId === '') {
+            return ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
+        }
+
+        if (array_key_exists($configId, $configIdCache)) {
+            return $configIdCache[$configId];
+        }
+
+        try {
+            $sibling = $components->getConfiguration(self::LEGACY_COMPONENT_ID, $configId);
+        } catch (ClientException $e) {
+            // Referenced config missing/inaccessible - skip just this task (flagged as unresolvable,
+            // not "unsupported") rather than aborting the whole project's migration.
+            return $configIdCache[$configId] = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
+        }
+
+        $siblingConfiguration = is_array($sibling) ? ($sibling['configuration'] ?? null) : null;
+        if (is_array($siblingConfiguration) && is_array($siblingConfiguration['parameters'] ?? null)) {
+            $result = $this->extractAppId($siblingConfiguration['parameters']);
+        } else {
+            $result = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
+        }
+
+        return $configIdCache[$configId] = $result;
+    }
+
+    /**
+     * @param array<mixed, mixed> $parameters
+     * @return array{appId: ?string, reason: ?string}
+     */
+    private function extractAppId(array $parameters): array
+    {
+        $id = $parameters['id'] ?? null;
+        if (!is_scalar($id)) {
+            return ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
+        }
+
+        $task = $parameters['task'] ?? null;
+        if (!in_array($task, self::SUPPORTED_LEGACY_TASK_VALUES, true)) {
+            return ['appId' => null, 'reason' => self::REASON_UNSUPPORTED_TASK];
+        }
+
+        return ['appId' => (string) $id, 'reason' => null];
+    }
+}
