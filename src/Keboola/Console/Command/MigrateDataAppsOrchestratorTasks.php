@@ -133,7 +133,18 @@ class MigrateDataAppsOrchestratorTasks extends Command
             $organizations = $manageClient->listMaintainerOrganizations($maintainer['id']);
             foreach ($organizations as $organization) {
                 $this->orgsChecked++;
-                $projects = $manageClient->listOrganizationProjects($organization['id']);
+                try {
+                    $projects = $manageClient->listOrganizationProjects($organization['id']);
+                } catch (ManageClientException $e) {
+                    // The Manage token may not have access to every organization on the stack (e.g. it
+                    // isn't a member/admin there) - skip it rather than aborting the whole stack-wide run.
+                    $output->writeln(sprintf(
+                        ' - error while listing projects for organization "%s": %s',
+                        $organization['id'],
+                        $e->getMessage()
+                    ));
+                    continue;
+                }
                 foreach ($projects as $project) {
                     $this->migrateProject($manageClient, $output, $url, (string) $project['id'], $force);
                 }
