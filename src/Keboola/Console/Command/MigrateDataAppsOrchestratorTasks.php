@@ -185,6 +185,10 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 'canManageBuckets' => false,
                 'canManageTokens' => false,
                 'expiresIn' => 300,
+                // Without an explicit grant, projects that restrict component access by default
+                // return 403 "You don't have access to the resource." when listing configurations
+                // for these components - verified live against a North Europe project (AJDA-3010).
+                'componentAccess' => ['keboola.orchestrator', 'keboola.flow', 'keboola.data-apps'],
             ]);
 
             $components = new Components(new StorageClient([
