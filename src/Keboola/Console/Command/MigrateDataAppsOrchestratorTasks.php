@@ -138,6 +138,11 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 } catch (ManageClientException $e) {
                     // The Manage token may not have access to every organization on the stack (e.g. it
                     // isn't a member/admin there) - skip it rather than aborting the whole stack-wide run.
+                    // Only skip on authorization errors though: transient/server-side failures (429/5xx)
+                    // must not be silently swallowed, since that would under-report the migration scope.
+                    if (!in_array($e->getCode(), [401, 403], true)) {
+                        throw $e;
+                    }
                     $output->writeln(sprintf(
                         ' - error while listing projects for organization "%s": %s',
                         $organization['id'],
