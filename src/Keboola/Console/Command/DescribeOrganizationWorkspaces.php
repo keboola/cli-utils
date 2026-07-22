@@ -8,10 +8,12 @@ use Keboola\StorageApi\BranchAwareClient;
 use Keboola\StorageApi\Client as StorageApiClient;
 use Keboola\StorageApi\DevBranches;
 use Keboola\StorageApi\Tokens;
+use Keboola\StorageApi\WorkspaceLoginType;
 use Keboola\StorageApi\Workspaces;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -42,6 +44,12 @@ class DescribeOrganizationWorkspaces extends Command
                 InputArgument::OPTIONAL,
                 'Keboola Connection Hostname Suffix',
                 'keboola.com'
+            )
+            ->addOption(
+                'legacy-only',
+                null,
+                InputOption::VALUE_NONE,
+                'Output only legacy_service workspaces (loginType "default" or "snowflake-legacy-service", i.e. internal login_type 0)'
             );
     }
 
@@ -58,6 +66,7 @@ class DescribeOrganizationWorkspaces extends Command
         $hostnameSuffix = $input->getArgument('hostnameSuffix');
         assert(is_string($hostnameSuffix));
         assert($hostnameSuffix !== '');
+        $legacyOnly = (bool) $input->getOption('legacy-only');
         $serviceClient = new ServiceClient($hostnameSuffix);
         $connectionUrl = $serviceClient->getConnectionServiceUrl();
         $manageClient = new Client(['token' => $manageToken, 'url' => $connectionUrl]);
@@ -84,7 +93,8 @@ class DescribeOrganizationWorkspaces extends Command
             'activeUser',
             'createdDate',
             'snowflakeSchema',
-            'readOnlyStorageAccess'
+            'readOnlyStorageAccess',
+            'loginType'
         ]);
 
         foreach ($projects as $project) {
@@ -130,6 +140,10 @@ class DescribeOrganizationWorkspaces extends Command
                 $workspaceList = $workspacesClient->listWorkspaces();
                 $output->writeln('Found ' . count($workspaceList) . ' workspaces in branch ' . $branch['name']);
                 foreach ($workspaceList as $workspace) {
+                    $loginType = $workspace['connection']['loginType'] ?? '';
+                    if ($legacyOnly && WorkspaceLoginType::tryFrom($loginType)?->isPasswordLogin() !== true) {
+                        continue;
+                    }
                     $userInProject = count(array_filter($projectUsers, function ($user) use ($workspace) {
                         return $user['email'] === $workspace['creatorToken']['description'];
                     }));
@@ -144,7 +158,8 @@ class DescribeOrganizationWorkspaces extends Command
                         $userInProject > 0 ? 'true' : 'false',
                         $workspace['created'],
                         $workspace['name'],
-                        $workspace['readOnlyStorageAccess']
+                        $workspace['readOnlyStorageAccess'],
+                        $loginType
                     ];
                     $csvFile->writeRow($row);
                     $totalProjectWorkspaces ++;
