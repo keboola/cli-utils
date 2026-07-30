@@ -103,120 +103,224 @@ You can add a project feature to all the project templates available on the stac
 
 ## Workspaces and sandboxes
 
-### Delete Orphaned Workspaces command
-This command can be used to delete all the workspaces in a project that were made for componentIds in the `component-list` argument
-and that were created before the `until-date` argument.
-The usecase for this command is to remove workspaces not cleaned after transformation failures.
-It will perform a dry run unleass the `--force/-f` option is applied.
+### Read this before deleting anything
 
-- Create a Storage token
+A component-created workspace has three separate things attached to it:
 
-- Run the command
-    ```
-    php ./cli.php storage:delete-orphaned-workspaces [--force/-f] <storage-token> <component-list> <untile-date> <hostname-suffix> 
-    ```
+1. the **workspace record** in Storage metadata,
+2. the **backend user / schema** (e.g. the Snowflake user and its schema), and
+3. the **parent component configuration** that created it.
 
-### Delete Orphaned Workspaces in Organization command
-This command can be used to delete all workspace in an organization that were made for componentIds in the `component` argument
-and that were created before the `until-date` argument.
+Deleting the workspace (`deleteWorkspace`) removes 1 and 2 and leaves the configuration alone.
+Deleting the **configuration** (delete twice = move to trash, then purge) cascades and takes its
+workspaces with it. Which of the two a command does is the single most important thing about it:
 
-The usecase for this command is to remove workspaces that were not cleaned after transformation failures.
-It will perform a dry run unleass the `--force/-f` option is applied.
+- For sandbox-type components (`keboola.sandboxes`) the configuration **is** the sandbox, so
+  deleting it is the correct cleanup.
+- For transformation components (`keboola.snowflake-transformation` and friends) the configuration
+  is **the user's transformation code**. Deleting it destroys user work, not a leaked resource.
 
-- Create a Storage token
+Every command in this section is dry-run by default and needs `--force`/`-f` to change anything.
+Always read the dry-run output first, and check the "Destroys" line below before you pass `-f`.
 
-- Run the command
-    ```
-    php ./cli.php manage:delete-organization-workspaces [--force/-f] <manage-token> <organization-id> <component> <untile-date> <hostname-suffix> 
-    ```
+There is also a fourth state worth naming, because it needs its own tool: the workspace record can
+already be gone from Storage metadata while the **backend user survives** (a failed or half-finished
+delete). Nothing that works through workspaces or editor sessions can see those - see
+`--ignore-backend-errors` on `storage:delete-orphaned-workspaces`.
+
+### Which command should I use?
+
+| What you have / want to do | Command |
+| --- | --- |
+| Just **see what is there**, as a CSV report | `manage:describe-organization-workspaces` |
+| Leaked workspaces of **one component, older than a cutoff**, in one project | `storage:delete-orphaned-workspaces` |
+| The same, across **whole organizations** | `manage:delete-organization-workspaces` |
+| Workspaces whose **owner is no longer in the project**, in one project | `storage:delete-ownerless-workspaces` |
+| The same, across a **whole organization** | `manage:delete-organization-ownerless-workspaces` |
+| An **explicit CSV list** of `projectId,WORKSPACE_schema` | `manage:mass-delete-project-workspaces` |
+| Workspace already gone from metadata but the **backend user survives** | `storage:delete-orphaned-workspaces --ignore-backend-errors` |
+
+Rules of thumb:
+
+- **Start with `manage:describe-organization-workspaces`.** It is read-only and reports component,
+  creator and creation date per workspace, which is what you need in order to pick the right command
+  and the right filter below.
+- The two `*-orphaned-*` commands and the two `*-ownerless-*` commands are each **the same selection
+  logic at two different scopes** (single project vs. organization). Pick by scope; the behaviour is
+  otherwise the same.
+- "Orphaned" is a misnomer inherited from the command name: those commands do **not** detect whether
+  anything is actually orphaned. They select purely by *component + age*. You are responsible for
+  choosing a component where that is a safe proxy.
+- `manage:mass-delete-project-workspaces` resolves your schemas through **editor sessions**, so it
+  cannot find a workspace that has no session. Its "not found" list is the important part of its
+  output, not an afterthought.
 
 ### Describe Connection Workspaces for an organization
-This command takes an output file argument and writes out a csv describing all connection workspaces in an organisation.
-The output file has header:
+Read-only. Writes a CSV describing all Connection workspaces in an organization, across all dev
+branches of every project. Use it to decide what to delete and with which command.
+
 ```
-'projectId',
-'projectName',
-'branchId',
-'branchName',
-'componentId',
-'configurationId',
-'creatorEmail',
-'createdDate',
-'snowflakeSchema',
-'readOnlyStorageAccess'
+php ./cli.php manage:describe-organization-workspaces <manage-token> <organization-id> <output-file> [<hostname-suffix>]
 ```
 Arguments:
-- Manage Token *required*
-- Organisation Id *required*
-- Output File *required*
-- Hostname suffix *optional* (default: keboola.com)
+- manage-token (required) Manage API token.
+- organization-id (required) Target organization ID.
+- output-file (required) Path of the CSV to write.
+- hostname-suffix (optional, default: keboola.com) Connection host suffix (e.g. eu-central-1.keboola.com).
 
-- Run the command
-    ```
-    php ./cli.php manage:describe-organization-workspaces <manage-token> <organization-id> <output-file> <hostname-suffix> 
-    ```
+Destroys: nothing, this command is read-only.
 
-### Delete Sandboxes/Workspaces that were created by no longer active token id
-This command can be used to delete all sandboxes and workspaces in a project that were created with a token that is no longer active in the project.
-To also delete shared workspaces created by inactive tokens use the `--includeShared` option.
-It will perform a dry run unleass the `--force/-f` option is applied.
+The output CSV has the header:
+```
+projectId,projectName,branchId,branchName,componentId,configurationId,creatorEmail,activeUser,createdDate,snowflakeSchema,readOnlyStorageAccess
+```
+`activeUser` is `true` when the workspace's creator email still matches a current user of the project,
+which is the same signal the `*-ownerless-*` commands act on.
 
+### Delete Orphaned Workspaces command
+Deletes workspaces of **one component** that were created **before a cutoff date**, in a single
+project, across all its dev branches. The intended use case is workspaces left behind by failed
+transformation jobs.
+
+```
+php ./cli.php storage:delete-orphaned-workspaces [-f|--force] [-i|--ignore-backend-errors] [-m|--manage-token=TOKEN] <storage-token> <orphan-component> [<hostname-suffix>] [<until-date>]
+```
 Arguments:
-- Storage Token *required*
-- Hostname suffix *optional* (default: keboola.com)
+- storage-token (required) Storage API token for the target project.
+- orphan-component (required) A **single** component ID matched exactly (e.g. `keboola.snowflake-transformation`). Pass `""` to match workspaces with an empty/blank component.
+- hostname-suffix (optional, default: keboola.com) Connection host suffix.
+- until-date (optional, default: `-1 month`) Cutoff as a `strtotime` expression; only workspaces created **before** it are selected.
+
+Note the argument order: `hostname-suffix` comes **before** `until-date`.
 
 Options:
-- `--force/-f`
-- `--includeShared`
+- `--force` / `-f` Actually delete. Without it only reports.
+- `--ignore-backend-errors` / `-i` Instead of deleting each workspace through the Storage API, collect the matched workspace IDs and drop them via the Manage API command `storage:workspace:drop-failed-workspaces-from-metadata`. Requires `--manage-token`. Use this for workspaces whose backend user survived a failed delete. This **replaces** the normal per-workspace delete, it is not additive.
+- `--manage-token` / `-m` Super-admin Manage API token, required by `--ignore-backend-errors`.
 
-- Run the command
-    ```
-    php ./cli.php storage:delete-ownerless-workspaces [--force/-f] [--includeShared] <storage-token> <hostname-suffix> 
-    ```
-### Delete all sandboxes in a project
-Bulk delete all sandboxes in a project (and their underlying storage workspaces). Dry-run by default.
-
-```
-php cli.php storage:delete-project-sandboxes [--force/-f] [--includeShared] <storageToken> [<hostnameSuffix>]
-```
-Arguments:
-- storageToken (required) Storage API token for the target project.
-- hostnameSuffix (optional, default: keboola.com) Connection host suffix (e.g. eu-central-1.keboola.com).
-
-Options:
-- --force / -f     Actually perform deletions. Without it the command just lists what would be deleted.
-- --includeShared  Include shared sandboxes; by default shared ones are skipped.
+Destroys: the **workspace only**. The parent configuration is left untouched.
 
 Behavior:
-- Lists all sandboxes via Sandboxes API.
-- (Unless --includeShared) skips those marked shared.
-- For DB-type sandboxes deletes associated Storage workspace (physicalId or staging workspace) first, then deletes sandbox.
-- Prints summary: X sandboxes deleted and Y storage workspaces deleted.
+- Iterates all dev branches of the project and lists workspaces in each.
+- Selects a workspace when `component` equals `orphan-component` **and** `created` is before `until-date`.
+- Prints every workspace it skips together with the reason, so a dry run is auditable.
+- Reports how many of the total workspaces found were deleted.
 
-### Delete multiple project workspaces access projects
-Delete specific Snowflake sandboxes and storage workspaces across multiple projects by workspace schema names.
+### Delete Orphaned Workspaces in Organization command
+The organization-scoped counterpart of `storage:delete-orphaned-workspaces`: same component + age
+selection, but it walks every project of one or more organizations and mints its own short-lived
+Storage token per project from a Manage token.
+
+```
+php ./cli.php manage:delete-organization-workspaces [-f|--force] [-c|--component=ID] [-g|--component-group=NAME] [-d|--until-date=DATE] [-H|--hostname-suffix=SUFFIX] <manage-token> <organization-ids>
+```
+Arguments:
+- manage-token (required) Manage API token.
+- organization-ids (required) **Comma-separated** list of organization IDs (e.g. `123,456`).
+
+Options:
+- `--force` / `-f` Actually delete. Without it only reports.
+- `--component` / `-c` A single component ID matched exactly, or `""` for empty/blank components.
+- `--component-group` / `-g` A predefined group instead of a single component. Available: `transformations` (`keboola.snowflake-transformation`, `keboola.legacy-transformation`, `transformation`).
+- `--until-date` / `-d` (default `-1 month`) Cutoff as a `strtotime` expression; only workspaces created before it are selected.
+- `--hostname-suffix` / `-H` (default `keboola.com`) Connection host suffix.
+
+Exactly one of `--component` / `--component-group` is required; passing both is an error.
+Note that unlike the project-scoped variant, the component, cutoff and host suffix are **options,
+not positional arguments**.
+
+Destroys: the **workspace only**. The parent configuration is left untouched.
+
+Behavior:
+- For each organization, lists its projects and creates a temporary Storage token per project
+  (skipping projects the token cannot access, with a warning).
+- Iterates all dev branches per project and applies the same selection as the project-scoped command.
+- Prints per-project, per-organization and final summaries, including a breakdown of skipped
+  workspaces by component.
+
+### Delete Sandboxes/Workspaces that were created by no longer active token id
+Deletes sandboxes and workspaces in a project whose **owner is no longer an active user of the
+project**. Use it after people leave a project or an organization.
+
+```
+php ./cli.php storage:delete-ownerless-workspaces [-f|--force] [--includeShared] <storage-token> [<hostname-suffix>]
+```
+Arguments:
+- storage-token (required) Storage API token for the target project.
+- hostname-suffix (optional, default: keboola.com) Connection host suffix.
+
+Options:
+- `--force` / `-f` Actually delete. Without it only reports.
+- `--includeShared` Also delete shared sessions and shared sandbox configurations. Skipped by default.
+
+Destroys: the **parent configuration** (trash + purge), which cascades to its workspace and backend
+user. This is the correct behaviour for sandboxes, where the configuration is the sandbox itself.
+
+Behavior:
+- Lists the project's tokens to build the set of active user IDs and active token IDs.
+- **SQL sessions:** lists editor-service sessions and selects those whose `userId` is not an active
+  user. Deletes the session's configuration twice (trash, then purge). If the purge is refused with
+  `storage.components.cannotDeleteConfiguration`, deletes the editor session instead.
+- **Python/R sandboxes:** lists apps from the sandboxes service and selects those whose
+  `keboola.sandboxes` configuration was created by a token that is no longer active. Queues a
+  `keboola.sandboxes` delete job for each; if queueing fails it falls back to deleting the app
+  directly and then purging its configuration, so nothing is left half-deleted.
+- Note the asymmetry: sessions are matched by **user ID** (stable), sandbox configurations by
+  **creator token ID**, which is re-issued whenever a user leaves and rejoins a project. A user who
+  left and came back keeps their SQL sessions but loses their old Python/R sandboxes.
+
+### Delete ownerless Sandboxes/Workspaces across an organization
+The organization-scoped counterpart of `storage:delete-ownerless-workspaces`. The selection and
+deletion logic is identical; this variant iterates every project of one organization and mints its
+own short-lived Storage token per project, and prints a per-project summary at the end.
+
+```
+php ./cli.php manage:delete-organization-ownerless-workspaces [-f|--force] [--includeShared] <manage-token> <organization-id> [<hostname-suffix>]
+```
+Arguments:
+- manage-token (required) Manage API token.
+- organization-id (required) A **single** numeric organization ID.
+- hostname-suffix (optional, default: keboola.com) Connection host suffix.
+
+Options:
+- `--force` / `-f` Actually delete. Without it only reports.
+- `--includeShared` Also delete shared sessions and shared sandbox configurations. Skipped by default.
+
+Destroys: the same as the project-scoped variant - the **parent configuration** (trash + purge),
+cascading to its workspace and backend user.
+
+### Delete multiple project workspaces across projects
+Deletes workspaces listed explicitly in a CSV, across multiple projects, matched by **workspace
+schema name**.
 
 ```
 php cli.php manage:mass-delete-project-workspaces [-f|--force] <stack-suffix> <source-file>
 ```
 Arguments:
-- stack-suffix (required) Stack host suffix (e.g. keboola.com, eu-central-1.keboola.com).
-- source-file (required) CSV without header, two columns per line: <projectId>,<WORKSPACE_schema>. Example:
+- stack-suffix (required) Stack host suffix (e.g. `keboola.com`, `eu-central-1.keboola.com`).
+- source-file (required) CSV **without header**, exactly two columns per line: `<projectId>,<WORKSPACE_schema>`. Example:
   ```
   12345,WORKSPACE_111111111
   98765,WORKSPACE_222222222
   ```
 
 Options:
-- --force / -f  Create and wait for delete jobs and actually delete matching storage workspaces. Without it the command only reports (dry-run).
+- `--force` / `-f` Actually delete. Without it only reports.
+
+Destroys: the **parent configuration** (trash + purge), which cascades to its workspace and backend
+user. It does not call `deleteWorkspace` at all.
 
 Behavior:
-- Builds a map of projectId => list of workspace schemas to delete; validates schema names start with WORKSPACE_.
-- For each project it interactively prompts (STDIN) for that project's STORAGE token (one-by-one) so tokens aren't stored in file.
-- Enumerates all dev branches, lists sandboxes per branch, matches schemas, and (force) queues delete jobs (via queue API) for sandboxes; waits until the jobs finish.
-- Then enumerates Storage workspaces per branch and deletes any whose schema is still pending.
-- Any schemas not found are printed for manual follow-up.
-- Currently targeted at Snowflake (SNFLK) workspaces only.
+- Builds a `projectId => [schemas]` map and validates that every schema starts with `WORKSPACE_`.
+- For each project it **prompts interactively on STDIN** for that project's Storage token, so tokens
+  are never kept in a file. This makes the command unsuitable for large unattended batches.
+- Resolves each schema through the project's **editor-service sessions**, then deletes the matching
+  session's configuration twice (trash, then purge), tolerating
+  `storage.components.cannotDeleteConfiguration` on the purge.
+- Because the lookup goes through editor sessions, **any workspace without a session cannot be
+  found**. Those schemas are printed at the end as "not found (are deleted or need to be deleted
+  manually)" - read that list, it is where the real leftovers end up.
+- Targeted at Snowflake (SNFLK) workspaces.
 
 ## Project manipulation
 
