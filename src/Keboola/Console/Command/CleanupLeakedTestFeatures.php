@@ -20,6 +20,12 @@ class CleanupLeakedTestFeatures extends Command
         'second-feature-',      // ProjectsTest
     ];
 
+    // declarative features synced from kbc-stacks apps/connection/features.yaml - never delete
+    private const EXCLUDED_NAMES = [
+        'test-feature-exclude',
+        'test-feature-override',
+    ];
+
     private const LIST_SAMPLE_SIZE = 30;
     private const PROGRESS_EVERY = 100;
 
@@ -63,6 +69,9 @@ class CleanupLeakedTestFeatures extends Command
             $features = $client->listFeatures(['type' => $type]);
             $matchedForType = 0;
             foreach ($features as $feature) {
+                if (in_array((string) $feature['name'], self::EXCLUDED_NAMES, true)) {
+                    continue;
+                }
                 foreach (self::LEAKED_NAME_PREFIXES as $prefix) {
                     if (strpos((string) $feature['name'], $prefix) === 0) {
                         $matched[] = $feature;
