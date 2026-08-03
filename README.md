@@ -132,19 +132,28 @@ delete). Nothing that works through workspaces or editor sessions can see those 
 
 | What you have / want to do | Command |
 | --- | --- |
-| Just **see what is there**, as a CSV report | `manage:describe-organization-workspaces` |
+| Just **see what is there** in an organization, as a CSV report | `manage:describe-organization-workspaces` |
+| A list of workspaces and you want **what state each one is in** | `manage:check-project-workspaces-state` |
+| An **explicit list of workspace IDs** to delete, with safety guards | `manage:delete-project-workspaces-by-id` |
 | Leaked workspaces of **one component, older than a cutoff**, in one project | `storage:delete-orphaned-workspaces` |
 | The same, across **whole organizations** | `manage:delete-organization-workspaces` |
 | Workspaces whose **owner is no longer in the project**, in one project | `storage:delete-ownerless-workspaces` |
 | The same, across a **whole organization** | `manage:delete-organization-ownerless-workspaces` |
-| An **explicit CSV list** of `projectId,WORKSPACE_schema` | `manage:mass-delete-project-workspaces` |
+| An explicit CSV list of `projectId,WORKSPACE_schema` (legacy) | `manage:mass-delete-project-workspaces` |
 | Workspace already gone from metadata but the **backend user survives** | `storage:delete-orphaned-workspaces --ignore-backend-errors` |
 
 Rules of thumb:
 
-- **Start with `manage:describe-organization-workspaces`.** It is read-only and reports component,
-  creator and creation date per workspace, which is what you need in order to pick the right command
-  and the right filter below.
+- **Start with a read-only command.** Use `manage:describe-organization-workspaces` when you want to
+  survey a whole organization, and `manage:check-project-workspaces-state` when you already have a
+  list of workspaces and need to know what is still live. Both report the component, creator and
+  state you need in order to pick the right command and the right filter below.
+- **Prefer `manage:delete-project-workspaces-by-id` when you have a concrete list.** It is the only
+  deletion command with layered guards (login type, expected schema, and a check that a configuration
+  owns exactly the one workspace you named), and it deletes the workspace without touching the
+  configuration unless you explicitly ask. `manage:mass-delete-project-workspaces` predates it, needs
+  an interactively pasted token per project, and always purges the configuration - prefer the by-id
+  command unless you specifically need schema-based matching.
 - The two `*-orphaned-*` commands and the two `*-ownerless-*` commands are each **the same selection
   logic at two different scopes** (single project vs. organization). Pick by scope; the behaviour is
   otherwise the same.
@@ -176,6 +185,91 @@ projectId,projectName,branchId,branchName,componentId,configurationId,creatorEma
 ```
 `activeUser` is `true` when the workspace's creator email still matches a current user of the project,
 which is the same signal the `*-ownerless-*` commands act on.
+
+### Check the state of a list of workspaces
+Read-only. Takes a list of workspaces you already care about (typically left over from an earlier
+cleanup) and reports, per row, whether the workspace is still live, whether its configuration is
+live / in the trash / gone, and when its configuration last ran a job. Each row gets a suggested
+follow-up command, so this is the triage step before any of the deletion commands.
+
+```
+php ./cli.php manage:check-project-workspaces-state <manage-token> <source-file> <output-file> [<hostname-suffix>]
+```
+Arguments:
+- manage-token (required) Manage API token (super admin); used to mint a short-lived Storage token per project.
+- source-file (required) CSV **without header**, either two or four columns per line: `projectId,workspaceSchema` or `projectId,workspaceSchema,componentId,configurationId`. Schemas must start with `WORKSPACE_`.
+- output-file (required) Path of the CSV report to write.
+- hostname-suffix (optional, default: keboola.com) Connection host suffix.
+
+Destroys: nothing, this command is read-only.
+
+Each row is classified as one of:
+
+| status | meaning | suggested follow-up |
+| --- | --- | --- |
+| `live` | the workspace still exists | `manage:delete-project-workspaces-by-id` |
+| `config_in_trash` | configuration sits in the trash, so its workspace and backend user still exist | purge the configuration from the trash |
+| `config_live_workspace_gone` | configuration is live but this workspace is not - backend user likely orphaned | investigate |
+| `purged_or_orphan` | neither workspace nor configuration found; a backend user may survive | drop the backend user (`storage:workspace:drop-failed-workspaces-from-metadata`) |
+| `not_live_no_config_ref` | not live and no component/configuration reference to check against | investigate |
+| `access_denied` | the manage token cannot reach the project | grant access and re-run |
+
+The output CSV header is:
+```
+projectId,workspaceSchema,componentId,configurationId,status,suggestedAction,workspaceId,branchId,branchName,loginType,liveComponentId,liveConfigurationId,configState,configName,configCreated,configCreator,lastJobStatus,lastJobCreated,lastJobEnd,note
+```
+
+Behavior:
+- Groups the input by project and mints one short-lived Storage token per project.
+- Indexes live workspaces by schema across **all** dev branches, then lists live and trashed
+  configurations of every referenced component, **per branch**. Branches hold independent copies of a
+  configuration under the same id, so the states are deliberately not merged across branches - a
+  configuration live in one branch and trashed in another is reported in the workspace's own branch,
+  and the other branches go into the `note` column.
+- Looks up the most recent job of each configuration through the Queue API and reports it in the
+  `lastJob*` columns, which is usually the deciding signal for whether a configuration is still in
+  use. It first runs a sanity query for *any* job in the project and warns when that comes back
+  empty, so that blank `lastJob*` columns are not misread as "never used".
+- Prints a per-status summary at the end.
+
+### Delete specific workspaces by ID
+Deletes individual workspaces named explicitly by ID, across multiple projects. This is the
+list-driven deletion command to reach for: it does not guess, and it refuses anything that does not
+match what you described.
+
+```
+php ./cli.php manage:delete-project-workspaces-by-id [-f|--force] [--any-login-type] [--with-configuration] <manage-token> <source-file> [<hostname-suffix>]
+```
+Arguments:
+- manage-token (required) Manage API token (super admin); used to mint a short-lived Storage token per project.
+- source-file (required) CSV **without header**, two or three columns per line: `projectId,workspaceId[,expectedSchema]`. When `expectedSchema` is present the workspace's actual schema must match it or the row is skipped.
+- hostname-suffix (optional, default: keboola.com) Connection host suffix.
+
+Options:
+- `--force` / `-f` Actually delete. Without it only reports.
+- `--any-login-type` Also delete workspaces that do not use password login (key-pair etc.). **Use with care** - by default only password-login (`LEGACY_SERVICE`) workspaces are touched.
+- `--with-configuration` Delete the whole parent configuration (trash + purge) instead of just the workspace. Refuses any configuration that owns a workspace other than the one you listed.
+
+Destroys: the **workspace only** by default. With `--with-configuration` the parent configuration and
+therefore everything it owns.
+
+Behavior:
+- Indexes every workspace of each project across all dev branches by workspace ID, and reports rows
+  it cannot find rather than failing silently.
+- Skips, with a message and its own counter, any row whose schema does not match `expectedSchema`,
+  or whose login type is not a password login unless `--any-login-type` is given.
+- With `--with-configuration` it first determines whether the configuration is live or already in the
+  trash, because that decides whether it needs one delete call (purge) or two (trash, then purge).
+  A live configuration is checked against the API's own list of its workspaces; a trashed one, whose
+  workspaces can no longer be listed, is checked against the project's live workspaces that still
+  reference it. Either way the configuration must own **exactly** the one workspace you listed.
+- A configuration that is neither live nor in the trash is reported as an orphaned workspace and
+  skipped, with a hint to delete it without `--with-configuration`.
+- If a purge is refused with `storage.components.cannotDeleteConfiguration`, that row is reported as
+  **failed**, not deleted: the configuration is probably still in the trash and its workspace and
+  backend user still exist, so it needs a re-check and a re-run.
+- Prints a final summary counting deletions, failures, not-found rows and each skip reason
+  separately.
 
 ### Delete Orphaned Workspaces command
 Deletes workspaces of **one component** that were created **before a cutoff date**, in a single
