@@ -234,6 +234,28 @@ cat data.csv |  php cli.php storage:notify-projects MANAGETOKEN
 ```
 
 
+### List external buckets on a stack
+Read-only. Walks every project on the stack and prints a CSV of all external buckets (buckets with
+`hasExternalSchema`), including whether each one is read-only, whether it is linked from elsewhere,
+and whether it has `KBC.description` metadata set.
+
+```
+php cli.php manage:list-external-buckets <manage-token> [<hostname-suffix>]
+```
+Arguments:
+- manage-token (required) Manage API token (super admin); used to create short-lived project Storage tokens.
+- hostname-suffix (optional, default: keboola.com) Connection host suffix (e.g. eu-central-1.keboola.com).
+
+Behavior:
+- Iterates maintainers -> organizations -> projects, de-duplicating projects that appear more than once.
+- Creates a 15-minute Storage token per project and always drops it afterwards, including when
+  listing fails.
+- Projects the token cannot reach are reported as comment lines and counted as skipped, so the run
+  continues over the rest of the stack.
+- Writes CSV to stdout with the header
+  `projectId,projectName,bucketId,created,isReadOnly,linked,hasDescription,description`, so it can be
+  redirected straight to a file. Progress and summary lines are prefixed with `#`.
+
 ### Force Unlink Shared and Linked Buckets
 
 List all buckets in the project and force-unlink those that are both shared and linked. By default, the command runs in dry-run mode and only reports what would be unlinked. Use the `--force` flag to actually perform the unlinking.
