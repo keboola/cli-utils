@@ -5,7 +5,6 @@ namespace Keboola\Console\Command;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\JobData;
 use Keboola\ManageApi\Client;
-use Keboola\SandboxesServiceApiClient\ApiClientConfiguration;
 use Keboola\SandboxesServiceApiClient\Apps\AppsApiClient;
 use Keboola\ServiceClient\ServiceClient;
 use Keboola\StorageApi\BranchAwareClient;
@@ -194,11 +193,11 @@ class DeleteOrganizationOwnerlessWorkspaces extends Command
             // Handle Python/R sandboxes via sandbox-service.
             // Configs are bound to creatorToken.id, not userId: a user who leaves and rejoins gets a new token,
             // so their old sandbox configs are reaped here even if the user is back — intentional, matches original behavior.
-            $appsClient = new AppsApiClient(new ApiClientConfiguration(
+            $appsClient = new AppsApiClient(
                 baseUrl: $serviceClient->getSandboxesServiceUrl(),
                 storageToken: $storageToken['token'],
                 userAgent: 'Keboola CLI Utils',
-            ));
+            );
 
             $storageComponents = new Components($storageClient);
             $sandboxConfigMap = [];
