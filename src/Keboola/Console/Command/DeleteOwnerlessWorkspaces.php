@@ -128,7 +128,13 @@ class DeleteOwnerlessWorkspaces extends Command
                     $components->deleteConfiguration($componentId, $configurationId);
                     $components->deleteConfiguration($componentId, $configurationId);
                 } catch (StorageClientException $e) {
-                    if ($e->getStringCode() !== 'storage.components.cannotDeleteConfiguration') {
+                    // The configuration may already be gone (notFound) or refuse permanent
+                    // deletion (cannotDeleteConfiguration). Either way its editor session can
+                    // still linger, so clean it up and continue instead of aborting the run.
+                    if (!in_array($e->getStringCode(), [
+                        'storage.configuration.notFound',
+                        'storage.components.cannotDeleteConfiguration',
+                    ], true)) {
                         throw $e;
                     }
                     $editorClient->deleteSession($sessionId);
@@ -209,7 +215,12 @@ class DeleteOwnerlessWorkspaces extends Command
                         $storageComponents->deleteConfiguration('keboola.sandboxes', $app->getConfigId());
                         $storageComponents->deleteConfiguration('keboola.sandboxes', $app->getConfigId());
                     } catch (StorageClientException $e) {
-                        if ($e->getStringCode() !== 'storage.components.cannotDeleteConfiguration') {
+                        // Already trashed/purged (notFound) or unpurgeable
+                        // (cannotDeleteConfiguration) — nothing left to do here.
+                        if (!in_array($e->getStringCode(), [
+                            'storage.configuration.notFound',
+                            'storage.components.cannotDeleteConfiguration',
+                        ], true)) {
                             throw $e;
                         }
                     }
