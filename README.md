@@ -488,6 +488,54 @@ Behavior:
 - Prints a summary: projects checked/disabled/errored, configurations scanned/touched, tasks migrated/skipped
   (unsupported vs. unresolvable).
 
+### Migrate keboola.orchestrator configurations to keboola.flow
+Batch driver for the automated `keboola.orchestrator` → `keboola.flow` migration
+(see [AJDA-3117](https://linear.app/keboola/issue/AJDA-3117)). All migration logic lives in the
+`keboola.flow-migration-tool` component; this command only creates one migration job per project
+and supervises the batch. Safe to re-run with the same list: already-migrated orchestrations are
+reported as skipped by the component, and projects with a live migration job are skipped here.
+
+```
+php cli.php manage:migrate-orchestrations-to-flow [-f|--force] <token> <url> [<projects>] \
+    [--projects-file=PATH] [--concurrency=10] [--poll-interval=5] [--report=PATH]
+```
+
+Arguments:
+- `token` (required): Manage API token.
+- `url` (required): Stack URL, including `https://` (e.g. `https://connection.north-europe.azure.keboola.com`).
+- `projects` (optional): Comma-separated project IDs (e.g. `1,7,146`), or `@path/to/file` with one ID
+  per line (blank lines and `#` comments are ignored). Exactly one of `projects`/`--projects-file`
+  must be given.
+
+Options:
+- `--force` / `-f`: Run the real migration. Without it, jobs are created with `dryRun: true`.
+  **Note:** even without `--force` a real `keboola.flow-migration-tool` job and a real ephemeral
+  storage token are created in every eligible project — on PAYGO stacks mind the billing.
+- `--projects-file=PATH`: File with one project ID per line (alternative to `@file` in the argument).
+- `--concurrency=N` (default 10): Max migration jobs in flight at once.
+- `--poll-interval=N` (default 5): Seconds between job status polls.
+- `--report=PATH` (default `flow-migration-<stack>-<timestamp>.csv`): CSV report path.
+
+Behavior:
+- For each project: skips disabled/deleted projects; creates an ephemeral 12h storage token
+  (`canManageBuckets`, `canReadAllFileUploads`, component access to `keboola.orchestrator`,
+  `keboola.flow`, `keboola.scheduler`, `keboola.flow-migration-tool`); skips projects with no
+  `keboola.orchestrator` configurations (no empty jobs in customers' job history); skips projects
+  where a `keboola.flow-migration-tool` job is already created/waiting/processing/terminating.
+- Creates the migration job via `configData` (no stored configuration is left behind) with
+  `parameters: {mode: "project", orchestrationIds: [], skipBroken: true, dryRun: <!force>}`.
+- Keeps at most `--concurrency` jobs in flight, polls each job and refills the window as jobs finish.
+  A transient poll failure is tolerated up to 3 consecutive times per job; after that the project is
+  reported as failed and the job is left to finish server-side (its job ID stays in the report).
+- Appends a CSV row (`projectId;jobId;status;durationSeconds;error`) the moment each project
+  resolves, so an interrupted run is still auditable. Every input project gets a row; skipped
+  projects carry the skip reason in `status`/`error` and an empty `jobId`. Re-running with the same
+  `--report` path appends to the existing file without repeating the header.
+- A failing project never aborts the batch. Exit code is `1` if at least one project failed
+  (job `error`/`terminated`/`cancelled` or a driver-side error), `0` otherwise.
+- Final summary: projects attempted / migrated / migrated with warning / skipped (no
+  orchestrations, disabled, job already running) / failed.
+
 ### Mass enablement of dynamic backends for multiple projects
 Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/Enable+Dynamic+Backends#Enable-for-project
 

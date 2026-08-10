@@ -80,33 +80,36 @@ this at startup, and the README documents it (relevant for PAYGO billing — see
 
 ## Architecture
 
-Four small classes in `src/Keboola/Console/Command/` (PSR-0: namespace
-`Keboola\Console\Command`, path = file name), plus registration in `cli.php`:
+Only the Symfony command itself lives directly in `src/Keboola/Console/Command/`; its four
+helper classes go into the `FlowMigration/` subnamespace (PSR-0: namespace
+`Keboola\Console\Command\FlowMigration` → `src/Keboola/Console/Command/FlowMigration/`), which
+keeps the flat command directory a list of commands. The helper class names therefore drop the
+redundant `FlowMigration` prefix the namespace already carries. Registration goes in `cli.php`:
 
 ```
-MigrateOrchestrationsToFlow          (Symfony Command — thin shell)
+Command/MigrateOrchestrationsToFlow  (Symfony Command — thin shell)
   ├─ parses/validates input, resolves project ID list
-  ├─ builds ManageApi\Client, ServiceClient, FlowMigrationProjectClientsFactory
+  ├─ builds ManageApi\Client, ServiceClient, FlowMigration\ProjectClientsFactory
   ├─ opens the CSV report (append mode, header if new/empty) and wires the
   │  per-result callback: CSV row + progress line to stdout
-  ├─ runs FlowMigrationBatchRunner
+  ├─ runs FlowMigration\BatchRunner
   └─ prints final summary, returns exit code (1 if any project failed)
 
-FlowMigrationBatchRunner             (plain class — ALL batch logic, unit-tested)
+Command/FlowMigration/BatchRunner            (plain class — ALL batch logic, unit-tested)
   ├─ per-project pipeline (skip rules, job submission)
   ├─ concurrency window + polling loop
-  └─ emits one FlowMigrationProjectResult per input project via callback,
+  └─ emits one ProjectResult per input project via callback,
      returns aggregate summary counts
 
-FlowMigrationProjectClientsFactory   (plain class — the only network seam)
+Command/FlowMigration/ProjectClientsFactory  (plain class — the only network seam)
   ├─ getProject(string $projectId): array            (Manage API)
-  └─ createProjectClients(string $projectId): FlowMigrationProjectClients
+  └─ createProjectClients(string $projectId): ProjectClients
        creates the ephemeral storage token, returns Components + JobQueueClient
        bound to that token
 
-FlowMigrationProjectClients          (tiny readonly DTO: Components + JobQueueClient)
-FlowMigrationProjectResult           (tiny readonly DTO: projectId, jobId, status,
-                                      durationSeconds, error + isFailed())
+Command/FlowMigration/ProjectClients         (tiny DTO: Components + JobQueueClient)
+Command/FlowMigration/ProjectResult          (tiny DTO: projectId, jobId, status,
+                                              durationSeconds, error + isFailed())
 ```
 
 Rationale: the repo's testable-logic pattern (`DataAppOrchestratorTaskMigrator` +
@@ -233,15 +236,17 @@ guard skips projects with a live migration job. No resume state is kept by the d
 
 ## Testing
 
-`tests/FlowMigrationBatchRunnerTest.php` + fakes (PSR-4 `Keboola\Console\Tests\`):
+`tests/FlowMigration/BatchRunnerTest.php` + fakes, mirroring the src layout in the PSR-4
+subnamespace `Keboola\Console\Tests\FlowMigration\` (shared `FakeComponents` stays in
+`Keboola\Console\Tests\`):
 
 - `FakeJobQueueClient extends JobQueueClient\Client` — constructor override (no parent call, same
   trick as `FakeComponents`), records `createJob` calls, scripted `getJob` status sequences
   (e.g. `processing, processing, success`), scripted `listJobs` guard responses, can throw on
   demand for poll-failure tests.
-- `FakeFlowMigrationProjectClientsFactory extends FlowMigrationProjectClientsFactory` — scripted
+- `FakeProjectClientsFactory extends ProjectClientsFactory` — scripted
   projects (disabled / deleted / erroring), records `createProjectClients` calls (asserts no token
-  is created for disabled projects), returns `FlowMigrationProjectClients` built from
+  is created for disabled projects), returns `ProjectClients` built from
   `FakeComponents` (reused as-is for the orchestrator-config listing) + `FakeJobQueueClient`.
 
 Scenarios (assert emitted results, summary counts, recorded API calls, sleep-callable cadence):
