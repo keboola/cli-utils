@@ -114,6 +114,8 @@ class ListStorageBackends extends Command
         $guzzle = new GuzzleClient([
             'base_uri' => $url,
             'headers' => ['X-KBC-ManageApiToken' => $token],
+            'timeout' => 30,
+            'connect_timeout' => 10,
         ]);
 
         $backends = $client->listStorageBackend();
@@ -123,11 +125,25 @@ class ListStorageBackends extends Command
         $progress->writeln(sprintf('Fetching details for %d backends...', count($backends)));
 
         $rows = [];
+        $failedDetails = [];
         foreach ($backends as $backend) {
             assert(is_array($backend));
-            $rows[] = $this->buildRow(array_merge($backend, $this->fetchDetail($guzzle, $backend)));
+            $detail = $this->fetchDetail($guzzle, $backend);
+            if ($detail === []) {
+                $failedDetails[] = $this->asInt($backend['id'] ?? 0);
+            }
+            $rows[] = $this->buildRow(array_merge($backend, $detail));
         }
         usort($rows, fn (array $a, array $b) => $a['id'] <=> $b['id']);
+
+        if ($failedDetails !== []) {
+            // Counts and verdicts come from the list response; only the detail-added columns are affected.
+            $progress->writeln(sprintf(
+                '<error>Warning: detail fetch failed for backend(s) %s — '
+                . 'loginType/keyRotated/SSO/dynBackends columns are empty there, not authoritative.</error>',
+                implode(',', $failedDetails)
+            ));
+        }
 
         $visibleRows = $this->filterRows($rows, $unsupportedOnly, $verdictFilter);
 
