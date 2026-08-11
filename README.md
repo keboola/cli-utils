@@ -683,8 +683,11 @@ Arguments:
 
 Options:
 - --format Output format, `table` (default) or `csv`. In `csv` mode the summary goes to stderr so stdout stays parseable.
-- --verdict Show only backends with the given verdict.
+- --verdict Show only backends with the given verdict (validated against the list below).
 - --unsupported Show only backends that are not snowflake/bigquery — i.e. both `DELETE_UNSUPPORTED_UNUSED` and `REVIEW_UNSUPPORTED_IN_USE` in one pass. Composable with `--verdict`.
+
+With filters active, the summary and the paste-ready delete ID lists cover the shown rows only
+(the header says `Backends shown: X of Y`), so what you see is exactly what you'd delete.
 
 Verdicts (backends we keep are snowflake and bigquery; everything else is a decommissioned type
 such as mysql/redshift/synapse/exasol/teradata, or a parked PoC such as supabase):
@@ -697,11 +700,13 @@ such as mysql/redshift/synapse/exasol/teradata, or a parked PoC such as supabase
 Counts come from `assignedProjectsCount` / `assignedMaintainersCount` and cover live projects only.
 A backend showing 0 can still be blocked by soft-deleted, not-yet-purged projects — the delete guard refuses those.
 
-The command fetches the detail of every backend (`GET /manage/storage-backend/{id}`) to add columns that are
-not in the list response: `loginType`, `keyRotated` (= `keyPairLastRotatedAt`, date only), `dynBackends`
-(= `useDynamicBackends`), `useSso`, `ssoEnabled`, `ssoConfigured`. Booleans render as 1/0, empty when the
-detail does not report the field (e.g. BigQuery has no `loginType`). A failed detail call leaves the extra
-columns empty and keeps the row.
+The command fetches the detail of every displayed backend (`GET /manage/storage-backend/{id}`, with retry
+on 429/5xx/connect errors) to add columns that are not in the list response: `loginType`, `keyRotated`
+(= `keyPairLastRotatedAt`, date only), `dynBackends` (= `useDynamicBackends`), `useSso`, `ssoEnabled`,
+`ssoConfigured`. Booleans render as 1/0, empty when the detail does not report the field (e.g. BigQuery
+has no `loginType`). A failed detail call leaves the extra columns empty, keeps the row and reports the
+affected backend IDs on stderr — verdicts and counts always come from the list response, so a failed
+detail cannot change the delete lists.
 
 ## Delete Storage Backend
 Delete one or more storage backends from a stack by their IDs. Dry-run by default.

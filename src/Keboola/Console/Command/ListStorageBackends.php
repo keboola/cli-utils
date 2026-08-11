@@ -5,20 +5,26 @@ declare(strict_types=1);
 namespace Keboola\Console\Command;
 
 use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use Keboola\ManageApi\Client;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\Console\Command\Command;
-use Throwable;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 
 /**
  * Read-only inventory of a stack's storage backends, with a cleanup verdict per backend.
  *
  * Feeds manage:delete-backend — the ID lists printed at the end are ready to paste.
+ * Row/verdict/filter logic lives in StorageBackendInventory; this command does I/O only.
  */
 class ListStorageBackends extends Command
 {
@@ -31,17 +37,7 @@ class ListStorageBackends extends Command
     private const FORMAT_TABLE = 'table';
     private const FORMAT_CSV = 'csv';
 
-    /**
-     * Backends we keep running. Anything else is decommissioned (mysql, redshift, synapse,
-     * exasol, teradata) or a parked PoC (supabase, removed in DMD-991) and is up for removal.
-     */
-    private const KEPT_BACKENDS = ['snowflake', 'bigquery'];
-
-    private const VERDICT_DELETE_UNSUPPORTED_UNUSED = 'DELETE_UNSUPPORTED_UNUSED';
-    private const VERDICT_DELETE_UNUSED = 'DELETE_UNUSED';
-    private const VERDICT_REVIEW_UNSUPPORTED_IN_USE = 'REVIEW_UNSUPPORTED_IN_USE';
-    private const VERDICT_REVIEW_MAINTAINER_ONLY = 'REVIEW_MAINTAINER_ONLY';
-    private const VERDICT_KEEP = 'KEEP';
+    private const DETAIL_RETRIES = 3;
 
     private const COLUMNS = [
         'id',
@@ -108,44 +104,49 @@ class ListStorageBackends extends Command
         }
         $verdictFilter = $input->getOption(self::OPTION_VERDICT);
         assert($verdictFilter === null || is_string($verdictFilter));
+        if ($verdictFilter !== null && !in_array($verdictFilter, StorageBackendInventory::VERDICTS, true)) {
+            $output->writeln(sprintf(
+                '<error>Unknown verdict "%s", use one of: %s</error>',
+                $verdictFilter,
+                implode(', ', StorageBackendInventory::VERDICTS)
+            ));
+            return 1;
+        }
         $unsupportedOnly = (bool) $input->getOption(self::OPTION_UNSUPPORTED);
 
         $client = new Client(['url' => $url, 'token' => $token]);
-        $guzzle = new GuzzleClient([
-            'base_uri' => $url,
-            'headers' => ['X-KBC-ManageApiToken' => $token],
-            'timeout' => 30,
-            'connect_timeout' => 10,
-        ]);
+        $inventory = new StorageBackendInventory();
+
+        $stderr = $output instanceof ConsoleOutputInterface ? $output->getErrorOutput() : $output;
 
         $backends = $client->listStorageBackend();
         assert(is_array($backends));
 
-        $progress = $output instanceof ConsoleOutputInterface ? $output->getErrorOutput() : $output;
-        $progress->writeln(sprintf('Fetching details for %d backends...', count($backends)));
-
         $rows = [];
-        $failedDetails = [];
+        $skipped = 0;
         foreach ($backends as $backend) {
             assert(is_array($backend));
-            $detail = $this->fetchDetail($guzzle, $backend);
-            if ($detail === []) {
-                $failedDetails[] = $this->asInt($backend['id'] ?? 0);
+            $row = $inventory->buildRow($backend);
+            if ($row === null) {
+                $skipped++;
+                continue;
             }
-            $rows[] = $this->buildRow(array_merge($backend, $detail));
+            $rows[] = $row;
         }
         usort($rows, fn (array $a, array $b) => $a['id'] <=> $b['id']);
-
-        if ($failedDetails !== []) {
-            // Counts and verdicts come from the list response; only the detail-added columns are affected.
-            $progress->writeln(sprintf(
-                '<error>Warning: detail fetch failed for backend(s) %s — '
-                . 'loginType/keyRotated/SSO/dynBackends columns are empty there, not authoritative.</error>',
-                implode(',', $failedDetails)
+        if ($skipped > 0) {
+            $stderr->writeln(sprintf(
+                '<error>Warning: skipped %d list entr%s without a usable numeric id.</error>',
+                $skipped,
+                $skipped === 1 ? 'y' : 'ies'
             ));
         }
 
-        $visibleRows = $this->filterRows($rows, $unsupportedOnly, $verdictFilter);
+        $visibleRows = $inventory->filterRows($rows, $unsupportedOnly, $verdictFilter);
+
+        // Detail (loginType, keyRotated, SSO flags) is fetched only for the rows that will
+        // be displayed — verdicts and counts come from the list response alone.
+        $visibleRows = $this->fetchDetails($url, $token, $inventory, $visibleRows, $stderr);
 
         if ($format === self::FORMAT_CSV) {
             $this->renderCsv($output, $visibleRows);
@@ -153,114 +154,94 @@ class ListStorageBackends extends Command
             $this->renderTable($output, $visibleRows);
         }
 
-        $this->renderSummary($output, $rows, $format === self::FORMAT_CSV);
+        $this->renderSummary(
+            $output,
+            $inventory->summarize($visibleRows),
+            count($visibleRows),
+            count($rows),
+            $format === self::FORMAT_CSV
+        );
 
         return 0;
-    }
-
-    /**
-     * @param array<mixed> $backend
-     * @return array<mixed>
-     */
-    private function fetchDetail(GuzzleClient $guzzle, array $backend): array
-    {
-        try {
-            $response = $guzzle->get(sprintf('manage/storage-backend/%d', $this->asInt($backend['id'] ?? 0)));
-            $detail = json_decode((string) $response->getBody(), true);
-            return is_array($detail) ? $detail : [];
-        } catch (Throwable) {
-            // Keep the list row usable even when a single detail call fails.
-            return [];
-        }
-    }
-
-    /**
-     * @param array<mixed> $backend
-     * @return array{id: int, backend: string, host: string, region: string, owner: string,
-     *     technicalOwner: string, projects: int, maintainers: int, buckets: int, loginType: string,
-     *     keyRotated: string, dynBackends: string, useSso: string, ssoEnabled: string,
-     *     ssoConfigured: string, created: string, verdict: string}
-     */
-    private function buildRow(array $backend): array
-    {
-        $stats = $backend['stats'] ?? [];
-        assert(is_array($stats));
-
-        $type = $this->asString($backend['backend'] ?? '');
-        $projects = $this->asInt($backend['assignedProjectsCount'] ?? 0);
-        $maintainers = $this->asInt($backend['assignedMaintainersCount'] ?? 0);
-
-        return [
-            'id' => $this->asInt($backend['id'] ?? 0),
-            'backend' => $type,
-            // BigQuery backends have no host, they report a folderId instead.
-            'host' => $this->asString($backend['host'] ?? $backend['folderId'] ?? ''),
-            'region' => $this->asString($backend['region'] ?? ''),
-            'owner' => $this->asString($backend['owner'] ?? ''),
-            'technicalOwner' => $this->asString($backend['technicalOwner'] ?? ''),
-            'projects' => $projects,
-            'maintainers' => $maintainers,
-            'buckets' => $this->asInt($stats['bucketsCount'] ?? 0),
-            'loginType' => $this->asString($backend['loginType'] ?? ''),
-            'keyRotated' => substr($this->asString($backend['keyPairLastRotatedAt'] ?? ''), 0, 10),
-            'dynBackends' => $this->asBool($backend['useDynamicBackends'] ?? null),
-            'useSso' => $this->asBool($backend['useSso'] ?? null),
-            'ssoEnabled' => $this->asBool($backend['isSsoEnabled'] ?? null),
-            'ssoConfigured' => $this->asBool($backend['isSsoConfigured'] ?? null),
-            'created' => substr($this->asString($backend['created'] ?? ''), 0, 10),
-            'verdict' => $this->resolveVerdict($type, $projects, $maintainers),
-        ];
     }
 
     /**
      * @param array<int, array<string, int|string>> $rows
      * @return array<int, array<string, int|string>>
      */
-    private function filterRows(array $rows, bool $unsupportedOnly, ?string $verdict): array
-    {
-        if ($unsupportedOnly) {
-            $rows = array_filter($rows, fn (array $r) => !in_array($r['backend'], self::KEPT_BACKENDS, true));
+    private function fetchDetails(
+        string $url,
+        string $token,
+        StorageBackendInventory $inventory,
+        array $rows,
+        OutputInterface $stderr
+    ): array {
+        if ($rows === []) {
+            return [];
         }
-        if ($verdict !== null) {
-            $rows = array_filter($rows, fn (array $r) => $r['verdict'] === $verdict);
+
+        $stderr->writeln(sprintf('Fetching details for %d backends...', count($rows)));
+        $guzzle = $this->createGuzzleClient($url, $token);
+
+        $failed = [];
+        foreach ($rows as $i => $row) {
+            $detail = [];
+            try {
+                $response = $guzzle->get(sprintf('manage/storage-backend/%d', $row['id']));
+                $decoded = json_decode((string) $response->getBody(), true);
+                if (is_array($decoded)) {
+                    $detail = $decoded;
+                }
+            } catch (Throwable) {
+                // Keep the row usable even when a single detail call fails.
+            }
+            if ($detail === []) {
+                $failed[] = (string) $row['id'];
+            }
+            $rows[$i] = $inventory->applyDetail($row, $detail);
         }
-        return array_values($rows);
+
+        if ($failed !== []) {
+            // Counts and verdicts come from the list response; only the detail-added columns are affected.
+            $stderr->writeln(sprintf(
+                '<error>Warning: detail fetch failed for backend(s) %s — '
+                . 'loginType/keyRotated/SSO/dynBackends columns are empty there, not authoritative.</error>',
+                implode(',', $failed)
+            ));
+        }
+
+        return $rows;
     }
 
-    private function resolveVerdict(string $type, int $projects, int $maintainers): string
+    private function createGuzzleClient(string $url, string $token): GuzzleClient
     {
-        $isUnsupported = !in_array($type, self::KEPT_BACKENDS, true);
-        $isUnused = $projects === 0 && $maintainers === 0;
+        $stack = HandlerStack::create();
+        $stack->push(Middleware::retry(
+            function (
+                int $retries,
+                RequestInterface $request,
+                ?ResponseInterface $response = null,
+                ?Throwable $e = null
+            ): bool {
+                if ($retries >= self::DETAIL_RETRIES) {
+                    return false;
+                }
+                if ($e instanceof ConnectException) {
+                    return true;
+                }
+                return $response !== null
+                    && ($response->getStatusCode() === 429 || $response->getStatusCode() >= 500);
+            },
+            fn (int $retries): int => 1000 * $retries
+        ));
 
-        if ($isUnsupported) {
-            return $isUnused ? self::VERDICT_DELETE_UNSUPPORTED_UNUSED : self::VERDICT_REVIEW_UNSUPPORTED_IN_USE;
-        }
-        if ($isUnused) {
-            return self::VERDICT_DELETE_UNUSED;
-        }
-        if ($projects === 0) {
-            // No projects, but a maintainer still points at it as its default backend.
-            return self::VERDICT_REVIEW_MAINTAINER_ONLY;
-        }
-        return self::VERDICT_KEEP;
-    }
-
-    private function asString(mixed $value): string
-    {
-        return is_scalar($value) ? (string) $value : '';
-    }
-
-    private function asInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private function asBool(mixed $value): string
-    {
-        if ($value === null) {
-            return '';
-        }
-        return $value ? '1' : '0';
+        return new GuzzleClient([
+            'base_uri' => $url,
+            'handler' => $stack,
+            'headers' => ['X-KBC-ManageApiToken' => $token],
+            'timeout' => 30,
+            'connect_timeout' => 10,
+        ]);
     }
 
     /**
@@ -268,14 +249,21 @@ class ListStorageBackends extends Command
      */
     private function renderCsv(OutputInterface $output, array $rows): void
     {
-        $output->writeln(implode(',', self::COLUMNS));
+        $stream = fopen('php://temp', 'r+');
+        assert($stream !== false);
+        fputcsv($stream, self::COLUMNS, ',', '"', '');
         foreach ($rows as $row) {
             $cells = [];
             foreach (self::COLUMNS as $column) {
-                $cells[] = '"' . str_replace('"', '""', (string) $row[$column]) . '"';
+                $cells[] = (string) $row[$column];
             }
-            $output->writeln(implode(',', $cells));
+            fputcsv($stream, $cells, ',', '"', '');
         }
+        rewind($stream);
+        $csv = stream_get_contents($stream);
+        fclose($stream);
+        assert(is_string($csv));
+        $output->write($csv, false, OutputInterface::OUTPUT_RAW);
     }
 
     /**
@@ -296,63 +284,55 @@ class ListStorageBackends extends Command
     }
 
     /**
-     * @param array<int, array<string, int|string>> $rows
+     * @param array{byType: array<string, int>, byVerdict: array<string, int>,
+     *     deleteIds: array<string, array<int, string>>, needsReview: int} $summary
      */
-    private function renderSummary(OutputInterface $output, array $rows, bool $toStdErr): void
-    {
+    private function renderSummary(
+        OutputInterface $output,
+        array $summary,
+        int $visibleCount,
+        int $totalCount,
+        bool $toStdErr
+    ): void {
         // In CSV mode keep stdout parseable — the summary goes to stderr.
         $out = $toStdErr && $output instanceof ConsoleOutputInterface
             ? $output->getErrorOutput()
             : $output;
 
-        $byType = [];
-        $byVerdict = [];
-        foreach ($rows as $row) {
-            $byType[(string) $row['backend']] = ($byType[(string) $row['backend']] ?? 0) + 1;
-            $byVerdict[(string) $row['verdict']] = ($byVerdict[(string) $row['verdict']] ?? 0) + 1;
-        }
-        arsort($byType);
-        arsort($byVerdict);
-
         $out->writeln('');
-        $out->writeln(sprintf('Total backends: %d', count($rows)));
+        if ($visibleCount === $totalCount) {
+            $out->writeln(sprintf('Total backends: %d', $totalCount));
+        } else {
+            $out->writeln(sprintf(
+                'Backends shown: %d of %d (filters active — summary and ID lists cover the shown rows only)',
+                $visibleCount,
+                $totalCount
+            ));
+        }
         $out->writeln('');
         $out->writeln('By backend type:');
-        foreach ($byType as $type => $count) {
+        foreach ($summary['byType'] as $type => $count) {
             $out->writeln(sprintf('  %-12s %d', $type, $count));
         }
         $out->writeln('');
         $out->writeln('By verdict:');
-        foreach ($byVerdict as $verdict => $count) {
+        foreach ($summary['byVerdict'] as $verdict => $count) {
             $out->writeln(sprintf('  %-24s %d', $verdict, $count));
         }
 
         $out->writeln('');
         $out->writeln('Delete candidates (paste into manage:delete-backend):');
-        foreach ([self::VERDICT_DELETE_UNSUPPORTED_UNUSED, self::VERDICT_DELETE_UNUSED] as $verdict) {
-            $ids = [];
-            foreach ($rows as $row) {
-                if ($row['verdict'] === $verdict) {
-                    $ids[] = (string) $row['id'];
-                }
-            }
+        foreach ($summary['deleteIds'] as $verdict => $ids) {
             $out->writeln('');
             $out->writeln(sprintf('  %s (%d):', $verdict, count($ids)));
             $out->writeln($ids === [] ? '    -' : '    ' . implode(',', $ids));
         }
 
-        $reviewVerdicts = [self::VERDICT_REVIEW_UNSUPPORTED_IN_USE, self::VERDICT_REVIEW_MAINTAINER_ONLY];
-        $needsReview = 0;
-        foreach ($rows as $row) {
-            if (in_array($row['verdict'], $reviewVerdicts, true)) {
-                $needsReview++;
-            }
-        }
-        if ($needsReview > 0) {
+        if ($summary['needsReview'] > 0) {
             $out->writeln('');
             $out->writeln(sprintf(
                 '%d backend(s) need a manual look before deletion (REVIEW_* verdicts above).',
-                $needsReview
+                $summary['needsReview']
             ));
         }
         $out->writeln('');
