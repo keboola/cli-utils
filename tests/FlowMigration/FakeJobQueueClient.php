@@ -7,7 +7,6 @@ namespace Keboola\Console\Tests\FlowMigration;
 use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\DTO\Job;
 use Keboola\JobQueueClient\JobData;
-use Keboola\JobQueueClient\ListJobsOptions;
 use RuntimeException;
 use Throwable;
 
@@ -24,36 +23,20 @@ class FakeJobQueueClient extends JobQueueClient
     /** @var array<int, array<int, string>> ordered call log: [method, id] */
     public array $calls = [];
 
-    public int $listJobsCalls = 0;
-
-    /**
-     * Query parameters of every listJobs() call. Recorded because the scripted return value is
-     * independent of the query - without asserting on this, a guard asking for the wrong component
-     * or the wrong statuses would still pass its test.
-     *
-     * @var array<int, array<string, mixed>>
-     */
-    public array $listJobsQueries = [];
-
     /** @var array<int, Job> */
     private array $createJobReturns;
 
     /** @var array<string, array<int, Job|Throwable>> */
     private array $getJobSequences;
 
-    /** @var array<int, Job> */
-    private array $listJobsReturn;
-
     /**
      * @param array<int, Job> $createJobReturns successive createJob() returns
      * @param array<string, array<int, Job|Throwable>> $getJobSequences jobId => successive getJob() outcomes
-     * @param array<int, Job> $listJobsReturn returned by every listJobs() call
      */
-    public function __construct(array $createJobReturns = [], array $getJobSequences = [], array $listJobsReturn = [])
+    public function __construct(array $createJobReturns = [], array $getJobSequences = [])
     {
         $this->createJobReturns = $createJobReturns;
         $this->getJobSequences = $getJobSequences;
-        $this->listJobsReturn = $listJobsReturn;
     }
 
     public function createJob(JobData $jobData): Job
@@ -84,15 +67,6 @@ class FakeJobQueueClient extends JobQueueClient
         }
 
         return $outcome;
-    }
-
-    public function listJobs(ListJobsOptions $listOptions): array
-    {
-        $this->calls[] = ['listJobs'];
-        $this->listJobsCalls++;
-        $this->listJobsQueries[] = $listOptions->getQueryParameters();
-
-        return $this->listJobsReturn;
     }
 
     /**

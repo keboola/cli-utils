@@ -385,7 +385,6 @@ class MigrateOrchestrationsToFlow extends Command
      *     migratedWithWarning: int,
      *     skippedNoOrchestrations: int,
      *     skippedDisabled: int,
-     *     skippedJobRunning: int,
      *     failed: int
      * } $summary
      */
@@ -394,14 +393,12 @@ class MigrateOrchestrationsToFlow extends Command
         $output->writeln('');
         $output->writeln(sprintf(
             "DONE\nProjects attempted: %d\nMigrated (job success): %d\nMigrated with warning: %d\n"
-            . "Skipped (no orchestrations): %d\nSkipped (disabled/deleted): %d\n"
-            . "Skipped (migration job already running): %d\nFailed: %d",
+            . "Skipped (no orchestrations): %d\nSkipped (disabled/deleted): %d\nFailed: %d",
             $summary['attempted'],
             $summary['migrated'],
             $summary['migratedWithWarning'],
             $summary['skippedNoOrchestrations'],
             $summary['skippedDisabled'],
-            $summary['skippedJobRunning'],
             $summary['failed']
         ));
     }

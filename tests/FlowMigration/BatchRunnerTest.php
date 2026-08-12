@@ -88,8 +88,6 @@ class BatchRunnerTest extends TestCase
             ]],
             $queueClient->createdJobs[0]['configData']
         );
-        // The live-job guard ran exactly once before submission.
-        $this->assertSame(1, $queueClient->listJobsCalls);
 
         $this->assertCount(1, $this->results);
         $this->assertSame('100', $this->results[0]->projectId);
@@ -233,41 +231,10 @@ class BatchRunnerTest extends TestCase
 
         $summary = $runner->run(['100'], true, new BufferedOutput(), $this->collector());
 
-        // No queue API call and no job for a project with nothing to migrate.
-        $this->assertSame(0, $queueClient->listJobsCalls);
+        // No job for a project with nothing to migrate.
         $this->assertSame([], $queueClient->createdJobs);
         $this->assertSame(ProjectResult::STATUS_SKIPPED_NO_ORCHESTRATIONS, $this->results[0]->status);
         $this->assertSame(1, $summary['skippedNoOrchestrations']);
-    }
-
-    public function testSkipsProjectWithLiveMigrationJob(): void
-    {
-        $queueClient = new FakeJobQueueClient(
-            [],
-            [],
-            [FakeJobQueueClient::makeJob('existing-job', 'processing')]
-        );
-        $factory = new FakeProjectClientsFactory(
-            ['100' => self::enabledProject('100')],
-            ['100' => self::clientsWith($queueClient)]
-        );
-        $runner = new BatchRunner($factory, 10, 5, $this->sleepRecorder());
-
-        $summary = $runner->run(['100'], true, new BufferedOutput(), $this->collector());
-
-        $this->assertSame([], $queueClient->createdJobs);
-        $this->assertSame(ProjectResult::STATUS_SKIPPED_JOB_RUNNING, $this->results[0]->status);
-        $this->assertSame(1, $summary['skippedJobRunning']);
-        // The scripted return does not depend on the query, so assert the query itself: a guard
-        // asking for another component or for terminal statuses would skip or submit wrongly.
-        $this->assertSame(
-            [
-                'component' => ['keboola.flow-migration-tool'],
-                'limit' => 1,
-                'status' => ['created', 'waiting', 'processing', 'terminating'],
-            ],
-            $queueClient->listJobsQueries[0]
-        );
     }
 
     public function testDeduplicatesInputProjectIds(): void
@@ -367,11 +334,9 @@ class BatchRunnerTest extends TestCase
         // With concurrency=1, job-2 must not be created until job-1 has finished.
         $this->assertSame(
             [
-                ['listJobs'],
                 ['createJob', 'job-1'],
                 ['getJob', 'job-1'],
                 ['getJob', 'job-1'],
-                ['listJobs'],
                 ['createJob', 'job-2'],
                 ['getJob', 'job-2'],
             ],

@@ -520,8 +520,7 @@ Behavior:
 - For each project: skips disabled/deleted projects; creates an ephemeral 1h storage token with full
   project rights (`canManageBuckets`, `canManageTokens`, `canReadAllFileUploads`, `canPurgeTrash`) so
   the component cannot be short of a permission mid-migration; skips projects with no
-  `keboola.orchestrator` configurations (no empty jobs in customers' job history); skips projects
-  where a `keboola.flow-migration-tool` job is already created/waiting/processing/terminating.
+  `keboola.orchestrator` configurations (no empty jobs in customers' job history).
 - Creates the migration job via `configData` (no stored configuration is left behind) with
   `parameters: {mode: "project", orchestrationIds: [], skipBroken: true, dryRun: <!force>}`.
 - Keeps at most `--concurrency` jobs in flight, polls each job and refills the window as jobs finish.
@@ -534,7 +533,11 @@ Behavior:
 - A failing project never aborts the batch. Exit code is `1` if at least one project failed
   (job `error`/`terminated`/`cancelled` or a driver-side error), `0` otherwise.
 - Final summary: projects attempted / migrated / migrated with warning / skipped (no
-  orchestrations, disabled, job already running) / failed.
+  orchestrations, disabled) / failed.
+- Re-running the same project list is the intended recovery path: the component reports
+  already-migrated orchestrations as skipped. The command does **not** check for a migration job
+  already running in the project, so before re-running an interrupted batch let the jobs it already
+  created finish - two concurrent migrations of one project can both create the same flows.
 
 ### Mass enablement of dynamic backends for multiple projects
 Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/Enable+Dynamic+Backends#Enable-for-project

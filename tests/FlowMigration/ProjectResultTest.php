@@ -35,6 +35,5 @@ class ProjectResultTest extends TestCase
             true,
             false,
         ];
-        yield 'skipped job running' => [ProjectResult::STATUS_SKIPPED_JOB_RUNNING, true, false];
     }
 }

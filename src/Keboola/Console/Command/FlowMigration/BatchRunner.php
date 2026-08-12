@@ -8,7 +8,6 @@ use Keboola\JobQueueClient\Client as JobQueueClient;
 use Keboola\JobQueueClient\DTO\Job;
 use Keboola\JobQueueClient\JobData;
 use Keboola\JobQueueClient\JobStatuses;
-use Keboola\JobQueueClient\ListJobsOptions;
 use Keboola\ManageApi\ClientException as ManageClientException;
 use Keboola\StorageApi\Options\Components\ListComponentConfigurationsOptions;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -24,7 +23,6 @@ use Throwable;
  *     migratedWithWarning: int,
  *     skippedNoOrchestrations: int,
  *     skippedDisabled: int,
- *     skippedJobRunning: int,
  *     failed: int
  * }
  * @phpstan-type InFlightJob array{
@@ -39,15 +37,6 @@ class BatchRunner
 {
     public const ORCHESTRATOR_COMPONENT_ID = 'keboola.orchestrator';
     public const MIGRATION_COMPONENT_ID = 'keboola.flow-migration-tool';
-
-    // TERMINATING is included on top of the issue's created/waiting/processing: a terminating
-    // job may still be executing migration writes, and skipping it strictly reduces overlap risk.
-    private const LIVE_JOB_STATUSES = [
-        JobStatuses::CREATED,
-        JobStatuses::WAITING,
-        JobStatuses::PROCESSING,
-        JobStatuses::TERMINATING,
-    ];
 
     // A transient Queue API outage must not fail a project instantly (the SDK already retries
     // 5xx internally), but an unbounded retry could hang the batch forever - so give up after
@@ -92,7 +81,6 @@ class BatchRunner
             'migratedWithWarning' => 0,
             'skippedNoOrchestrations' => 0,
             'skippedDisabled' => 0,
-            'skippedJobRunning' => 0,
             'failed' => 0,
         ];
         /** @var array<int, InFlightJob> $inFlight */
@@ -205,6 +193,9 @@ class BatchRunner
     }
 
     /**
+     * A project with no keboola.orchestrator configurations gets no job at all, so hundreds of
+     * empty jobs never show up in customers' job history.
+     *
      * @return ProjectResult|null non-null when no new migration job should be created
      */
     private function checkProjectNeedsMigration(
@@ -223,22 +214,6 @@ class BatchRunner
                 ProjectResult::STATUS_SKIPPED_NO_ORCHESTRATIONS,
                 null,
                 'no keboola.orchestrator configurations'
-            );
-        }
-
-        $liveJobs = $clients->queueClient->listJobs(
-            (new ListJobsOptions())
-                ->setComponents([self::MIGRATION_COMPONENT_ID])
-                ->setStatuses(self::LIVE_JOB_STATUSES)
-                ->setLimit(1)
-        );
-        if ($liveJobs !== []) {
-            return new ProjectResult(
-                $projectId,
-                null,
-                ProjectResult::STATUS_SKIPPED_JOB_RUNNING,
-                null,
-                'a keboola.flow-migration-tool job is already running in this project'
             );
         }
 
@@ -430,7 +405,6 @@ class BatchRunner
             JobStatuses::WARNING->value => 'migratedWithWarning',
             ProjectResult::STATUS_SKIPPED_NO_ORCHESTRATIONS => 'skippedNoOrchestrations',
             ProjectResult::STATUS_SKIPPED_DISABLED => 'skippedDisabled',
-            ProjectResult::STATUS_SKIPPED_JOB_RUNNING => 'skippedJobRunning',
             default => 'failed',
         };
     }

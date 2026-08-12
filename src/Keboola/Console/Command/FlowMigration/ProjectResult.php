@@ -14,7 +14,6 @@ class ProjectResult
 {
     public const STATUS_SKIPPED_DISABLED = 'skipped-disabled';
     public const STATUS_SKIPPED_NO_ORCHESTRATIONS = 'skipped-no-orchestrations';
-    public const STATUS_SKIPPED_JOB_RUNNING = 'skipped-job-running';
     public const STATUS_ERROR = 'error';
 
     public string $projectId;
@@ -42,7 +41,6 @@ class ProjectResult
         return in_array($this->status, [
             self::STATUS_SKIPPED_DISABLED,
             self::STATUS_SKIPPED_NO_ORCHESTRATIONS,
-            self::STATUS_SKIPPED_JOB_RUNNING,
         ], true);
     }
 
