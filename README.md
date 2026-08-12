@@ -517,9 +517,9 @@ Options:
 - `--report=PATH` (default `flow-migration-<stack>-<timestamp>.csv`): CSV report path.
 
 Behavior:
-- For each project: skips disabled/deleted projects; creates an ephemeral 12h storage token
-  (`canManageBuckets`, `canReadAllFileUploads`, component access to `keboola.orchestrator`,
-  `keboola.flow`, `keboola.scheduler`, `keboola.flow-migration-tool`); skips projects with no
+- For each project: skips disabled/deleted projects; creates an ephemeral 1h storage token with full
+  project rights (`canManageBuckets`, `canManageTokens`, `canReadAllFileUploads`, `canPurgeTrash`) so
+  the component cannot be short of a permission mid-migration; skips projects with no
   `keboola.orchestrator` configurations (no empty jobs in customers' job history); skips projects
   where a `keboola.flow-migration-tool` job is already created/waiting/processing/terminating.
 - Creates the migration job via `configData` (no stored configuration is left behind) with

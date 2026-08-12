@@ -26,6 +26,15 @@ class FakeJobQueueClient extends JobQueueClient
 
     public int $listJobsCalls = 0;
 
+    /**
+     * Query parameters of every listJobs() call. Recorded because the scripted return value is
+     * independent of the query - without asserting on this, a guard asking for the wrong component
+     * or the wrong statuses would still pass its test.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    public array $listJobsQueries = [];
+
     /** @var array<int, Job> */
     private array $createJobReturns;
 
@@ -81,6 +90,7 @@ class FakeJobQueueClient extends JobQueueClient
     {
         $this->calls[] = ['listJobs'];
         $this->listJobsCalls++;
+        $this->listJobsQueries[] = $listOptions->getQueryParameters();
 
         return $this->listJobsReturn;
     }

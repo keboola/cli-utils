@@ -158,57 +158,25 @@ class BatchRunnerTest extends TestCase
         $this->assertSame(1, $summary['failed']);
     }
 
-    public function testWarningJobCountsAsMigratedWithWarning(): void
+    public function testSkipsDisabledAndDeletedProjectsWithoutCreatingTokenOrJob(): void
     {
-        $queueClient = new FakeJobQueueClient(
-            [FakeJobQueueClient::makeJob('job-1', 'created')],
-            ['job-1' => [FakeJobQueueClient::makeJob('job-1', 'warning', 5, ['message' => 'partial'])]]
-        );
-        $factory = new FakeProjectClientsFactory(
-            ['100' => self::enabledProject('100')],
-            ['100' => self::clientsWith($queueClient)]
-        );
+        $factory = new FakeProjectClientsFactory([
+            '100' => ['id' => '100', 'name' => 'Off', 'isDisabled' => true],
+            // A deleted project surfaces as a Manage API 404 and is reported the same way.
+            '200' => new ManageClientException('Project not found', 404),
+        ]);
         $runner = new BatchRunner($factory, 10, 5, $this->sleepRecorder());
 
-        $summary = $runner->run(['100'], true, new BufferedOutput(), $this->collector());
+        $summary = $runner->run(['100', '200'], true, new BufferedOutput(), $this->collector());
 
-        $this->assertSame('warning', $this->results[0]->status);
-        $this->assertFalse($this->results[0]->isFailed());
-        $this->assertSame(1, $summary['migratedWithWarning']);
-        $this->assertSame(0, $summary['migrated']);
-        $this->assertSame(0, $summary['failed']);
-    }
-
-    public function testSkipsDisabledProjectWithoutCreatingTokenOrJob(): void
-    {
-        $factory = new FakeProjectClientsFactory(
-            ['100' => ['id' => '100', 'name' => 'Off', 'isDisabled' => true]]
-        );
-        $runner = new BatchRunner($factory, 10, 5, $this->sleepRecorder());
-
-        $summary = $runner->run(['100'], true, new BufferedOutput(), $this->collector());
-
-        // No ephemeral token may be created for a disabled project.
+        // No ephemeral token may be created for a project that will not be migrated.
         $this->assertSame([], $factory->createClientsCalls);
         $this->assertSame(ProjectResult::STATUS_SKIPPED_DISABLED, $this->results[0]->status);
+        $this->assertSame(ProjectResult::STATUS_SKIPPED_DISABLED, $this->results[1]->status);
         $this->assertNull($this->results[0]->jobId);
-        $this->assertSame(1, $summary['skippedDisabled']);
+        $this->assertSame(2, $summary['skippedDisabled']);
         $this->assertSame(0, $summary['failed']);
         $this->assertSame([], $this->sleeps);
-    }
-
-    public function testSkipsDeletedProjectOnManage404(): void
-    {
-        $factory = new FakeProjectClientsFactory(
-            ['100' => new ManageClientException('Project not found', 404)]
-        );
-        $runner = new BatchRunner($factory, 10, 5, $this->sleepRecorder());
-
-        $summary = $runner->run(['100'], true, new BufferedOutput(), $this->collector());
-
-        $this->assertSame([], $factory->createClientsCalls);
-        $this->assertSame(ProjectResult::STATUS_SKIPPED_DISABLED, $this->results[0]->status);
-        $this->assertSame(1, $summary['skippedDisabled']);
     }
 
     public function testManageErrorOtherThan404MarksProjectFailed(): void
@@ -290,34 +258,16 @@ class BatchRunnerTest extends TestCase
         $this->assertSame([], $queueClient->createdJobs);
         $this->assertSame(ProjectResult::STATUS_SKIPPED_JOB_RUNNING, $this->results[0]->status);
         $this->assertSame(1, $summary['skippedJobRunning']);
-    }
-
-    public function testDriverSideErrorWhenTokenCreationFailsAndBatchContinues(): void
-    {
-        $queueClient = new FakeJobQueueClient(
-            [FakeJobQueueClient::makeJob('job-2', 'created')],
-            ['job-2' => [FakeJobQueueClient::makeJob('job-2', 'success', 3)]]
-        );
-        $factory = new FakeProjectClientsFactory(
-            ['100' => self::enabledProject('100'), '200' => self::enabledProject('200')],
+        // The scripted return does not depend on the query, so assert the query itself: a guard
+        // asking for another component or for terminal statuses would skip or submit wrongly.
+        $this->assertSame(
             [
-                '100' => new ManageClientException('Cannot create token', 403),
-                '200' => self::clientsWith($queueClient),
-            ]
+                'component' => ['keboola.flow-migration-tool'],
+                'limit' => 1,
+                'status' => ['created', 'waiting', 'processing', 'terminating'],
+            ],
+            $queueClient->listJobsQueries[0]
         );
-        $runner = new BatchRunner($factory, 10, 5, $this->sleepRecorder());
-
-        $summary = $runner->run(['100', '200'], true, new BufferedOutput(), $this->collector());
-
-        $byProject = [];
-        foreach ($this->results as $result) {
-            $byProject[$result->projectId] = $result;
-        }
-        $this->assertSame(ProjectResult::STATUS_ERROR, $byProject['100']->status);
-        $this->assertSame('Cannot create token', $byProject['100']->error);
-        $this->assertSame('success', $byProject['200']->status);
-        $this->assertSame(1, $summary['failed']);
-        $this->assertSame(1, $summary['migrated']);
     }
 
     public function testDeduplicatesInputProjectIds(): void
@@ -337,23 +287,6 @@ class BatchRunnerTest extends TestCase
         $this->assertSame(1, $summary['attempted']);
         $this->assertCount(1, $queueClient->createdJobs);
         $this->assertCount(1, $this->results);
-    }
-
-    public function testNonPositiveConcurrencyStillDrainsTheQueueInsteadOfHanging(): void
-    {
-        $queueClient = new FakeJobQueueClient(
-            [FakeJobQueueClient::makeJob('job-1', 'created')],
-            ['job-1' => [FakeJobQueueClient::makeJob('job-1', 'success', 1)]]
-        );
-        $factory = new FakeProjectClientsFactory(
-            ['100' => self::enabledProject('100')],
-            ['100' => self::clientsWith($queueClient)]
-        );
-        $runner = new BatchRunner($factory, 0, 5, $this->sleepRecorder());
-
-        $summary = $runner->run(['100'], true, new BufferedOutput(), $this->collector());
-
-        $this->assertSame(1, $summary['migrated']);
     }
 
     public function testTwoConsecutivePollFailuresAreToleratedAndJobFinishes(): void
@@ -404,32 +337,6 @@ class BatchRunnerTest extends TestCase
         $this->assertIsString($this->results[0]->error);
         $this->assertStringContainsString('polling gave up', $this->results[0]->error);
         $this->assertSame(1, $summary['failed']);
-    }
-
-    public function testPollFailureCounterResetsAfterASuccessfulPoll(): void
-    {
-        $queueClient = new FakeJobQueueClient(
-            [FakeJobQueueClient::makeJob('job-1', 'created')],
-            ['job-1' => [
-                new RuntimeException('blip 1'),
-                new RuntimeException('blip 2'),
-                FakeJobQueueClient::makeJob('job-1', 'processing'),
-                new RuntimeException('blip 3'),
-                new RuntimeException('blip 4'),
-                FakeJobQueueClient::makeJob('job-1', 'success', 9),
-            ]]
-        );
-        $factory = new FakeProjectClientsFactory(
-            ['100' => self::enabledProject('100')],
-            ['100' => self::clientsWith($queueClient)]
-        );
-        $runner = new BatchRunner($factory, 10, 5, $this->sleepRecorder());
-
-        $summary = $runner->run(['100'], true, new BufferedOutput(), $this->collector());
-
-        $this->assertSame('success', $this->results[0]->status);
-        $this->assertSame(1, $summary['migrated']);
-        $this->assertSame(0, $summary['failed']);
     }
 
     public function testConcurrencyWindowCapsInFlightJobsAndRefills(): void

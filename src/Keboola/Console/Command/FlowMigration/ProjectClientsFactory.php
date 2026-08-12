@@ -17,18 +17,10 @@ class ProjectClientsFactory
 {
     private const TOKEN_DESCRIPTION = 'AJDA-3117 keboola.orchestrator to keboola.flow migration (batch driver)';
 
-    // 12 hours: the job may wait in the queue and the runtime keeps using this token for the whole
-    // run - an expiry mid-migration is worse than a longer-lived privileged token.
-    private const TOKEN_EXPIRES_IN_SECONDS = 43200;
-
-    // Broad rights on purpose: trigger and notification migration touches tables and project-level
-    // resources, and a migration failing halfway through is worse than a short-lived privileged token.
-    private const TOKEN_COMPONENT_ACCESS = [
-        'keboola.orchestrator',
-        'keboola.flow',
-        'keboola.scheduler',
-        'keboola.flow-migration-tool',
-    ];
+    // One hour. The job runs for minutes and, being started from configData, does not wait on
+    // anything project-side - only the shared queue - so this covers the whole run with a wide
+    // margin while keeping a fully privileged token short-lived.
+    private const TOKEN_EXPIRES_IN_SECONDS = 3600;
 
     private ManageClient $manageClient;
     private string $connectionUrl;
@@ -51,12 +43,17 @@ class ProjectClientsFactory
 
     public function createProjectClients(string $projectId): ProjectClients
     {
+        // Full project rights on purpose. The migration writes configurations, tables, triggers
+        // (with a runWithTokenId copied from the source trigger, i.e. another token) and
+        // notification subscriptions, and a migration failing halfway through is worse than a
+        // short-lived privileged token. Restricting this only risks the component missing something.
         $tokenInfo = $this->manageClient->createProjectStorageToken($projectId, [
             'description' => self::TOKEN_DESCRIPTION,
             'expiresIn' => self::TOKEN_EXPIRES_IN_SECONDS,
             'canManageBuckets' => true,
+            'canManageTokens' => true,
             'canReadAllFileUploads' => true,
-            'componentAccess' => self::TOKEN_COMPONENT_ACCESS,
+            'canPurgeTrash' => true,
         ]);
 
         $storageClient = new StorageClient([

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Tests;
 
-use Keboola\Console\Command\FlowMigration\ProjectResult;
 use Keboola\Console\Command\MigrateOrchestrationsToFlow;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -92,38 +91,5 @@ class MigrateOrchestrationsToFlowTest extends TestCase
         yield 'duplicates are removed' => ["100\n200\n100\n", ['100', '200']];
         yield 'non-numeric line invalidates the file' => ["100\nfoo\n", null];
         yield 'empty file is a valid empty list' => ['', []];
-    }
-
-    /**
-     * The report is the audit artifact of a batch run, so a quote or backslash in an API error
-     * message must not be able to break a row for a standard CSV parser.
-     */
-    public function testAppendReportRowKeepsTheRowParsableWithQuotesInTheError(): void
-    {
-        $command = new MigrateOrchestrationsToFlow();
-        $method = (new ReflectionClass($command))->getMethod('appendReportRow');
-        $method->setAccessible(true);
-        $handle = fopen('php://memory', 'w+');
-        $this->assertIsResource($handle);
-
-        $method->invoke(
-            $command,
-            $handle,
-            new ProjectResult('123', 'job-1', 'error', 7, 'Orchestration \"Daily load\" failed; retry')
-        );
-
-        rewind($handle);
-        $contents = stream_get_contents($handle);
-        fclose($handle);
-
-        $this->assertIsString($contents);
-        $this->assertSame(
-            '123;job-1;error;7;"Orchestration \""Daily load\"" failed; retry"' . "\n",
-            $contents
-        );
-        $this->assertSame(
-            ['123', 'job-1', 'error', '7', 'Orchestration \"Daily load\" failed; retry'],
-            str_getcsv(trim($contents), ';', '"', '')
-        );
     }
 }

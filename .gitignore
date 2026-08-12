@@ -10,3 +10,4 @@ composer.phar
 *.env.json
 /.phpunit.result.cache
 /phpunit.xml
+/docs/superpowers

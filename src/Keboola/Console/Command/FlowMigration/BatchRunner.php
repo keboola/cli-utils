@@ -61,6 +61,9 @@ class BatchRunner
     /** @var callable(int): void */
     private $sleep;
 
+    /**
+     * @param int $concurrency max jobs in flight; must be >= 1, validated by the calling command
+     */
     public function __construct(
         ProjectClientsFactory $clientsFactory,
         int $concurrency,
@@ -68,9 +71,7 @@ class BatchRunner
         ?callable $sleep = null
     ) {
         $this->clientsFactory = $clientsFactory;
-        // A window smaller than one job would never let the run loop drain the pending queue,
-        // i.e. it would hang the batch forever - clamp instead of spinning.
-        $this->concurrency = max(1, $concurrency);
+        $this->concurrency = $concurrency;
         $this->pollIntervalSeconds = $pollIntervalSeconds;
         $this->sleep = $sleep ?? function (int $seconds): void {
             sleep($seconds);
