@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b460374ec27395d05b2d468a08b23055",
+    "content-hash": "a95ddafa49e9ddfe1542b567f39fe586",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1201,30 +1201,21 @@
         },
         {
             "name": "keboola/kbc-manage-api-php-client",
-            "version": "v7.1.1",
+            "version": "v10.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/keboola/kbc-manage-api-php-client.git",
-                "reference": "c1549531015a70c479cd7398b9778028b6ee1e68"
+                "reference": "f4b9060f01f3e88b19df62ef3fa17aa6953a03a8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/keboola/kbc-manage-api-php-client/zipball/c1549531015a70c479cd7398b9778028b6ee1e68",
-                "reference": "c1549531015a70c479cd7398b9778028b6ee1e68",
+                "url": "https://api.github.com/repos/keboola/kbc-manage-api-php-client/zipball/f4b9060f01f3e88b19df62ef3fa17aa6953a03a8",
+                "reference": "f4b9060f01f3e88b19df62ef3fa17aa6953a03a8",
                 "shasum": ""
             },
             "require": {
-                "guzzlehttp/guzzle": "^7.0|^6.1",
-                "php": "^7.4|^8.0"
-            },
-            "require-dev": {
-                "keboola/coding-standard": "^15.0",
-                "keboola/phpunit-retry-annotations": "^0.3.0",
-                "keboola/storage-api-client": "^12.0",
-                "phpstan/phpdoc-parser": "^1.24.5",
-                "phpstan/phpstan": "^1.10",
-                "phpstan/phpstan-phpunit": "^1",
-                "phpunit/phpunit": "^7.0|^8.0"
+                "guzzlehttp/guzzle": "~7.0",
+                "php": ">=8.2"
             },
             "type": "library",
             "autoload": {
@@ -1245,9 +1236,9 @@
             "description": "Keboola Management API Client",
             "support": {
                 "issues": "https://github.com/keboola/kbc-manage-api-php-client/issues",
-                "source": "https://github.com/keboola/kbc-manage-api-php-client/tree/v7.1.1"
+                "source": "https://github.com/keboola/kbc-manage-api-php-client/tree/v10.3.0"
             },
-            "time": "2024-04-05T12:49:35+00:00"
+            "time": "2026-06-16T05:40:34+00:00"
         },
         {
             "name": "keboola/php-api-client-base",
@@ -5943,5 +5934,5 @@
         "php": "^8.3"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }
