@@ -4,13 +4,7 @@ declare(strict_types=1);
 
 namespace Keboola\Console\Command;
 
-use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Middleware;
 use Keboola\ManageApi\Client;
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
@@ -36,8 +30,6 @@ class ListStorageBackends extends Command
 
     private const FORMAT_TABLE = 'table';
     private const FORMAT_CSV = 'csv';
-
-    private const DETAIL_RETRIES = 3;
 
     private const COLUMNS = [
         'id',
@@ -120,7 +112,6 @@ class ListStorageBackends extends Command
         $stderr = $output instanceof ConsoleOutputInterface ? $output->getErrorOutput() : $output;
 
         $backends = $client->listStorageBackend();
-        assert(is_array($backends));
 
         $rows = [];
         $skipped = 0;
@@ -146,7 +137,7 @@ class ListStorageBackends extends Command
 
         // Detail (loginType, keyRotated, SSO flags) is fetched only for the rows that will
         // be displayed — verdicts and counts come from the list response alone.
-        $visibleRows = $this->fetchDetails($url, $token, $inventory, $visibleRows, $stderr);
+        $visibleRows = $this->fetchDetails($client, $inventory, $visibleRows, $stderr);
 
         if ($format === self::FORMAT_CSV) {
             $this->renderCsv($output, $visibleRows);
@@ -170,8 +161,7 @@ class ListStorageBackends extends Command
      * @return array<int, array<string, int|string>>
      */
     private function fetchDetails(
-        string $url,
-        string $token,
+        Client $client,
         StorageBackendInventory $inventory,
         array $rows,
         OutputInterface $stderr
@@ -181,17 +171,12 @@ class ListStorageBackends extends Command
         }
 
         $stderr->writeln(sprintf('Fetching details for %d backends...', count($rows)));
-        $guzzle = $this->createGuzzleClient($url, $token);
 
         $failed = [];
         foreach ($rows as $i => $row) {
             $detail = [];
             try {
-                $response = $guzzle->get(sprintf('manage/storage-backend/%d', $row['id']));
-                $decoded = json_decode((string) $response->getBody(), true);
-                if (is_array($decoded)) {
-                    $detail = $decoded;
-                }
+                $detail = $client->getStorageBackend((int) $row['id']);
             } catch (Throwable) {
                 // Keep the row usable even when a single detail call fails.
             }
@@ -211,37 +196,6 @@ class ListStorageBackends extends Command
         }
 
         return $rows;
-    }
-
-    private function createGuzzleClient(string $url, string $token): GuzzleClient
-    {
-        $stack = HandlerStack::create();
-        $stack->push(Middleware::retry(
-            function (
-                int $retries,
-                RequestInterface $request,
-                ?ResponseInterface $response = null,
-                ?Throwable $e = null
-            ): bool {
-                if ($retries >= self::DETAIL_RETRIES) {
-                    return false;
-                }
-                if ($e instanceof ConnectException) {
-                    return true;
-                }
-                return $response !== null
-                    && ($response->getStatusCode() === 429 || $response->getStatusCode() >= 500);
-            },
-            fn (int $retries): int => 1000 * $retries
-        ));
-
-        return new GuzzleClient([
-            'base_uri' => $url,
-            'handler' => $stack,
-            'headers' => ['X-KBC-ManageApiToken' => $token],
-            'timeout' => 30,
-            'connect_timeout' => 10,
-        ]);
     }
 
     /**

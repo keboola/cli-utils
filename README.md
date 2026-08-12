@@ -700,8 +700,8 @@ such as mysql/redshift/synapse/exasol/teradata, or a parked PoC such as supabase
 Counts come from `assignedProjectsCount` / `assignedMaintainersCount` and cover live projects only.
 A backend showing 0 can still be blocked by soft-deleted, not-yet-purged projects — the delete guard refuses those.
 
-The command fetches the detail of every displayed backend (`GET /manage/storage-backend/{id}`, with retry
-on 429/5xx/connect errors) to add columns that are not in the list response: `loginType`, `keyRotated`
+The command fetches the detail of every displayed backend (`Client::getStorageBackend()`, with the
+client's built-in backoff) to add columns that are not in the list response: `loginType`, `keyRotated`
 (= `keyPairLastRotatedAt`, date only), `dynBackends` (= `useDynamicBackends`), `useSso`, `ssoEnabled`,
 `ssoConfigured`. Booleans render as 1/0, empty when the detail does not report the field (e.g. BigQuery
 has no `loginType`). A failed detail call leaves the extra columns empty, keeps the row and reports the

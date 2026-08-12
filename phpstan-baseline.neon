@@ -1,0 +1,883 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 5
+			path: src/Keboola/Console/Command/AddFeature.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Keboola/Console/Command/AddFeature.php
+
+		-
+			message: '#^Parameter \#1 \$templateStringId of method Keboola\\ManageApi\\Client\:\:addProjectTemplateFeature\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/AddFeature.php
+
+		-
+			message: '#^Parameter \#1 \$templateStringId of method Keboola\\ManageApi\\Client\:\:getProjectTemplateFeatures\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/AddFeature.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: src/Keboola/Console/Command/AddFeature.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: src/Keboola/Console/Command/CleanupLeakedTestFeatures.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 4
+			path: src/Keboola/Console/Command/CleanupLeakedTestFeatures.php
+
+		-
+			message: '#^Cannot access offset ''type'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/CleanupLeakedTestFeatures.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: src/Keboola/Console/Command/CleanupLeakedTestFeatures.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:removeFeature\(\) expects int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/CleanupLeakedTestFeatures.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/CleanupLeakedTestFeatures.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/CleanupLeakedTestFeatures.php
+
+		-
+			message: '#^Parameter \#4 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/CleanupLeakedTestFeatures.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$config of class Keboola\\StorageApi\\Client constructor expects array\{token\?\: string, url\?\: string, userAgent\?\: string, backoffMaxTries\?\: int, retryOnMaintenance\?\: bool, awsRetries\?\: int, logger\?\: Psr\\Log\\LoggerInterface, jobPollRetryDelay\?\: callable\(\)\: mixed, \.\.\.\}, array\{token\: mixed, url\: non\-empty\-string, logger\: Symfony\\Component\\Console\\Logger\\ConsoleLogger\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\StorageApi\\Tokens\:\:dropToken\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$projectId of method Keboola\\ManageApi\\Client\:\:createProjectStorageToken\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Parameter \#2 \$config of class Keboola\\StorageApi\\BranchAwareClient constructor expects array\{token\?\: string, url\?\: string, userAgent\?\: string, backoffMaxTries\?\: int, retryOnMaintenance\?\: bool, awsRetries\?\: int, logger\?\: Psr\\Log\\LoggerInterface, jobPollRetryDelay\?\: callable\(\)\: mixed, \.\.\.\}, array\{token\: mixed, url\: non\-empty\-string, backoffMaxTries\: 1\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOrphanedWorkspaces.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 5
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$config of class Keboola\\StorageApi\\Client constructor expects array\{token\?\: string, url\?\: string, userAgent\?\: string, backoffMaxTries\?\: int, retryOnMaintenance\?\: bool, awsRetries\?\: int, logger\?\: Psr\\Log\\LoggerInterface, jobPollRetryDelay\?\: callable\(\)\: mixed, \.\.\.\}, array\{token\: mixed, url\: non\-empty\-string, backoffMaxTries\: 1, logger\: Symfony\\Component\\Console\\Logger\\ConsoleLogger\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\StorageApi\\Tokens\:\:dropToken\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$projectId of method Keboola\\ManageApi\\Client\:\:createProjectStorageToken\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#2 \$config of class Keboola\\StorageApi\\BranchAwareClient constructor expects array\{token\?\: string, url\?\: string, userAgent\?\: string, backoffMaxTries\?\: int, retryOnMaintenance\?\: bool, awsRetries\?\: int, logger\?\: Psr\\Log\\LoggerInterface, jobPollRetryDelay\?\: callable\(\)\: mixed, \.\.\.\}, array\{token\: mixed, url\: non\-empty\-string\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#2 \$storageToken of class Keboola\\JobQueueClient\\Client constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#2 \$token of class Keboola\\Console\\Command\\EditorServiceClient constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 6
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \$storageToken of class Keboola\\SandboxesServiceApiClient\\Apps\\AppsApiClient constructor expects non\-empty\-string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrganizationOwnerlessWorkspaces.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteOrphanedWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:deleteProject\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteProjects.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:getDeletedProject\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteProjects.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/DeleteProjects.php
+
+		-
+			message: '#^Cannot access offset ''host'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/DeleteStorageBackend.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/DeleteStorageBackend.php
+
+		-
+			message: '#^Cannot access offset ''owner'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/DeleteStorageBackend.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteStorageBackend.php
+
+		-
+			message: '#^Parameter \#4 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeleteStorageBackend.php
+
+		-
+			message: '#^Possibly invalid array key type mixed\.$#'
+			identifier: offsetAccess.invalidOffset
+			count: 1
+			path: src/Keboola/Console/Command/DeleteStorageBackend.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: src/Keboola/Console/Command/DeletedProjectsPurge.php
+
+		-
+			message: '#^Parameter \#4 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DeletedProjectsPurge.php
+
+		-
+			message: '#^Part \$response\[''commandExecutionId''\] \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 1
+			path: src/Keboola/Console/Command/DeletedProjectsPurge.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Cannot access offset ''email'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 6
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$config of class Keboola\\StorageApi\\Client constructor expects array\{token\?\: string, url\?\: string, userAgent\?\: string, backoffMaxTries\?\: int, retryOnMaintenance\?\: bool, awsRetries\?\: int, logger\?\: Psr\\Log\\LoggerInterface, jobPollRetryDelay\?\: callable\(\)\: mixed, \.\.\.\}, array\{token\: mixed, url\: non\-empty\-string, logger\: Symfony\\Component\\Console\\Logger\\ConsoleLogger\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:listProjectUsers\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\StorageApi\\Tokens\:\:dropToken\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$projectId of method Keboola\\ManageApi\\Client\:\:createProjectStorageToken\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Parameter \#2 \$config of class Keboola\\StorageApi\\BranchAwareClient constructor expects array\{token\?\: string, url\?\: string, userAgent\?\: string, backoffMaxTries\?\: int, retryOnMaintenance\?\: bool, awsRetries\?\: int, logger\?\: Psr\\Log\\LoggerInterface, jobPollRetryDelay\?\: callable\(\)\: mixed, \.\.\.\}, array\{token\: mixed, url\: non\-empty\-string\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/DescribeOrganizationWorkspaces.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:getProject\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/MassProjectEnableDynamicBackends.php
+
+		-
+			message: '#^Parameter \#1 \$projectId of method Keboola\\ManageApi\\Client\:\:addProjectFeature\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MassProjectEnableDynamicBackends.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of function in_array expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/MassProjectEnableDynamicBackends.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/MassProjectEnableDynamicBackends.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Keboola/Console/Command/MassProjectExtendExpiration.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:getProject\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MassProjectExtendExpiration.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:updateProject\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MassProjectExtendExpiration.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/MassProjectExtendExpiration.php
+
+		-
+			message: '#^Parameter \#4 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/MassProjectExtendExpiration.php
+
+		-
+			message: '#^Parameter \#5 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MassProjectExtendExpiration.php
+
+		-
+			message: '#^Parameter \#6 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MassProjectExtendExpiration.php
+
+		-
+			message: '#^Parameter \#7 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/MassProjectExtendExpiration.php
+
+		-
+			message: '#^Parameter \#8 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MassProjectExtendExpiration.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 4
+			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
+
+		-
+			message: '#^Parameter \#1 \$config of class Keboola\\StorageApi\\Client constructor expects array\{token\?\: string, url\?\: string, userAgent\?\: string, backoffMaxTries\?\: int, retryOnMaintenance\?\: bool, awsRetries\?\: int, logger\?\: Psr\\Log\\LoggerInterface, jobPollRetryDelay\?\: callable\(\)\: mixed, \.\.\.\}, array\{url\: string, token\: mixed\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:getProject\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
+
+		-
+			message: '#^Parameter \#1 \$maintainerId of method Keboola\\ManageApi\\Client\:\:listMaintainerOrganizations\(\) expects int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
+
+		-
+			message: '#^Parameter \#1 \$organizationId of method Keboola\\ManageApi\\Client\:\:listOrganizationProjects\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
+
+		-
+			message: '#^Parameter \#1 \$projectId of method Keboola\\ManageApi\\Client\:\:createProjectStorageToken\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 5
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Parameter \#1 \$config of class Keboola\\StorageApi\\Client constructor expects array\{token\?\: string, url\?\: string, userAgent\?\: string, backoffMaxTries\?\: int, retryOnMaintenance\?\: bool, awsRetries\?\: int, logger\?\: Psr\\Log\\LoggerInterface, jobPollRetryDelay\?\: callable\(\)\: mixed, \.\.\.\}, array\{token\: mixed, url\: non\-empty\-string\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\StorageApi\\Tokens\:\:dropToken\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Parameter \#1 \$projectId of method Keboola\\ManageApi\\Client\:\:createProjectStorageToken\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Parameter \#1 \$projectId of method Keboola\\ManageApi\\Client\:\:disableProject\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Parameter \#1 \$projectId of method Keboola\\ManageApi\\Client\:\:enableProject\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Parameter \#2 \$projectId of method Keboola\\Console\\Command\\OrganizationIntoMaintenanceMode\:\:areThereRunningJobs\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Parameter \#2 \$storageToken of class Keboola\\JobQueueClient\\Client constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/OrganizationIntoMaintenanceMode.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationResetWorkspacePasswords.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: src/Keboola/Console/Command/OrganizationResetWorkspacePasswords.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationResetWorkspacePasswords.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationResetWorkspacePasswords.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/OrganizationResetWorkspacePasswords.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationResetWorkspacePasswords.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationStorageBackend.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 7
+			path: src/Keboola/Console/Command/OrganizationStorageBackend.php
+
+		-
+			message: '#^Cannot access offset ''snowflake'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationStorageBackend.php
+
+		-
+			message: '#^Cannot cast mixed to int\.$#'
+			identifier: cast.int
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationStorageBackend.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationStorageBackend.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationStorageBackend.php
+
+		-
+			message: '#^Parameter \#2 \$projectId of method Keboola\\Console\\Command\\OrganizationStorageBackend\:\:waitForProjectToMigrate\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationStorageBackend.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 4
+			path: src/Keboola/Console/Command/OrganizationStorageBackend.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/OrganizationStorageBackend.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationsAddFeature.php
+
+		-
+			message: '#^Parameter \#1 \$organizationId of method Keboola\\ManageApi\\Client\:\:getOrganization\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationsAddFeature.php
+
+		-
+			message: '#^Parameter \#2 \$array of function array_map expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationsAddFeature.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationsAddFeature.php
+
+		-
+			message: '#^Parameter \#4 \$projectIds of method Keboola\\Console\\Command\\ProjectsAddFeature\:\:addFeatureToSelectedProjects\(\) expects array\<int, string\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/OrganizationsAddFeature.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Keboola/Console/Command/ProjectsAddFeature.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsAddFeature.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:getProject\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsAddFeature.php
+
+		-
+			message: '#^Parameter \#1 \$maintainerId of method Keboola\\ManageApi\\Client\:\:listMaintainerOrganizations\(\) expects int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsAddFeature.php
+
+		-
+			message: '#^Parameter \#1 \$organizationId of method Keboola\\ManageApi\\Client\:\:listOrganizationProjects\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsAddFeature.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Keboola/Console/Command/ProjectsAddFeatureConditionally.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: src/Keboola/Console/Command/ProjectsAddFeatureConditionally.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:getProject\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsAddFeatureConditionally.php
+
+		-
+			message: '#^Parameter \#1 \$organizationId of method Keboola\\ManageApi\\Client\:\:listOrganizationProjects\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsAddFeatureConditionally.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: src/Keboola/Console/Command/ProjectsRemoveFeature.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsRemoveFeature.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:getProject\(\) expects int, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsRemoveFeature.php
+
+		-
+			message: '#^Parameter \#1 \$maintainerId of method Keboola\\ManageApi\\Client\:\:listMaintainerOrganizations\(\) expects int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsRemoveFeature.php
+
+		-
+			message: '#^Parameter \#1 \$organizationId of method Keboola\\ManageApi\\Client\:\:listOrganizationProjects\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsRemoveFeature.php
+
+		-
+			message: '#^Parameter \#1 \$projectId of method Keboola\\ManageApi\\Client\:\:removeProjectFeature\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsRemoveFeature.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsRemoveFeature.php
+
+		-
+			message: '#^Parameter \#3 \$projectInfo of method Keboola\\Console\\Command\\ProjectsRemoveFeature\:\:removeFeatureFromProject\(\) expects array\<string, mixed\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/ProjectsRemoveFeature.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: src/Keboola/Console/Command/RemoveUserFromOrganizationProjects.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: src/Keboola/Console/Command/RemoveUserFromOrganizationProjects.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Keboola/Console/Command/RemoveUserFromOrganizationProjects.php
+
+		-
+			message: '#^Cannot cast mixed to int\.$#'
+			identifier: cast.int
+			count: 3
+			path: src/Keboola/Console/Command/RemoveUserFromOrganizationProjects.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/RemoveUserFromOrganizationProjects.php
+
+		-
+			message: '#^Parameter \#2 \$projectUsers of method Keboola\\Console\\Command\\RemoveUserFromOrganizationProjects\:\:isUserInProject\(\) expects array\<int, array\<string, mixed\>\>, array\<string, mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/RemoveUserFromOrganizationProjects.php
+
+		-
+			message: '#^Parameter \#2 \$userEmailOrId of method Keboola\\ManageApi\\Client\:\:removeUserFromProject\(\) expects int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/RemoveUserFromOrganizationProjects.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/RemoveUserFromOrganizationProjects.php
+
+		-
+			message: '#^Parameter \#4 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/RemoveUserFromOrganizationProjects.php
+
+		-
+			message: '#^Cannot access offset ''id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 6
+			path: src/Keboola/Console/Command/UpdateDataRetention.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Keboola/Console/Command/UpdateDataRetention.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:updateProject\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/UpdateDataRetention.php
+
+		-
+			message: '#^Parameter \#1 \$maintainerId of method Keboola\\ManageApi\\Client\:\:listMaintainerOrganizations\(\) expects int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/UpdateDataRetention.php
+
+		-
+			message: '#^Parameter \#1 \$organizationId of method Keboola\\ManageApi\\Client\:\:listOrganizationProjects\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/UpdateDataRetention.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Keboola/Console/Command/UpdateDataRetention.php
+
+		-
+			message: '#^Parameter \#3 \$projectInfo of method Keboola\\Console\\Command\\UpdateDataRetention\:\:updateProjectDataRetention\(\) expects array\<string, mixed\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Keboola/Console/Command/UpdateDataRetention.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 4
+			path: src/Keboola/Console/Command/UpdateDataRetention.php
