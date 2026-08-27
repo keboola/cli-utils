@@ -20,7 +20,7 @@ class DeletedProjectsPurge extends Command
             ->setDescription('Purge deleted projects.')
             ->addArgument('url', InputArgument::REQUIRED, 'URL of stack including https://')
             ->addArgument('token', InputArgument::REQUIRED, 'manage api token')
-            ->addArgument('projectIds', InputArgument::REQUIRED, 'IDs of projects to purge (separate multiple IDs with a space)')
+            ->addArgument('projectIds', InputArgument::REQUIRED, 'Comma-separated IDs of projects to purge, or "ALL" to purge every deleted project')
             ->addOption('ignore-backend-errors', null, InputOption::VALUE_NONE, "Ignore errors from backend and just delete buckets and workspaces metadata")
             ->addOption('force', null, InputOption::VALUE_NONE, 'Actually perform destructive operations (purge). Without this flag, the command will only simulate actions.');
     }
@@ -48,7 +48,13 @@ class DeletedProjectsPurge extends Command
             'url' => $url,
             'token' => $token,
         ]);
-        $projectIds = array_filter(explode(',', $projectIds), 'is_numeric');
+
+        if (strtoupper(trim($projectIds)) === 'ALL') {
+            $projectIds = $this->fetchAllDeletedProjectIds($client, $output);
+            $output->writeln(sprintf('Found %d not yet purged deleted project(s).', count($projectIds)));
+        } else {
+            $projectIds = array_filter(explode(',', $projectIds), 'is_numeric');
+        }
 
         foreach ($projectIds as $projectId) {
             $this->purgeProject(
@@ -61,6 +67,42 @@ class DeletedProjectsPurge extends Command
         }
 
         return 0;
+    }
+
+    /**
+     * @return int[]
+     */
+    private function fetchAllDeletedProjectIds(Client $client, OutputInterface $output): array
+    {
+        $projectIds = [];
+        $limit = 100;
+        $offset = 0;
+
+        do {
+            $output->writeln(sprintf('Fetching deleted projects (offset %d)...', $offset));
+            $deletedProjects = $client->listDeletedProjects([
+                'limit' => $limit,
+                'offset' => $offset,
+            ]);
+
+            foreach ($deletedProjects as $deletedProject) {
+                assert(is_array($deletedProject));
+                if (($deletedProject['isPurged'] ?? false) === true) {
+                    continue;
+                }
+                $projectIds[] = (int) $deletedProject['id'];
+            }
+
+            $output->writeln(sprintf(
+                ' - got %d project(s), %d not yet purged so far',
+                count($deletedProjects),
+                count($projectIds),
+            ));
+
+            $offset += $limit;
+        } while (count($deletedProjects) === $limit);
+
+        return $projectIds;
     }
 
     private function purgeProject(
