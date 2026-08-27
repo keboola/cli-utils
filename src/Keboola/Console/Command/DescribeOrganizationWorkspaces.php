@@ -78,12 +78,15 @@ class DescribeOrganizationWorkspaces extends Command
             'projectName',
             'branchId',
             'branchName',
+            'workspaceId',
             'componentId',
             'configurationId',
             'creatorEmail',
             'activeUser',
             'createdDate',
             'snowflakeSchema',
+            'backend',
+            'loginType',
             'readOnlyStorageAccess'
         ]);
 
@@ -138,12 +141,15 @@ class DescribeOrganizationWorkspaces extends Command
                         $project['name'],
                         $branch['id'],
                         $branch['name'],
+                        $workspace['id'],
                         $workspace['component'],
                         $workspace['configurationId'],
                         $workspace['creatorToken']['description'],
                         $userInProject > 0 ? 'true' : 'false',
                         $workspace['created'],
                         $workspace['name'],
+                        $workspace['connection']['backend'],
+                        $workspace['connection']['loginType'] ?? '',
                         $workspace['readOnlyStorageAccess']
                     ];
                     $csvFile->writeRow($row);
