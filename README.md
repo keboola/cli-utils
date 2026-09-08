@@ -101,6 +101,30 @@ You can add a project feature to all the project templates available on the stac
 
 **This command supports dry-run. Add the `-f` flag if you want to submit the changes**
 
+### Clean up features leaked by E2E tests
+Deletes features left behind by connection E2E test runs. Matches on the name prefixes the tests
+use (`test-feature-`, `manage-feature-test-`, `random-feature-`, `new-feature-`, `first-feature-`,
+`second-feature-`) across all three feature types (`admin`, `project`, `global`).
+
+```
+php cli.php manage:cleanup-leaked-test-features [-f|--force] <token> <url>
+```
+Arguments:
+- `token` (required): Manage API token (super-admin).
+- `url` (required): Stack URL.
+
+Options:
+- `--force` / `-f`: Actually delete the matched features. Without this flag the command only lists
+  what it would delete (dry-run).
+
+Behavior:
+- **Refuses to run against `connection.keboola.com` and `connection.eu-central-1.keboola.com`**
+  and exits with code 1. This is a test-stack cleanup tool, not a production one.
+- Never deletes `test-feature-exclude` and `test-feature-override` - those are declarative
+  features synced from `kbc-stacks` `apps/connection/features.yaml` despite matching a prefix.
+- Lists the first 30 matches; pass `-v` to list all of them.
+- Exits with code 1 if any deletion failed.
+
 ## Workspaces and sandboxes
 
 ### Read this before deleting anything
@@ -438,6 +462,12 @@ Command execution:
 cat data.csv |  php cli.php storage:notify-projects MANAGETOKEN
 ```
 
+> :warning: **No dry-run.** This command has no `-f`/`--force` flag and sends the notifications
+> immediately. They are visible to the customer in the project and cannot be recalled.
+
+Options:
+- `--url`: Stack URL. Defaults to `https://connection.keboola.com`.
+
 
 ### Force Unlink Shared and Linked Buckets
 
@@ -586,6 +616,11 @@ Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/En
     ```
     php cli.php manage:mass-project-enable-dynamic-backends [--force-new-trans -f] <manage_token> <kbc_url> <file_with_projects> 
     ```
+
+> :warning: **`-f` means something different here.** Everywhere else in this repo `-f` is
+> `--force`, i.e. "stop the dry-run and do it for real". This command has no dry-run at all - it
+> always writes - and its `-f` is the shortcut for `--force-new-trans`, which only suppresses the
+> confirmation prompt for adding the `new-transformations-only` feature.
 The command will do the following for every projectId in the source file:
 - check if the project has project feature `queuev2`. If not, project migration fails
 - check if the project has project feature `new-transformations-only`. If not, it offers to add it. If the `--force-new-trans` is provided, it won't ask, but it will do it automatically
@@ -658,6 +693,12 @@ Behavior:
 
 ### Set data retention for multiple projects
 Set data retention days for specific projects listed in a CSV piped via STDIN.
+
+> :warning: **No dry-run.** Unlike most commands here, this one has no `-f`/`--force` flag: it
+> updates each project as it reads the row, so a wrong CSV is applied before you see it. Retention
+> governs how long the platform keeps data, so lowering it is not a safe thing to try out on a
+> whole list of projects - check the CSV first, and confirm the intended value with whoever owns
+> the projects.
 
 ```
 cat retention.csv | php cli.php storage:set-data-retention <manageToken> [--url=<stackConnectionUrl>]
@@ -739,6 +780,9 @@ This command can be used to terminate all jobs in a project in specified state (
     ```
     php ./cli.php queue:terminate-project-jobs <storage-token> <connection-url> <job-status>
     ```
+
+> :warning: **No dry-run.** This command has no `-f`/`--force` flag and starts terminating as
+> soon as it runs. Terminated jobs cannot be resumed, only run again.
 
 # Utils
 ## Bulk operation on multiple stacks
