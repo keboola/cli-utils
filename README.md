@@ -460,6 +460,30 @@ Behavior:
 - With `--force`, unlinks each shared and linked bucket and confirms the action.
 - Prints a summary of unlinked or would-be-unlinked buckets.
 
+### Download all configurations of a component
+
+Downloads every configuration of the given component in a project as pretty-printed JSON files
+(one file per configuration, full detail including rows and state). Read-only, no `--force` needed.
+
+```
+php cli.php storage:download-configurations [--dir|-d DIR] [--include-deleted] <token> <url> <component-id>
+```
+Arguments:
+- `token` (required): Storage API token for the target project.
+- `url` (required): Stack URL, including `https://`, e.g. `https://connection.keboola.com`.
+- `component-id` (required): Component ID, e.g. `keboola.ex-db-mysql`.
+
+Options:
+- `--dir` / `-d`: Output directory. Defaults to `./configurations/<component-id>`.
+- `--include-deleted`: Also download deleted configurations into a `deleted/` subdirectory.
+
+Destroys: nothing, this command is read-only.
+
+Behavior:
+- Lists all (non-deleted) configurations of the component, fetches each configuration's full detail
+  and writes it to `<dir>/<configurationId>.json`.
+- Prints each saved file and a final summary count.
+
 ### Migrate data-apps orchestrator/flow tasks to data-app-control
 Migrate orchestration/flow tasks that start a data app via the legacy `keboola.data-apps` component so they use
 `keboola.data-app-control` instead (see [AJDA-2445](https://linear.app/keboola/issue/AJDA-2445)). Skips tasks whose
