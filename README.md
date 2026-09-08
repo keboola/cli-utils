@@ -44,6 +44,8 @@ By in argument `<projects>` you can
 
 Note: the feature has to exist before calling, and it has to be type of `project`
 
+**This command supports dry-run. Add the `-f` flag if you want to submit the changes**
+
 ### Add Feature on all projects in Organization
 Adds a project feature to all projects in selected organizations
 
@@ -55,6 +57,8 @@ By in argument `<projects>` you can
   -  `manage:organizations-add-feature  <token> <url> <featureName> 1,2,3`
 
 Note: the feature has to exist before calling, and it has to be type of `project`
+
+**This command supports dry-run. Add the `-f` flag if you want to submit the changes**
 
 ### Conditionally Add Feature
 Adds a target feature to projects based on whether they have a given condition feature.
@@ -93,6 +97,8 @@ By in argument `<projects>` you can
     -  `manage:projects-remove-feature <token> <url> <featureName> 1,2,3`
 - OR run the script for ALL projects in the stack by passing `all` argument
     -  `manage:projects-remove-feature <token> <url> <featureName> all`
+
+**This command supports dry-run. Add the `-f` flag if you want to submit the changes**
 
 ### Add a feature to project templates
 You can add a project feature to all the project templates available on the stack
@@ -766,6 +772,8 @@ export STORAGE_API_TOKEN=<token>
 php cli.php storage:lineage-events-export <marquezUrl> [<connectionUrl>] [--limit=100] [--job-names-configurations]
 ```
 
+`<connectionUrl>` is optional and defaults to `https://connection.keboola.com`.
+
 Loads last N _(default 100)_ jobs into Marquez tool. Export has two modes:
 - default - jobs are identified by job IDs
 - with `--job-names-configurations` option - job are identified by component and configuration IDs
@@ -804,8 +812,16 @@ You can use it to set all projects of an organization to use a storage backend.
 
 - Run the command
     ```
-    php ./cli.php manage:set-organization-storage-backend [--force/-f] <manage-token> <organization-id> <storage-backend-id> <hostname-suffix> 
+    php ./cli.php manage:set-organization-storage-backend [--force/-f] <manage-token> <organization-id> <storage-backend-id> [<hostname-suffix>]
     ```
+Arguments:
+- `manage-token` (required): Manage API token.
+- `organization-id` (required): Target organization ID.
+- `storage-backend-id` (required): ID of the storage backend to assign.
+- `hostname-suffix` (optional, default: `keboola.com`): Connection host suffix, e.g. `eu-central-1.keboola.com`.
+
+Options:
+- `--force` / `-f`: Assign the backend for real. Without it the command prints `DRY RUN` and only reports what it would change.
 
 ## List Storage Backends
 Read-only inventory of a stack's storage backends with a cleanup verdict per backend. Nothing is modified.
@@ -871,8 +887,17 @@ It resets all legacy (not keypair type) Snowflake workspace passwords for all pr
 
 - Run the command
     ```
-    php ./cli.php manage:reset-organization-workspace-passwords [--force/-f] <manage-token> <organization-id> <snowflake-hostname> <hostname-suffix> 
+    php ./cli.php manage:reset-organization-workspace-passwords [--force/-f] <manage-token> <organization-id> <snowflake-hostname> [<hostname-suffix>]
     ```
+Arguments:
+- `manage-token` (required): Manage API token.
+- `organization-id` (required): Target organization ID.
+- `snowflake-hostname` (required): Snowflake account hostname.
+- `hostname-suffix` (optional, default: `keboola.com`): Connection host suffix, e.g. `eu-central-1.keboola.com`.
+
+Options:
+- `--force` / `-f`: Reset the passwords for real. Without it the command prints `DRY RUN` and only reports what it would reset.
+
 It prints `command-01k3m9p324cae95c48rr23rqvh` for each project, you can track the progress in Datadog.
 
 ## Set a maintenance mode for the organization
@@ -884,13 +909,13 @@ Arguments:
 - Manage Token *required*
 - OrganizationId *required*
 - Maintenance Mode *required* (on or off)
-- Hostname sUffix *optional* (default: keboola.com)
+- Hostname suffix *optional* (default: keboola.com)
 - Disable reason *optional* 
 - Estimated end time *optional*
 
 - Run the command
     ```
-    php ./cli.php manage:set-organization-maintenance-mode [--force/-f] <manage-token> <organization Id> <on/off> <hostname-suffix> <reason> <estimatedEndTime> 
+    php ./cli.php manage:set-organization-maintenance-mode [--force/-f] <manage-token> <organization-id> <on/off> [<hostname-suffix>] [<reason>] [<estimatedEndTime>]
     ```
   
 ## Remove user from all projects in an organization
