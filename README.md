@@ -181,10 +181,17 @@ Destroys: nothing, this command is read-only.
 
 The output CSV has the header:
 ```
-projectId,projectName,branchId,branchName,componentId,configurationId,creatorEmail,activeUser,createdDate,snowflakeSchema,readOnlyStorageAccess
+projectId,projectName,branchId,branchName,workspaceId,componentId,configurationId,creatorEmail,activeUser,createdDate,snowflakeSchema,backend,loginType,readOnlyStorageAccess
 ```
 `activeUser` is `true` when the workspace's creator email still matches a current user of the project,
 which is the same signal the `*-ownerless-*` commands act on.
+
+`loginType` is the authentication mode of the workspace's backend user (e.g.
+`snowflake-legacy-service` = password, `snowflake-service-keypair` = key pair). It is the column to
+filter on when auditing an organization ahead of the Snowflake password-authentication deprecation;
+it is empty for backends that do not report a login type. `workspaceId` is the ID that
+`manage:delete-project-workspaces-by-id` takes as input, so a row of this report can be fed straight
+into the deletion step without a second lookup.
 
 ### Check the state of a list of workspaces
 Read-only. Takes a list of workspaces you already care about (typically left over from an earlier
