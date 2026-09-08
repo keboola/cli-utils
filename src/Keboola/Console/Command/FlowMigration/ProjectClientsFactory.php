@@ -38,7 +38,7 @@ class ProjectClientsFactory
      */
     public function getProject(string $projectId): array
     {
-        return $this->manageClient->getProject($projectId);
+        return $this->manageClient->getProject((int) $projectId);
     }
 
     public function createProjectClients(string $projectId): ProjectClients
@@ -47,7 +47,7 @@ class ProjectClientsFactory
         // (with a runWithTokenId copied from the source trigger, i.e. another token) and
         // notification subscriptions, and a migration failing halfway through is worse than a
         // short-lived privileged token. Restricting this only risks the component missing something.
-        $tokenInfo = $this->manageClient->createProjectStorageToken($projectId, [
+        $tokenInfo = $this->manageClient->createProjectStorageToken((int) $projectId, [
             'description' => self::TOKEN_DESCRIPTION,
             'expiresIn' => self::TOKEN_EXPIRES_IN_SECONDS,
             'canManageBuckets' => true,
@@ -56,14 +56,17 @@ class ProjectClientsFactory
             'canPurgeTrash' => true,
         ]);
 
+        $token = $tokenInfo['token'];
+        assert(is_string($token));
+
         $storageClient = new StorageClient([
             'url' => $this->connectionUrl,
-            'token' => $tokenInfo['token'],
+            'token' => $token,
         ]);
 
         return new ProjectClients(
             new Components($storageClient),
-            new JobQueueClient($this->queueApiUrl, $tokenInfo['token'])
+            new JobQueueClient($this->queueApiUrl, $token)
         );
     }
 }
