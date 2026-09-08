@@ -610,8 +610,20 @@ Behavior:
 Purge already deleted projects (remove residual metadata, optionally ignoring backend errors) using a Manage API token.
 
 ```
-php cli.php storage:deleted-projects-purge [--ignore-backend-errors] <manageToken> <stackUrl> [--ignore-backend-errors] <projectIds>
+php cli.php storage:deleted-projects-purge [-f|--force] [--ignore-backend-errors] <url> <token> <projectIds>
 ```
+Arguments:
+- `url` (required): Stack URL, including `https://`.
+- `token` (required): Manage API token.
+- `projectIds` (required): Comma-separated list of project IDs to purge (e.g. `1,7,146`), or `ALL` to purge every deleted project that isn't purged yet.
+
+Options:
+- `--force` / `-f`: Actually purge the projects. Without this flag, the command only reports what would be purged (dry-run).
+- `--ignore-backend-errors`: Ignore errors from the backend and just delete buckets and workspaces metadata.
+
+Behavior:
+- With `projectIds` set to `ALL`, lists all deleted projects via the Manage API (paginated) and purges each one not already purged.
+- For each project ID, skips it if already purged or not found, otherwise purges it and waits (up to 10 minutes) for the purge to complete.
 
 ### Set data retention for multiple projects
 Set data retention days for specific projects listed in a CSV piped via STDIN.
