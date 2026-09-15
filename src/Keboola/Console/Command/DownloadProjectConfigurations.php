@@ -127,6 +127,7 @@ class DownloadProjectConfigurations extends Command
         $stateCounts = [];
         /** @var array<string, array<string>> $workspaceRefs config key => found WORKSPACE_ strings */
         $workspaceRefs = [];
+        $writtenFiles = 0;
 
         foreach ($map as $projectId => $configs) {
             $projectId = (string) $projectId;
@@ -156,97 +157,32 @@ class DownloadProjectConfigurations extends Command
                 'token' => $storageToken['token'],
                 'url' => $connectionUrl,
             ]);
-            $components = new Components($storageClient);
-
-            /** @var array<string, array<string, array<mixed>>> $trashedByComponent componentId => configId => detail */
-            $trashedByComponent = [];
-
-            foreach ($configs as $config) {
-                $componentId = $config['componentId'];
-                $configurationId = $config['configurationId'];
-                $state = self::STATE_LIVE;
-                $detail = null;
-                try {
-                    $detail = $components->getConfiguration($componentId, $configurationId);
-                } catch (StorageClientException $e) {
-                    if ($e->getCode() !== 404) {
-                        throw $e;
-                    }
-                    // not live in the default branch: look through the trash of the component
-                    if (!isset($trashedByComponent[$componentId])) {
-                        $trashedByComponent[$componentId] = [];
-                        $trashed = $components->listComponentConfigurations(
-                            (new ListComponentConfigurationsOptions())
-                                ->setComponentId($componentId)
-                                ->setIsDeleted(true)
-                        );
-                        assert(is_array($trashed));
-                        foreach ($trashed as $trashedConfig) {
-                            assert(is_array($trashedConfig));
-                            assert(is_scalar($trashedConfig['id']));
-                            $trashedByComponent[$componentId][(string) $trashedConfig['id']] = $trashedConfig;
-                        }
-                    }
-                    if (isset($trashedByComponent[$componentId][$configurationId])) {
-                        $state = self::STATE_IN_TRASH;
-                        $detail = $trashedByComponent[$componentId][$configurationId];
-                    } else {
-                        $state = self::STATE_NOT_FOUND;
-                    }
-                }
-                $stateCounts[$state] = ($stateCounts[$state] ?? 0) + 1;
-
-                $label = sprintf('%s/%s (project %s)', $componentId, $configurationId, $projectId);
-                if ($detail === null) {
-                    $output->writeln(sprintf('  <error>%s: not found (neither live nor in trash)</error>', $label));
-                    continue;
-                }
-                assert(is_array($detail));
-
-                $targetDir = sprintf(
-                    '%s/%s/%s',
-                    rtrim($outputDir, '/'),
+            try {
+                $this->downloadProjectConfigurations(
+                    $storageClient,
                     $projectId,
-                    $this->safeFilename($componentId)
+                    $configs,
+                    $outputDir,
+                    $output,
+                    $stateCounts,
+                    $workspaceRefs,
+                    $writtenFiles
                 );
-                if (!is_dir($targetDir) && !mkdir($targetDir, 0777, true) && !is_dir($targetDir)) {
-                    throw new RuntimeException('Cannot create output directory ' . $targetDir);
-                }
-                $filename = sprintf(
-                    '%s/%s%s.json',
-                    $targetDir,
-                    $this->safeFilename($configurationId),
-                    $state === self::STATE_IN_TRASH ? '.deleted' : ''
-                );
-                $json = json_encode($detail, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                assert(is_string($json));
-                file_put_contents($filename, $json . "\n");
-
-                preg_match_all('~[A-Z0-9_]*WORKSPACE_\d+~', $json, $matches);
-                $found = array_values(array_unique($matches[0]));
-                sort($found);
-                $workspaceRefs[$projectId . ':' . $componentId . '/' . $configurationId] = $found;
-
-                $output->writeln(sprintf(
-                    '  %s: %s, name "%s", %d rows -> %s%s',
-                    $label,
-                    $state,
-                    is_string($detail['name'] ?? null) ? $detail['name'] : '',
-                    is_array($detail['rows'] ?? null) ? count($detail['rows']) : 0,
-                    $filename,
-                    count($found) > 0
-                        ? sprintf(' <comment>[WORKSPACE refs: %s]</comment>', implode(', ', $found))
-                        : ''
-                ));
+            } finally {
+                // the temporary token has canManageBuckets, never leave it alive on failure
+                $tokensClient = new Tokens($storageClient);
+                assert(is_scalar($storageToken['id']));
+                $tokensClient->dropToken((int) $storageToken['id']);
             }
-
-            $tokensClient = new Tokens($storageClient);
-            assert(is_scalar($storageToken['id']));
-            $tokensClient->dropToken((int) $storageToken['id']);
         }
 
         $output->writeln('');
-        $output->writeln(sprintf('Downloaded %d unique configurations to "%s":', $uniqueCount, $outputDir));
+        $output->writeln(sprintf(
+            'Requested %d unique configurations, wrote %d files to "%s":',
+            $uniqueCount,
+            $writtenFiles,
+            $outputDir
+        ));
         ksort($stateCounts);
         foreach ($stateCounts as $state => $count) {
             $output->writeln(sprintf(' - %s: %d', $state, $count));
@@ -261,6 +197,109 @@ class DownloadProjectConfigurations extends Command
         }
 
         return 0;
+    }
+
+    /**
+     * @param array<string, array{componentId: string, configurationId: string}> $configs
+     * @param array<string, int> $stateCounts
+     * @param array<string, array<string>> $workspaceRefs
+     */
+    private function downloadProjectConfigurations(
+        StorageApiClient $storageClient,
+        string $projectId,
+        array $configs,
+        string $outputDir,
+        OutputInterface $output,
+        array &$stateCounts,
+        array &$workspaceRefs,
+        int &$writtenFiles
+    ): void {
+        $components = new Components($storageClient);
+
+        /** @var array<string, array<string, array<mixed>>> $trashedByComponent componentId => configId => detail */
+        $trashedByComponent = [];
+
+        foreach ($configs as $config) {
+            $componentId = $config['componentId'];
+            $configurationId = $config['configurationId'];
+            $state = self::STATE_LIVE;
+            $detail = null;
+            try {
+                $detail = $components->getConfiguration($componentId, $configurationId);
+            } catch (StorageClientException $e) {
+                if ($e->getCode() !== 404) {
+                    throw $e;
+                }
+                // not live in the default branch: look through the trash of the component
+                if (!isset($trashedByComponent[$componentId])) {
+                    $trashedByComponent[$componentId] = [];
+                    $trashed = $components->listComponentConfigurations(
+                        (new ListComponentConfigurationsOptions())
+                            ->setComponentId($componentId)
+                            ->setIsDeleted(true)
+                    );
+                    assert(is_array($trashed));
+                    foreach ($trashed as $trashedConfig) {
+                        assert(is_array($trashedConfig));
+                        assert(is_scalar($trashedConfig['id']));
+                        $trashedByComponent[$componentId][(string) $trashedConfig['id']] = $trashedConfig;
+                    }
+                }
+                if (isset($trashedByComponent[$componentId][$configurationId])) {
+                    $state = self::STATE_IN_TRASH;
+                    $detail = $trashedByComponent[$componentId][$configurationId];
+                } else {
+                    $state = self::STATE_NOT_FOUND;
+                }
+            }
+            $stateCounts[$state] = ($stateCounts[$state] ?? 0) + 1;
+
+            $label = sprintf('%s/%s (project %s)', $componentId, $configurationId, $projectId);
+            if ($detail === null) {
+                $output->writeln(sprintf('  <error>%s: not found (neither live nor in trash)</error>', $label));
+                continue;
+            }
+            assert(is_array($detail));
+
+            $targetDir = sprintf(
+                '%s/%s/%s',
+                rtrim($outputDir, '/'),
+                $projectId,
+                $this->safeFilename($componentId)
+            );
+            if (!is_dir($targetDir) && !mkdir($targetDir, 0777, true) && !is_dir($targetDir)) {
+                throw new RuntimeException('Cannot create output directory ' . $targetDir);
+            }
+            $filename = sprintf(
+                '%s/%s%s.json',
+                $targetDir,
+                $this->safeFilename($configurationId),
+                $state === self::STATE_IN_TRASH ? '.deleted' : ''
+            );
+            $json = json_encode($detail, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            assert(is_string($json));
+            if (file_put_contents($filename, $json . "\n") === false) {
+                throw new RuntimeException(sprintf('Cannot write "%s", aborting the audit.', $filename));
+            }
+            $writtenFiles++;
+
+            preg_match_all('~[A-Z0-9_]*WORKSPACE_\d+~', $json, $matches);
+            $found = array_values(array_unique($matches[0]));
+            sort($found);
+            $workspaceRefs[$projectId . ':' . $componentId . '/' . $configurationId] = $found;
+
+            $output->writeln(sprintf(
+                '  %s: %s, name "%s", %d rows -> %s%s',
+                $label,
+                $state,
+                is_string($detail['name'] ?? null) ? $detail['name'] : '',
+                is_array($detail['rows'] ?? null) ? count($detail['rows']) : 0,
+                $filename,
+                count($found) > 0
+                    ? sprintf(' <comment>[WORKSPACE refs: %s]</comment>', implode(', ', $found))
+                    : ''
+            ));
+        }
     }
 
     private function safeFilename(string $value): string

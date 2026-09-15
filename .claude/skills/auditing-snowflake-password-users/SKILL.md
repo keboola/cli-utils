@@ -93,8 +93,10 @@ cleanup; the config itself used a key-pair user the whole time.
 curl -s https://apps-api.keboola.com/apps/<componentId> | jq '{stagingStorageInput, stagingStorageOutput}'
 ```
 `workspace-snowflake` means the job runner creates a workspace for every job and drops it
-afterwards → surviving workspaces are per-run leftovers, ours. Anything else → the component (or
-a human) owns the workspace → permanent, customer's call.
+afterwards → surviving workspaces are per-run leftovers, ours. A resolved definition with any
+other staging mode (`local`, `s3`, `abs`, ...) means the component or a human provisioned the
+workspace itself → permanent, customer's call. Lookup failed, field missing, value you have not
+seen before → still **investigate, never drop**; a gap in the metadata is not evidence of anything.
 
 **Two empirical checks that confirm it:**
 - Count workspaces per configuration. Permanent staging is uniformly 1:1. Per-run components
@@ -108,7 +110,10 @@ a human) owns the workspace → permanent, customer's call.
 `manage:download-project-configurations` over the parent configurations (it also fetches
 trashed ones) and read the `WORKSPACE_<id>` strings it reports. A workspace named in
 `parameters.db.user` / `schema` of a *live* config is that config's destination or staging - not
-a leftover, whatever the table says.
+a leftover, whatever the table says. The command reads the **default branch only**; for a
+workspace whose `branchName` in the state report is a dev branch, that branch's copy of the
+configuration is the one to read (in the UI, or `GET /v2/storage/branch/{id}/components/...`),
+and an empty default-branch result proves nothing about it.
 
 **Permanent does not mean untouchable - it means not ours.** Recommend, let the customer decide:
 no traffic → suggest deleting, recent login → suggest migrating.

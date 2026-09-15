@@ -550,8 +550,11 @@ Behavior:
   trash; one found in neither is reported as `not_found`.
 - Prints per configuration its state (`live` / `in_trash` / `not_found`), name, row count, target file and
   every `WORKSPACE_<id>` string found anywhere in the JSON.
-- Ends with a per-state summary and the list of configurations containing a `WORKSPACE_<id>` string, so an
-  empty list means none of the downloaded configurations references a workspace in its credentials.
+- Ends with the number of requested configurations vs. files actually written, a per-state summary and
+  the list of configurations containing a `WORKSPACE_<id>` string, so an empty list means none of the
+  downloaded configurations references a workspace in its credentials.
+- A failed file write aborts the run (an incomplete audit must not look complete); the temporary storage
+  token is dropped in every case, including on error.
 
 ### Migrate data-apps orchestrator/flow tasks to data-app-control
 Migrate orchestration/flow tasks that start a data app via the legacy `keboola.data-apps` component so they use
