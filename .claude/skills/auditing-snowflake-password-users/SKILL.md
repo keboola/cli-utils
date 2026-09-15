@@ -72,6 +72,7 @@ the audit still works. What you lose and how to replace it:
 | `keboola.sandboxes` | permanent, personal | owner is not using it | **customer** |
 | `*-transformation` (snowflake, dbt, python-snowpark, no-code-dbt) | **per-run** - workspace per job, dropped after | **leftover of a terminated/failed job** | **ours**, workspace only |
 | `keboola.wr-db-snowflake` | **permanent staging**, 1:1 with its config | normal state, not a leftover | **customer** |
+| `keboola.wr-db-snowflake-gcs-s3` (Azure/GCP stacks) | **per-run** - job runner creates a staging workspace per job, drops it after | **leftover of a terminated/failed job** | **ours**, workspace only |
 | anything unrecognised | unknown | unknown | **investigate, never drop** |
 
 Two failure modes, both real:
@@ -81,9 +82,33 @@ Two failure modes, both real:
 - **"sole workspace of its config" → "permanent"** swept the transformation leftovers out of
   the delete pile, which they genuinely belong in.
 
-**Empirical check that separates them:** count workspaces per configuration. Writer staging is
-uniformly 1:1. Transformations accumulate - one dbt config held 8 surviving workspaces spanning
-six months. Accumulation is the fingerprint of a per-run component.
+**Same name, opposite lifecycle:** `keboola.wr-db-snowflake` holds its own staging credentials
+in the configuration; `keboola.wr-db-snowflake-gcs-s3` never creates a workspace at all - the job
+runner provisions one per run and hands it in as `authorization.workspace`. Twelve surviving
+workspaces of one live, daily-running `-gcs-s3` config were all leftovers of runs that died before
+cleanup; the config itself used a key-pair user the whole time.
+
+**Settle the lifecycle from the component definition, not from the table alone:**
+```
+curl -s https://apps-api.keboola.com/apps/<componentId> | jq '{stagingStorageInput, stagingStorageOutput}'
+```
+`workspace-snowflake` means the job runner creates a workspace for every job and drops it
+afterwards → surviving workspaces are per-run leftovers, ours. Anything else → the component (or
+a human) owns the workspace → permanent, customer's call.
+
+**Two empirical checks that confirm it:**
+- Count workspaces per configuration. Permanent staging is uniformly 1:1. Per-run components
+  accumulate - one dbt config held 8 surviving workspaces spanning six months, one writer config 12
+  created in three days.
+- `LAST_SUCCESS_LOGIN` of a runner leftover is **exactly one login 10-20 seconds after
+  `CREATED_ON`** (the runner loading the input tables) and nothing since. A permanent staging or
+  sandbox user logs in repeatedly, or never.
+
+**Before deleting, prove no configuration references the workspace:** run
+`manage:download-project-configurations` over the parent configurations (it also fetches
+trashed ones) and read the `WORKSPACE_<id>` strings it reports. A workspace named in
+`parameters.db.user` / `schema` of a *live* config is that config's destination or staging - not
+a leftover, whatever the table says.
 
 **Permanent does not mean untouchable - it means not ours.** Recommend, let the customer decide:
 no traffic → suggest deleting, recent login → suggest migrating.
@@ -111,6 +136,9 @@ no traffic → suggest deleting, recent login → suggest migrating.
 - **Check when the users were created.** A tight cluster (e.g. 126 users inside five minutes)
   is a backend migration re-provisioning them. Login history only reaches back to that moment,
   so "never logged in" means "unused since then". Say it that way to the customer.
+- **Purging a trashed configuration drops its workspaces and their backend users.** If a row
+  flips to `purged_or_orphan` between two state checks, someone emptied the trash; confirm with
+  `SHOW USERS LIKE '%<schema>%'` and take it off the delete list rather than reporting it as an orphan.
 - **`LAST_SUCCESS_LOGIN` is not a usage signal for staging workspaces.** The unload into a
   staging schema runs as the storage role, not as the workspace user, so an actively used staging
   workspace can show zero logins. It is reliable for sandboxes, where a human really does connect.
@@ -135,7 +163,9 @@ as `*.sent-<date>.csv` - generators overwrite.
 
 1. KBDB or BYODB → do we have Snowflake access?
 2. Inventory (`describe-organization-workspaces`) + dump if available
-3. Join, classify by lifecycle table, sanity-check the join is total
+3. Join, classify by lifecycle table (settle unknown components via `apps-api`), sanity-check
+   the join is total, download the parent configurations and confirm none references a workspace
+   you are about to delete
 4. Clean up **our** leftovers: dry-run → confirm → workspace-only delete → keep `deleted_<date>.csv`
 5. Re-export and verify the count moved by exactly what you deleted; investigate any difference
 6. Send the customer report, wait for `YOUR_DECISION`
