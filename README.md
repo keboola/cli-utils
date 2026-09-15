@@ -164,6 +164,7 @@ delete). Nothing that works through workspaces or editor sessions can see those 
 | --- | --- |
 | Just **see what is there** in an organization, as a CSV report | `manage:describe-organization-workspaces` |
 | A list of workspaces and you want **what state each one is in** | `manage:check-project-workspaces-state` |
+| Want to know whether the **parent configurations still reference** the workspaces in their credentials | `manage:download-project-configurations` |
 | An **explicit list of workspace IDs** to delete, with safety guards | `manage:delete-project-workspaces-by-id` |
 | Leaked workspaces of **one component, older than a cutoff**, in one project | `storage:delete-orphaned-workspaces` |
 | The same, across **whole organizations** | `manage:delete-organization-workspaces` |
@@ -519,6 +520,38 @@ Behavior:
 - Lists all (non-deleted) configurations of the component, fetches each configuration's full detail
   and writes it to `<dir>/<configurationId>.json`.
 - Prints each saved file and a final summary count.
+
+### Download specific configurations across projects
+
+Downloads the full detail (including rows) of a given list of configurations spread across several
+projects, using a Manage token to mint short-lived project storage tokens. Meant for audits such as
+"does any of these writer/transformation configurations still reference workspace X in its
+credentials?" before deleting the workspace (see [Read this before deleting anything](#read-this-before-deleting-anything)).
+Read-only, no `--force` needed.
+
+```
+php cli.php manage:download-project-configurations <manage-token> <source-file> <output-dir> [<hostname-suffix>]
+```
+Arguments:
+- `manage-token` (required): Manage API token (super admin), used to create short-lived storage tokens
+  per project.
+- `source-file` (required): CSV without header, either `projectId,componentId,configurationId` or the
+  `manage:check-project-workspaces-state` input format `projectId,workspaceSchema,componentId,configurationId`.
+  Duplicate configurations are downloaded once.
+- `output-dir` (required): Files are written to `<output-dir>/<projectId>/<componentId>/<configurationId>.json`
+  (`<configurationId>.deleted.json` for configurations found in trash).
+- `hostname-suffix` (optional): Keboola Connection hostname suffix. Defaults to `keboola.com`.
+
+Destroys: nothing, this command is read-only. The temporary storage token is dropped at the end of
+each project.
+
+Behavior:
+- Default branch only. A configuration missing from the default branch is looked up in the component's
+  trash; one found in neither is reported as `not_found`.
+- Prints per configuration its state (`live` / `in_trash` / `not_found`), name, row count, target file and
+  every `WORKSPACE_<id>` string found anywhere in the JSON.
+- Ends with a per-state summary and the list of configurations containing a `WORKSPACE_<id>` string, so an
+  empty list means none of the downloaded configurations references a workspace in its credentials.
 
 ### Migrate data-apps orchestrator/flow tasks to data-app-control
 Migrate orchestration/flow tasks that start a data app via the legacy `keboola.data-apps` component so they use
