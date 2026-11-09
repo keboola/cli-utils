@@ -642,6 +642,13 @@ Behavior:
   already running in the project, so before re-running an interrupted batch let the jobs it already
   created finish - two concurrent migrations of one project can both create the same flows.
 
+The end-to-end procedure — pre-flight check, dry run, triage of failures, PAYGO credits and the
+post-run audit — is described in [docs/flow-migration-runbook.md](docs/flow-migration-runbook.md).
+The audit itself is [docs/flow-migration-audit.sh](docs/flow-migration-audit.sh)
+(`MANAGE_TOKEN=<token> docs/flow-migration-audit.sh <stackUrl> <YYYY-MM-DD> <projectsFile>`): it
+checks that every migrated orchestration has a flow and that its schedules, triggers, notification
+subscriptions and nested references carried over.
+
 ### Mass enablement of dynamic backends for multiple projects
 Prerequisities: https://keboola.atlassian.net/wiki/spaces/KB/pages/2135982081/Enable+Dynamic+Backends#Enable-for-project
 
