@@ -4,7 +4,6 @@
 
 require __DIR__.'/vendor/autoload.php';
 
-use Keboola\Console\Command\AddFeature;
 use Keboola\Console\Command\CleanupLeakedTestFeatures;
 use Keboola\Console\Command\AllStacksIterator;
 use Keboola\Console\Command\CheckProjectWorkspacesState;
@@ -53,7 +52,6 @@ $application->add(new MassProjectExtendExpiration());
 $application->add(new MassProjectEnableDynamicBackends());
 $application->add(new MigrateDataAppsOrchestratorTasks());
 $application->add(new MigrateOrchestrationsToFlow());
-$application->add(new AddFeature());
 $application->add(new CleanupLeakedTestFeatures());
 $application->add(new AllStacksIterator());
 $application->add(new LineageEventsExport());
