@@ -19,6 +19,8 @@ same project list is safe: already-migrated orchestrations are reported as skipp
   ```
 
 - **A project id list**, one per line (`#` comments allowed). ~300 projects per batch works well.
+- **On a single-tenant stack**, go through [Single-tenant stacks](#7-single-tenant-stacks) first.
+  Most problems there come from customer code outside the tool.
 - **notification-service with the deleted-branch fix.** Deleting a notification subscription whose
   `branch.id` points to a deleted branch used to answer `500`, which failed the orchestration. Fixed
   in keboola/notification-service#204 (`6646105`). On a single-tenant stack check the deployed
@@ -213,3 +215,103 @@ One comment per batch, compact tables first, prose only for causes and decisions
 
 List projects without access by name — `GET /manage/projects/{id}` still works for them:
 `Project ID | Project name | Organization`.
+
+## 7. Single-tenant stacks
+
+A single-tenant stack needs more preparation than a multi-tenant one. Projects there are usually
+production pipelines with external integrations, and every migration window has to be agreed with
+the customer. The tool migrates everything inside a project. The risk is in customer code that
+calls legacy flows by component id.
+
+### Stack prerequisites
+
+- **The tool is on the stack.** `keboola.flow-migration-tool` must be listed in
+  `https://connection.<stack>/v2/storage` (`components`). If it is missing, add `{"id":
+  "keboola.flow-migration-tool"}` to `stacks/<stack>.json` in
+  keboola/infrastructure-plugin-update-components. Do not set `data.network: none` for it, because
+  the tool calls Keboola APIs. After the merge, the stack's `infrastructure-plugin-update-components`
+  CronJob applies it (daily at 06:00 UTC).
+- **notification-service has the deleted-branch fix** (see [Prepare](#1-prepare)).
+- **A manage token for the stack from SRE**, kept in a file and never pasted into chat.
+- **The customer agreed to the window**, through the customer's CSM. Find the CSM in the CRM
+  (`account` table in Agnes, the account linked to the stack). The account owner is not always
+  the CSM, so confirm in the customer's Slack channel.
+
+### Inventory without a manage token
+
+Agnes telemetry (`agnes query`, DuckDB) gives a first picture before any token is issued:
+
+- Legacy flows per stack: `kbc_component_configuration`, `kbc_component_id` is
+  `keboola.orchestrator_<stack>`. Count configs that are not deleted, not on a dev branch and
+  enabled. A config counts as migrated when a `keboola.flow` with the same id exists in the same
+  project.
+- Runs in the last 30 days: `kbc_job`. Here `kbc_component_id` has no stack suffix; take the stack
+  from the end of `kbc_project_id`.
+- Telemetry still holds snapshots of decommissioned stacks. Before planning, check which stacks still
+  send logs to Datadog:
+
+  ```bash
+  pup logs aggregate --storage indexes --query 'env:cloud-*' --from 7d --group-by env
+  ```
+
+### What can break, and how to find it
+
+| Risk | Handled automatically? | How to find it | What to do |
+|---|---|---|---|
+| External API callers (customer scripts, Claude Code, kbagent, Cursor or MCP clients, service tokens) start the flow as `keboola.orchestrator/<id>` | **No.** The legacy config is disabled after the migration, so these calls stop working. | Top-level `keboola.orchestrator` jobs (no `parentRunId`) whose token is not `[_internal] Scheduler for …`. Get token names from `GET /v2/storage/tokens`. Without a token, get them from Datadog: `pup logs aggregate --query 'env:<env> service:connection @token.id:*' --group-by @token.id,@token.description` | The customer switches the component id to `keboola.flow`. The configuration id stays the same. Tell them **before** the migration. Innogy found out only when a data consumer complained. |
+| Code or configs that read legacy flows: Python transformations, custom Python apps and data apps that call `/components/keboola.orchestrator/configs`, or that hard-code `("keboola.orchestrator", "<id>")` | **No** | Search the configuration JSON of all other components for `keboola.orchestrator` and for legacy flow ids (`GET /v2/storage/components?include=configuration,rows`) | The customer updates the code. Otherwise it keeps reading the disabled legacy config. |
+| `kds-team.app-flow-trigger-tracker` configs list Storage trigger ids (`flow_trigger_ids`) | **No.** The tool clones each trigger to the flow, and the clone gets a new id. | Configs of this component | After the migration, replace the ids with the ids of the flow triggers. |
+| `kds-team.app-orchestration-trigger-queue-v2` starts flows, also across projects | **Yes.** Since Oct 2026 the app picks `keboola.flow` when an enabled flow with that id exists. | Configs of this component | Check that its token can read `keboola.flow`. A `403` falls back to the disabled legacy flow. |
+| A flow is a task of another flow in the same project | **Yes**, references are repointed. | Audit `nestedStaleReferences` | Nothing. A fan-in phase still blocks the orchestration (see [triage](#3-triage-failures)). |
+| A trigger runs under a user's admin token | **No**, the orchestration is rolled back | `GET /v2/storage/triggers` → `runWithTokenId` → `GET /v2/storage/tokens`, flag `admin` | The customer migrates it via the one-click migration in the UI. |
+| Protected default branch (SOX) | **No** | [Pre-flight check](#pre-flight-check) | Separate wave with the customer. |
+| The project has the `hide-conditional-flows` feature | Migration works, but users no longer see their flows | `GET /manage/projects/<id>` → `features` | Remove the feature before or together with the migration. |
+| Automation runs under a person's admin token (token named after an email, runs at a fixed time) | Not a migration problem | Token names, as for API callers | Tell the customer. The automation breaks when that person leaves. |
+
+On Groupon the projects were split into three waves: projects that only need confirmation,
+projects with external API callers or data apps that need the customer's help, and SOX projects.
+
+### Reading the results
+
+On a single-tenant stack, a project token created through the manage API sees **no** Storage events
+(`/v2/storage/branch/<id>/events?runId=` returns `[]`). Read the job output from Datadog instead.
+There is one log record per job:
+
+```bash
+pup logs search --query 'env:<env> @extra.component:keboola.flow-migration-tool "Migration complete"' \
+  --from <RFC3339> --to <RFC3339> --limit 200
+```
+
+The `validate` sync action reports fan-in and other blockers per orchestration without creating a
+job (see the flow-migration-tool README).
+
+### Choosing the window
+
+There should be no legacy job running in a project when it is migrated. A running job finishes
+normally, but the new flow schedule can start a second run next to it.
+
+- Pull 21 days of `keboola.orchestrator` jobs per project from
+  `https://queue.<stack>/search/jobs` and the enabled schedules from `https://scheduler.<stack>/schedules`.
+- Pick the hour with the fewest busy projects. Start a few minutes after `:00` or `:30`, so hourly
+  jobs have finished. Move projects with multi-hour jobs to their own wave.
+- Right before the real run, hold back projects with a legacy job that has been running for more
+  than 30 minutes, and migrate them in the next wave.
+
+### Status (2026-11-19)
+
+Tracked in [AJDA-3782](https://linear.app/keboola/issue/AJDA-3782).
+
+| Stack | State | Known issues |
+|---|---|---|
+| `cloud-keboola-slsp` | migrated (Oct 2026) | — |
+| `cloud-keboola-groupon` | in preparation, split into three waves | external API callers, data apps, flow-trigger-tracker, SOX projects |
+| `cloud-keboola-csas` | not started; 1106 enabled legacy flows | not checked yet |
+| `cloud-keboola-innogy-hub` | customer migrates with the one-click migration; 89 enabled legacy flows left | external API callers (already hit) |
+| `cloud-keboola-pasha` | not started; 98 enabled legacy flows | cross-project trigger app (handled by the app); one chain runs under a personal admin token |
+| `cloud-keboola-hckz` | not started; 52 enabled legacy flows | none found |
+| `cloud-keboola-creditinfo` | not started; 33 enabled legacy flows | `hide-conditional-flows` in project 4 |
+| `cloud-keboola-nah` | nothing to migrate | — |
+| `cloud-keboola-coates`, `-hci`, `-rbi` | decommissioned | — |
+
+The issues for Pasha, HCKZ and Creditinfo come from telemetry and Datadog only. Configuration
+contents, table triggers and token lists still need checking with a manage token.
