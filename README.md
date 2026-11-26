@@ -598,6 +598,8 @@ Direct schedules (second pass, skipped with `--skip-schedules`):
   refreshed again, which also repairs a run that stopped between the Storage update and the refresh.
 - Order per schedule: create or find the flow, update the schedule configuration, refresh the schedule. A failure is
   printed, counted as FAILED and the run goes on with the next schedule; re-running is safe.
+- A schedule configuration that was never activated has no Scheduler row. Its Storage target is still changed, the
+  refresh is skipped because the Scheduler answers that no schedule exists, and it is not counted as failed.
 - Every forced change prints a `ROLLBACK:` line with the schedule configuration id, its old target and the new flow id.
   To roll back, write the old target into the schedule configuration, call `POST /schedules/migrate` for it and delete
   the flow.

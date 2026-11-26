@@ -25,6 +25,10 @@ class StatefulFakeComponents extends Components
     /** @var array<int, string> "componentId/configurationId" whose update must fail */
     public array $failUpdateFor = [];
 
+    public bool $failCreate = false;
+
+    public ?\Throwable $failCreateWith = null;
+
     private int $nextId = 1;
 
     /**
@@ -55,6 +59,12 @@ class StatefulFakeComponents extends Components
 
     public function addConfiguration(Configuration $options)
     {
+        if ($this->failCreateWith !== null) {
+            throw $this->failCreateWith;
+        }
+        if ($this->failCreate) {
+            throw new ClientException('Storage is unavailable');
+        }
         $id = 'new-' . $this->nextId++;
         $data = [
             'id' => $id,

@@ -3,6 +3,8 @@
 namespace Keboola\Console\Tests;
 
 use Keboola\Console\Command\DataAppScheduleMigrator;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Psr7\Request;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -383,5 +385,44 @@ class DataAppScheduleMigratorTest extends TestCase
         $this->migrate($components, new FakeSchedulerClient(), true);
 
         $this->assertSame('disabled', $components->updateCalls[0]['configuration']['schedule']['state']);
+    }
+
+    public function testFailedFlowCreationIsNotCountedAsCreated(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $components->failCreate = true;
+
+        $result = $this->migrate($components, new FakeSchedulerClient(), true);
+
+        $this->assertEquals(
+            ['schedulesScanned' => 1, 'schedulesFailed' => 1] + self::EMPTY_RESULT,
+            $result
+        );
+        $this->assertSame([], $components->updateCalls);
+    }
+
+    public function testFailedRefreshOfAlreadyMigratedScheduleIsCountedOnlyAsFailed(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $scheduler = new FakeSchedulerClient();
+        $this->migrate($components, $scheduler, true);
+        $scheduler->failRefreshFor = ['s1'];
+
+        $result = $this->migrate($components, $scheduler, true);
+
+        $this->assertEquals(
+            ['schedulesScanned' => 1, 'schedulesFailed' => 1] + self::EMPTY_RESULT,
+            $result
+        );
+    }
+
+    public function testTransportErrorOfOneScheduleDoesNotAbortTheRun(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $components->failCreateWith = new ConnectException('Connection refused', new Request('POST', 'https://connection.keboola.com'));
+
+        $result = $this->migrate($components, new FakeSchedulerClient(), true);
+
+        $this->assertSame(1, $result['schedulesFailed']);
     }
 }

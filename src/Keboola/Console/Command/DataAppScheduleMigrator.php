@@ -2,6 +2,7 @@
 
 namespace Keboola\Console\Command;
 
+use GuzzleHttp\Exception\GuzzleException;
 use Keboola\StorageApi\ClientException;
 use Keboola\StorageApi\Components;
 use Keboola\StorageApi\Options\Components\Configuration;
@@ -79,15 +80,15 @@ class DataAppScheduleMigrator
             $targetConfigurationId = (string) ($target['configurationId'] ?? '');
 
             if ($targetComponentId === self::FLOW_COMPONENT_ID && isset($migratedFlowIds[$targetConfigurationId])) {
-                $counts['schedulesAlreadyMigrated']++;
                 $output->writeln(sprintf('%sSkipping %s: already migrated to flow "%s"', $prefix, $label, $targetConfigurationId));
-                if ($isForce) {
-                    try {
+                try {
+                    if ($isForce) {
                         $scheduler->refreshSchedule($scheduleId);
-                    } catch (SchedulerClientException $e) {
-                        $counts['schedulesFailed']++;
-                        $output->writeln(sprintf(' - error while refreshing schedule config "%s": %s', $scheduleId, $e->getMessage()));
                     }
+                    $counts['schedulesAlreadyMigrated']++;
+                } catch (SchedulerClientException $e) {
+                    $counts['schedulesFailed']++;
+                    $output->writeln(sprintf(' - error while refreshing schedule config "%s": %s', $scheduleId, $e->getMessage()));
                 }
                 continue;
             }
@@ -140,13 +141,13 @@ class DataAppScheduleMigrator
                 ));
 
                 if ($flowId === null) {
-                    $counts['flowsCreated']++;
                     if ($isForce) {
                         $flowId = $this->createFlow($components, $targetConfigurationId, $dataApp['name'], $dataApp['appId']);
                         $migratedFlowIds[$flowId] = $targetConfigurationId;
                     } else {
                         $flowId = 'dry-run-' . $targetConfigurationId;
                     }
+                    $counts['flowsCreated']++;
                     $flowIdsByDataAppsConfigId[$targetConfigurationId] = $flowId;
                 }
 
@@ -171,7 +172,7 @@ class DataAppScheduleMigrator
                     $scheduler->refreshSchedule($scheduleId);
                 }
                 $counts['schedulesMigrated']++;
-            } catch (ClientException | SchedulerClientException $e) {
+            } catch (ClientException | SchedulerClientException | GuzzleException $e) {
                 $counts['schedulesFailed']++;
                 $output->writeln(sprintf(' - error while migrating schedule config "%s": %s', $scheduleId, $e->getMessage()));
             }

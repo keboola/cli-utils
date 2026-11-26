@@ -3,19 +3,21 @@
 namespace Keboola\Console\Command;
 
 use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Exception\ClientException as GuzzleClientException;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\HandlerStack;
 
 class HttpSchedulerClient implements SchedulerClient
 {
     private GuzzleClient $client;
 
-    public function __construct(string $schedulerUrl, string $storageToken)
+    public function __construct(string $schedulerUrl, string $storageToken, ?HandlerStack $handler = null)
     {
         $this->client = new GuzzleClient([
             'base_uri' => $schedulerUrl,
             'headers' => ['X-StorageApi-Token' => $storageToken],
             'timeout' => 60,
-        ]);
+        ] + ($handler !== null ? ['handler' => $handler] : []));
     }
 
     public static function schedulerUrlFromConnectionUrl(string $connectionUrl): ?string
@@ -34,6 +36,13 @@ class HttpSchedulerClient implements SchedulerClient
                     'sourceConfigurationId' => $configurationId,
                 ],
             ]);
+        } catch (GuzzleClientException $e) {
+            // A schedule configuration that was never activated has no Scheduler row to refresh and does not run.
+            $isInactive = $e->getResponse()->getStatusCode() === 400
+                && str_contains((string) $e->getResponse()->getBody(), 'no schedule found');
+            if (!$isInactive) {
+                throw new SchedulerClientException($e->getMessage(), (int) $e->getCode(), $e);
+            }
         } catch (GuzzleException $e) {
             throw new SchedulerClientException($e->getMessage(), (int) $e->getCode(), $e);
         }
