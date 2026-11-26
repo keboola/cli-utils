@@ -16,7 +16,8 @@ class DataAppScheduleMigratorTest extends TestCase
         'schedulesMigrated' => 0,
         'schedulesAlreadyMigrated' => 0,
         'flowsCreated' => 0,
-        'flowsCreatedDisabled' => 0,
+        'schedulesSkippedDisabledSource' => 0,
+        'schedulesRetargetedWithoutLiveRow' => 0,
         'schedulesSkippedUnsupported' => 0,
         'schedulesSkippedUnresolvable' => 0,
         'schedulesSkippedDiverged' => 0,
@@ -430,44 +431,75 @@ class DataAppScheduleMigratorTest extends TestCase
         $this->assertSame(1, $result['schedulesFailed']);
     }
 
-    public function testDisabledDataAppsConfigIsMigratedToADisabledFlow(): void
+    public function testDisabledDataAppsConfigIsSkippedAndNothingIsWritten(): void
     {
         $components = $this->components(
             [$this->schedule('s1')],
             [['isDisabled' => true] + $this->dataAppsConfig('app-cfg-1')]
         );
+        $scheduler = new FakeSchedulerClient($components);
         $output = new BufferedOutput();
 
-        $result = $this->migrate($components, new FakeSchedulerClient($components), true, $output);
+        $result = $this->migrate($components, $scheduler, true, $output);
 
         $this->assertEquals(
-            ['schedulesScanned' => 1, 'schedulesMigrated' => 1, 'flowsCreated' => 1, 'flowsCreatedDisabled' => 1] + self::EMPTY_RESULT,
+            ['schedulesScanned' => 1, 'schedulesSkippedDisabledSource' => 1] + self::EMPTY_RESULT,
             $result
         );
-        $this->assertTrue($components->createCalls[0]['isDisabled']);
-        $this->assertStringContainsString('source configuration is disabled', $output->fetch());
+        $this->assertSame([], $components->createCalls);
+        $this->assertSame([], $components->updateCalls);
+        $this->assertSame([], $scheduler->refreshed);
+        $this->assertSame(0, $scheduler->listCalls);
+        $this->assertSame('keboola.data-apps', $components->configs['keboola.scheduler']['s1']['configuration']['target']['componentId']);
+        $this->assertStringContainsString(
+            'Skipping project "500", schedule config "s1" ("Schedule s1"): keboola.data-apps configuration "app-cfg-1" is disabled',
+            $output->fetch()
+        );
     }
 
-    public function testEnabledDataAppsConfigIsMigratedToAnEnabledFlow(): void
-    {
-        $components = $this->components([$this->schedule('s1')]);
-
-        $this->migrate($components, new FakeSchedulerClient($components), true);
-
-        $this->assertFalse($components->createCalls[0]['isDisabled']);
-    }
-
-    public function testDryRunCountsDisabledFlow(): void
+    public function testDisabledSourceIsCountedPerScheduleInDryRunToo(): void
     {
         $components = $this->components(
-            [$this->schedule('s1')],
+            [$this->schedule('s1'), $this->schedule('s2')],
             [['isDisabled' => true] + $this->dataAppsConfig('app-cfg-1')]
         );
 
         $result = $this->migrate($components, new FakeSchedulerClient($components), false);
 
-        $this->assertSame(1, $result['flowsCreatedDisabled']);
-        $this->assertSame([], $components->createCalls);
+        $this->assertSame(2, $result['schedulesSkippedDisabledSource']);
+        $this->assertSame(0, $result['schedulesMigrated']);
+    }
+
+    public function testEnabledAndDisabledSourcesAreHandledPerConfiguration(): void
+    {
+        $components = $this->components([
+            $this->schedule('s1'),
+            $this->schedule('s2', ['configurationId' => 'app-cfg-2']),
+        ], [
+            ['isDisabled' => true] + $this->dataAppsConfig('app-cfg-1', ['id' => '111']),
+            $this->dataAppsConfig('app-cfg-2', ['id' => '222']),
+        ]);
+
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true);
+
+        $this->assertEquals(
+            ['schedulesScanned' => 2, 'schedulesMigrated' => 1, 'flowsCreated' => 1, 'schedulesSkippedDisabledSource' => 1] + self::EMPTY_RESULT,
+            $result
+        );
+        $this->assertCount(1, $components->configs['keboola.flow']);
+    }
+
+    public function testNoRollbackLineIsPrintedForAFailedUpdate(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $components->failUpdateFor = ['keboola.scheduler/s1'];
+        $output = new BufferedOutput();
+
+        $this->migrate($components, new FakeSchedulerClient($components), true, $output);
+
+        $log = $output->fetch();
+        $this->assertStringContainsString('error while migrating schedule config "s1"', $log);
+        $this->assertStringNotContainsString('ROLLBACK:', $log);
     }
 
     /**
@@ -525,11 +557,35 @@ class DataAppScheduleMigratorTest extends TestCase
         $result = $this->migrate($components, $scheduler, true);
 
         $this->assertEquals(
-            ['schedulesScanned' => 1, 'schedulesMigrated' => 1, 'flowsCreated' => 1] + self::EMPTY_RESULT,
+            ['schedulesScanned' => 1, 'schedulesRetargetedWithoutLiveRow' => 1, 'flowsCreated' => 1] + self::EMPTY_RESULT,
             $result
         );
         $this->assertCount(1, $components->updateCalls);
         $this->assertSame([], $scheduler->refreshed);
+    }
+
+    public function testRetargetedWithoutLiveRowIsReportedInTheOutput(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $scheduler = new FakeSchedulerClient($components);
+        $scheduler->rows = [];
+        $output = new BufferedOutput();
+
+        $this->migrate($components, $scheduler, true, $output);
+
+        $this->assertStringContainsString('retargeted in Storage only, no live Scheduler row found', $output->fetch());
+    }
+
+    public function testRowOnAnotherTargetIsReportedAsNoLiveRowNotAsMigrated(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $scheduler = new FakeSchedulerClient($components);
+        $scheduler->rows['s1']['target']['configurationId'] = 'other-app-cfg';
+
+        $result = $this->migrate($components, $scheduler, true);
+
+        $this->assertSame(0, $result['schedulesMigrated']);
+        $this->assertSame(1, $result['schedulesRetargetedWithoutLiveRow']);
     }
 
     public function testRollbackLineContainsTheLiveState(): void

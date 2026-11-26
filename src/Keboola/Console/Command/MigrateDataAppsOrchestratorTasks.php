@@ -39,7 +39,9 @@ class MigrateDataAppsOrchestratorTasks extends Command
     protected int $schedulesMigrated = 0;
     protected int $schedulesAlreadyMigrated = 0;
     protected int $flowsCreated = 0;
-    protected int $flowsCreatedDisabled = 0;
+    protected int $schedulesSkippedDisabledSource = 0;
+    protected int $schedulesRetargetedWithoutLiveRow = 0;
+    protected int $tasksSkippedDisabledSource = 0;
     protected int $schedulesSkippedDiverged = 0;
     protected int $schedulesSkippedUnsupported = 0;
     protected int $schedulesSkippedUnresolvable = 0;
@@ -267,6 +269,7 @@ class MigrateDataAppsOrchestratorTasks extends Command
             $this->tasksMigrated += $result['tasksMigrated'];
             $this->tasksSkippedUnsupported += $result['tasksSkippedUnsupported'];
             $this->tasksSkippedUnresolvable += $result['tasksSkippedUnresolvable'];
+            $this->tasksSkippedDisabledSource += $result['tasksSkippedDisabledSource'];
             if (!$this->skipSchedules) {
                 $this->migrateProjectSchedules($project, $components, $output, $url, $projectToken, $projectId, $force);
             }
@@ -310,7 +313,8 @@ class MigrateDataAppsOrchestratorTasks extends Command
         $this->schedulesMigrated += $result['schedulesMigrated'];
         $this->schedulesAlreadyMigrated += $result['schedulesAlreadyMigrated'];
         $this->flowsCreated += $result['flowsCreated'];
-        $this->flowsCreatedDisabled += $result['flowsCreatedDisabled'];
+        $this->schedulesSkippedDisabledSource += $result['schedulesSkippedDisabledSource'];
+        $this->schedulesRetargetedWithoutLiveRow += $result['schedulesRetargetedWithoutLiveRow'];
         $this->schedulesSkippedDiverged += $result['schedulesSkippedDiverged'];
         $this->schedulesSkippedUnsupported += $result['schedulesSkippedUnsupported'];
         $this->schedulesSkippedUnresolvable += $result['schedulesSkippedUnresolvable'];
@@ -338,7 +342,8 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 . '%d configurations ' . ($force ? 'updated' : 'would be updated in force mode') . "\n"
                 . '%d tasks ' . ($force ? 'migrated' : 'would be migrated in force mode') . "\n"
                 . "%d tasks skipped (unsupported shape - expected, no action needed)\n"
-                . "%d tasks skipped as UNRESOLVABLE (needs manual follow-up)\n",
+                . "%d tasks skipped as UNRESOLVABLE (needs manual follow-up)\n"
+                . "%d tasks skipped as DISABLED SOURCE (the referenced keboola.data-apps configuration is disabled, task left untouched)\n",
                 $totalProjectsChecked,
                 $this->projectsDisabled,
                 $this->projectsError,
@@ -346,7 +351,8 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 $this->configsTouched,
                 $this->tasksMigrated,
                 $this->tasksSkippedUnsupported,
-                $this->tasksSkippedUnresolvable
+                $this->tasksSkippedUnresolvable,
+                $this->tasksSkippedDisabledSource
             )
         );
 
@@ -354,21 +360,24 @@ class MigrateDataAppsOrchestratorTasks extends Command
             $output->writeln(sprintf(
                 "Scanned %d schedules\n"
                 . '%d schedules ' . ($force ? 'migrated' : 'would be migrated in force mode') . "\n"
-                . '%d flows ' . ($force ? 'created' : 'would be created in force mode') . " (%d of them disabled, as their source configuration is disabled)\n"
+                . '%d schedules retargeted in Storage only (no live Scheduler row found, check them; ' . ($force ? '' : 'would be, in force mode; ') . "not counted as migrated)\n"
+                . '%d flows ' . ($force ? 'created' : 'would be created in force mode') . "\n"
                 . "%d schedules already migrated\n"
                 . "%d schedules skipped (unsupported target - expected, no action needed)\n"
                 . "%d schedules skipped as UNRESOLVABLE (needs manual follow-up)\n"
                 . "%d schedules skipped as DIVERGED (live Scheduler row differs from its configuration, needs manual follow-up)\n"
+                . "%d schedules skipped as DISABLED SOURCE (the keboola.data-apps configuration is disabled, schedule left untouched)\n"
                 . "%d schedules FAILED (see errors above, safe to re-run)\n"
                 . "%d projects skipped for schedules (protected default branch)\n",
                 $this->schedulesScanned,
                 $this->schedulesMigrated,
+                $this->schedulesRetargetedWithoutLiveRow,
                 $this->flowsCreated,
-                $this->flowsCreatedDisabled,
                 $this->schedulesAlreadyMigrated,
                 $this->schedulesSkippedUnsupported,
                 $this->schedulesSkippedUnresolvable,
                 $this->schedulesSkippedDiverged,
+                $this->schedulesSkippedDisabledSource,
                 $this->schedulesFailed,
                 $this->projectsSchedulesSkippedProtected
             ));

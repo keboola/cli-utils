@@ -37,7 +37,7 @@ class DataAppOrchestratorTaskMigratorTest extends TestCase
         $result = $migrator->migrateProject($components, new BufferedOutput(), '500', true);
 
         $this->assertSame(
-            ['configsScanned' => 1, 'configsTouched' => 1, 'tasksMigrated' => 1, 'tasksSkippedUnsupported' => 0, 'tasksSkippedUnresolvable' => 0],
+            ['configsScanned' => 1, 'configsTouched' => 1, 'tasksMigrated' => 1, 'tasksSkippedUnsupported' => 0, 'tasksSkippedUnresolvable' => 0, 'tasksSkippedDisabledSource' => 0],
             $result
         );
         $this->assertCount(1, $components->updateCalls);
@@ -209,7 +209,7 @@ class DataAppOrchestratorTaskMigratorTest extends TestCase
         $this->assertCount(0, $components->updateCalls);
     }
 
-    public function testTaskReferencingADisabledDataAppsConfigIsMigratedAsDisabledTask(): void
+    public function testTaskReferencingADisabledDataAppsConfigIsLeftUntouched(): void
     {
         $config = [
             'id' => 'c1',
@@ -233,15 +233,19 @@ class DataAppOrchestratorTaskMigratorTest extends TestCase
 
         $result = (new DataAppOrchestratorTaskMigrator())->migrateProject($components, $output, '500', true);
 
-        $this->assertSame(2, $result['tasksMigrated']);
+        $this->assertSame(1, $result['tasksMigrated']);
+        $this->assertSame(1, $result['tasksSkippedDisabledSource']);
         $tasks = $components->updateCalls[0]['configuration']['tasks'];
-        $this->assertFalse($tasks[0]['enabled']);
-        $this->assertSame(['parameters' => ['appId' => 'app-1']], $tasks[0]['task']['configData']);
-        $this->assertTrue($tasks[1]['enabled']);
-        $this->assertStringContainsString('source configuration is disabled', $output->fetch());
+        $this->assertSame($config['configuration']['tasks'][0], $tasks[0]);
+        $this->assertSame('keboola.data-app-control', $tasks[1]['task']['componentId']);
+        $this->assertSame(['parameters' => ['appId' => 'app-2']], $tasks[1]['task']['configData']);
+        $this->assertStringContainsString(
+            'Skipping project "500", keboola.flow config "c1" ("my flow"), task "t1": keboola.data-apps configuration "sibling-1" is disabled',
+            $output->fetch()
+        );
     }
 
-    public function testDisabledStateOfTheCachedConfigIsAppliedToEveryTaskReferencingIt(): void
+    public function testFlowWithOnlyDisabledSourceTasksIsNotUpdatedAtAll(): void
     {
         $config = [
             'id' => 'c1',
@@ -259,11 +263,82 @@ class DataAppOrchestratorTaskMigratorTest extends TestCase
             ['keboola.data-apps/sibling-1' => ['isDisabled' => true, 'configuration' => ['parameters' => ['id' => 'app-1']]]]
         );
 
-        (new DataAppOrchestratorTaskMigrator())->migrateProject($components, new BufferedOutput(), '500', true);
+        $result = (new DataAppOrchestratorTaskMigrator())->migrateProject($components, new BufferedOutput(), '500', true);
 
-        $tasks = $components->updateCalls[0]['configuration']['tasks'];
-        $this->assertFalse($tasks[0]['enabled']);
-        $this->assertFalse($tasks[1]['enabled']);
+        $this->assertSame(
+            ['configsScanned' => 1, 'configsTouched' => 0, 'tasksMigrated' => 0, 'tasksSkippedUnsupported' => 0, 'tasksSkippedUnresolvable' => 0, 'tasksSkippedDisabledSource' => 2],
+            $result
+        );
+        $this->assertSame([], $components->updateCalls);
+        $this->assertSame(1, $components->getConfigurationCalls);
+    }
+
+    public function testTaskWithBothConfigIdAndConfigDataChecksTheDisabledStateOfTheConfigId(): void
+    {
+        $config = [
+            'id' => 'c1',
+            'name' => 'my flow',
+            'configuration' => [
+                'phases' => [],
+                'tasks' => [
+                    $this->legacyTask('c1', 't1', ['configId' => 'sibling-1', 'configData' => ['parameters' => ['id' => 'app-1']]]),
+                ],
+            ],
+        ];
+        $components = new FakeComponents(
+            ['keboola.flow' => [$config]],
+            ['keboola.data-apps/sibling-1' => ['isDisabled' => true, 'configuration' => ['parameters' => ['id' => 'app-1']]]]
+        );
+
+        $result = (new DataAppOrchestratorTaskMigrator())->migrateProject($components, new BufferedOutput(), '500', true);
+
+        $this->assertSame(1, $result['tasksSkippedDisabledSource']);
+        $this->assertSame(0, $result['tasksMigrated']);
+        $this->assertSame([], $components->updateCalls);
+    }
+
+    public function testTaskWithBothConfigIdAndConfigDataIsMigratedWhenTheConfigIdIsEnabled(): void
+    {
+        $config = [
+            'id' => 'c1',
+            'name' => 'my flow',
+            'configuration' => [
+                'phases' => [],
+                'tasks' => [
+                    $this->legacyTask('c1', 't1', ['configId' => 'sibling-1', 'configData' => ['parameters' => ['id' => 'app-from-data']]]),
+                ],
+            ],
+        ];
+        $components = new FakeComponents(
+            ['keboola.flow' => [$config]],
+            ['keboola.data-apps/sibling-1' => ['isDisabled' => false, 'configuration' => ['parameters' => ['id' => 'app-1']]]]
+        );
+
+        $result = (new DataAppOrchestratorTaskMigrator())->migrateProject($components, new BufferedOutput(), '500', true);
+
+        $this->assertSame(1, $result['tasksMigrated']);
+        $task = $components->updateCalls[0]['configuration']['tasks'][0]['task'];
+        $this->assertSame(['parameters' => ['appId' => 'app-from-data']], $task['configData']);
+        $this->assertArrayNotHasKey('configId', $task);
+    }
+
+    public function testTaskWithBothConfigIdAndConfigDataIsMigratedWhenTheConfigIdCannotBeRead(): void
+    {
+        $config = [
+            'id' => 'c1',
+            'name' => 'my flow',
+            'configuration' => [
+                'phases' => [],
+                'tasks' => [
+                    $this->legacyTask('c1', 't1', ['configId' => 'gone', 'configData' => ['parameters' => ['id' => 'app-from-data']]]),
+                ],
+            ],
+        ];
+        $components = new FakeComponents(['keboola.flow' => [$config]]);
+
+        $result = (new DataAppOrchestratorTaskMigrator())->migrateProject($components, new BufferedOutput(), '500', true);
+
+        $this->assertSame(1, $result['tasksMigrated']);
     }
 
     public function testInlineConfigDataTaskKeepsItsEnabledFlag(): void

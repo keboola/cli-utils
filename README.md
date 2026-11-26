@@ -596,11 +596,15 @@ Direct schedules (second pass, skipped with `--skip-schedules`):
 - The live Scheduler row is read first (`GET /schedules?componentId=keboola.data-apps&configurationId=<id>`). If its
   state, cron or timezone differs from the Storage configuration, the schedule is skipped and counted as DIVERGED
   (needs manual follow-up), because the refresh would copy the configuration values over the live ones. A
-  configuration without a live row (never activated) is retargeted in Storage and nothing is refreshed.
-- A disabled `keboola.data-apps` configuration gets a disabled flow, so the schedule keeps firing into a rejected job
-  as before and the app is not started. The same applies to flow tasks: a task that referenced a disabled data-apps
-  configuration by `configId` is migrated with `enabled: false`, because the job queue only rejects disabled
-  configurations that are referenced by `configId`.
+  configuration for which no live row is found (never activated, or the row targets something else) is retargeted in
+  Storage, nothing is refreshed, and it is counted separately as "retargeted in Storage only" instead of "migrated", so
+  that you can check it.
+- A disabled `keboola.data-apps` configuration is not migrated. Its schedule is left as it is (no flow, no retarget) and
+  counted as DISABLED SOURCE, with the project, schedule and data-apps configuration id in the output. The same holds
+  for flow tasks: a task that references a disabled configuration by `configId` is left untouched and counted as
+  DISABLED SOURCE, also when the task has `configData` next to the `configId`. After migration the task would carry
+  `configData` only, and the job queue rejects a disabled configuration only when it is referenced by `configId`, so
+  the app would start. Re-enable the data-apps configuration and run the command again to migrate these.
 - The flow is found again by a `[migrated-from-data-apps:<configId>]` marker in its description, so a re-run reuses it
   and never creates a second one. If two flows carry the same marker, a warning is printed and the first one is used.
   A schedule whose Storage target is already such a flow is reported as already migrated. It is refreshed again only

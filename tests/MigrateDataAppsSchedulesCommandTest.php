@@ -152,7 +152,7 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
         $this->assertContains('keboola.scheduler', $tokenRequests[0]['componentAccess']);
         $this->assertSame(['https://scheduler.keboola.com'], $schedulerUrls);
         $this->assertSame(['s1'], $scheduler->refreshed);
-        $this->assertStringContainsString("1 schedules migrated\n1 flows created", $tester->getDisplay());
+        $this->assertStringContainsString("1 schedules migrated\n0 schedules retargeted in Storage only", $tester->getDisplay());
     }
 
     public function testDryRunWritesNothingAndSaysWouldBeMigrated(): void
@@ -262,7 +262,7 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
         $this->assertSame(['s1'], $scheduler->refreshed);
     }
 
-    public function testSummaryShowsDisabledFlowsAndDivergedSchedules(): void
+    public function testSummaryShowsTheDisabledSourceAndDivergedCounters(): void
     {
         $components = $this->components();
         $components->configs['keboola.data-apps']['app-cfg-1']['isDisabled'] = true;
@@ -271,8 +271,11 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
 
         $tester = $this->execute($this->command($components, new FakeSchedulerClient($components), [], $tokenRequests, $schedulerUrls));
 
-        $this->assertStringContainsString('1 flows would be created in force mode (1 of them disabled', $tester->getDisplay());
-        $this->assertStringContainsString('0 schedules skipped as DIVERGED', $tester->getDisplay());
+        $display = $tester->getDisplay();
+        $this->assertStringContainsString('1 schedules skipped as DISABLED SOURCE', $display);
+        $this->assertStringContainsString('0 tasks skipped as DISABLED SOURCE', $display);
+        $this->assertStringContainsString('0 schedules skipped as DIVERGED', $display);
+        $this->assertStringContainsString('0 schedules retargeted in Storage only (no live Scheduler row found', $display);
     }
 
     #[DataProvider('provideConnectionUrls')]

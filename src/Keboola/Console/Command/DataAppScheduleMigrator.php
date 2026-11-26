@@ -27,10 +27,11 @@ class DataAppScheduleMigrator
      *     schedulesMigrated: int,
      *     schedulesAlreadyMigrated: int,
      *     flowsCreated: int,
-     *     flowsCreatedDisabled: int,
+     *     schedulesRetargetedWithoutLiveRow: int,
      *     schedulesSkippedUnsupported: int,
      *     schedulesSkippedUnresolvable: int,
      *     schedulesSkippedDiverged: int,
+     *     schedulesSkippedDisabledSource: int,
      *     schedulesFailed: int
      * }
      */
@@ -46,10 +47,11 @@ class DataAppScheduleMigrator
             'schedulesMigrated' => 0,
             'schedulesAlreadyMigrated' => 0,
             'flowsCreated' => 0,
-            'flowsCreatedDisabled' => 0,
+            'schedulesRetargetedWithoutLiveRow' => 0,
             'schedulesSkippedUnsupported' => 0,
             'schedulesSkippedUnresolvable' => 0,
             'schedulesSkippedDiverged' => 0,
+            'schedulesSkippedDisabledSource' => 0,
             'schedulesFailed' => 0,
         ];
         $prefix = $isForce ? 'FORCE: ' : 'DRY-RUN: ';
@@ -156,6 +158,17 @@ class DataAppScheduleMigrator
                 continue;
             }
 
+            if ($dataApp['isDisabled']) {
+                $output->writeln(sprintf(
+                    '%sSkipping %s: keboola.data-apps configuration "%s" is disabled, the schedule is left as it is',
+                    $prefix,
+                    $label,
+                    $targetConfigurationId
+                ));
+                $counts['schedulesSkippedDisabledSource']++;
+                continue;
+            }
+
             try {
                 $liveRow = $this->findLiveRow($scheduler, $targetConfigurationId, $scheduleId, $liveRowsCache);
                 $divergence = $liveRow === null ? null : $this->describeDivergence($configuration, $liveRow);
@@ -185,35 +198,23 @@ class DataAppScheduleMigrator
                 ));
 
                 if ($flowId === null) {
-                    if ($dataApp['isDisabled']) {
-                        $output->writeln(sprintf(
-                            '%sNote for %s: source configuration is disabled, the flow is created disabled',
-                            $prefix,
-                            $label
-                        ));
-                    }
                     if ($isForce) {
                         try {
                             $flowId = $this->createFlow(
                                 $components,
                                 $targetConfigurationId,
                                 $dataApp['name'],
-                                $dataApp['appId'],
-                                $dataApp['isDisabled']
+                                $dataApp['appId']
                             );
                         } catch (ClientException | GuzzleException $e) {
                             $flowIndex = $this->indexMigratedFlows($components, $output, $prefix, false);
                             $flowIdsByDataAppsConfigId = $flowIndex['byDataAppsConfigId'];
-                            $dataAppsConfigIdsByFlowId = $flowIndex['byFlowId'];
                             throw $e;
                         }
                     } else {
                         $flowId = 'dry-run-' . $targetConfigurationId;
                     }
                     $counts['flowsCreated']++;
-                    if ($dataApp['isDisabled']) {
-                        $counts['flowsCreatedDisabled']++;
-                    }
                     $flowIdsByDataAppsConfigId[$targetConfigurationId] = $flowId;
                 }
 
@@ -241,7 +242,16 @@ class DataAppScheduleMigrator
                         $scheduler->refreshSchedule($scheduleId);
                     }
                 }
-                $counts['schedulesMigrated']++;
+                if ($liveRow === null) {
+                    $output->writeln(sprintf(
+                        '%sNote for %s: retargeted in Storage only, no live Scheduler row found - check it',
+                        $prefix,
+                        $label
+                    ));
+                    $counts['schedulesRetargetedWithoutLiveRow']++;
+                } else {
+                    $counts['schedulesMigrated']++;
+                }
             } catch (ClientException | SchedulerClientException | GuzzleException $e) {
                 $counts['schedulesFailed']++;
                 $output->writeln(sprintf(' - error while migrating schedule config "%s": %s', $scheduleId, $e->getMessage()));
@@ -370,8 +380,7 @@ class DataAppScheduleMigrator
         Components $components,
         string $dataAppsConfigurationId,
         string $dataAppName,
-        string $appId,
-        bool $isDisabled
+        string $appId
     ): string {
         $created = $components->addConfiguration(
             (new Configuration())
@@ -399,7 +408,6 @@ class DataAppScheduleMigrator
                         'enabled' => true,
                     ]],
                 ])
-                ->setIsDisabled($isDisabled)
                 ->setChangeDescription(self::CHANGE_DESCRIPTION)
         );
 
