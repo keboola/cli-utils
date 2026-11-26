@@ -427,12 +427,6 @@ parameters:
 			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
 
 		-
-			message: '#^Parameter \#1 \$config of class Keboola\\StorageApi\\Client constructor expects array\{token\?\: string, url\?\: string, userAgent\?\: string, backoffMaxTries\?\: int, retryOnMaintenance\?\: bool, awsRetries\?\: int, logger\?\: Psr\\Log\\LoggerInterface, jobPollRetryDelay\?\: callable\(\)\: mixed, \.\.\.\}, array\{url\: string, token\: mixed\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Keboola/Console/Command/MigrateDataAppsOrchestratorTasks.php
-
-		-
 			message: '#^Parameter \#1 \$id of method Keboola\\ManageApi\\Client\:\:getProject\(\) expects int, string given\.$#'
 			identifier: argument.type
 			count: 1

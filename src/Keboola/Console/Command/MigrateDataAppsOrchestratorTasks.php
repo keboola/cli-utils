@@ -2,6 +2,7 @@
 
 namespace Keboola\Console\Command;
 
+use GuzzleHttp\Exception\GuzzleException;
 use Keboola\ManageApi\Client;
 use Keboola\ManageApi\ClientException as ManageClientException;
 use Keboola\StorageApi\Client as StorageClient;
@@ -21,6 +22,8 @@ class MigrateDataAppsOrchestratorTasks extends Command
     const ARG_URL = 'url';
     const ARG_PROJECTS = 'projects';
     const OPT_FORCE = 'force';
+    const OPT_SKIP_SCHEDULES = 'skip-schedules';
+    const PROTECTED_DEFAULT_BRANCH_FEATURE = 'protected-default-branch';
 
     protected int $maintainersChecked = 0;
     protected int $orgsChecked = 0;
@@ -32,24 +35,54 @@ class MigrateDataAppsOrchestratorTasks extends Command
     protected int $tasksMigrated = 0;
     protected int $tasksSkippedUnsupported = 0;
     protected int $tasksSkippedUnresolvable = 0;
+    protected int $schedulesScanned = 0;
+    protected int $schedulesMigrated = 0;
+    protected int $schedulesAlreadyMigrated = 0;
+    protected int $flowsCreated = 0;
+    protected int $schedulesSkippedDisabledSource = 0;
+    protected int $schedulesRetargetedWithoutLiveRow = 0;
+    protected int $tasksSkippedDisabledSource = 0;
+    protected int $schedulesSkippedDiverged = 0;
+    protected int $schedulesSkippedUnsupported = 0;
+    protected int $schedulesSkippedUnresolvable = 0;
+    protected int $schedulesFailed = 0;
+    protected int $projectsSchedulesSkippedProtected = 0;
+    protected bool $skipSchedules = false;
+    protected ?string $schedulerUrl = null;
 
     private DataAppOrchestratorTaskMigrator $migrator;
+    private DataAppScheduleMigrator $scheduleMigrator;
 
     public function __construct()
     {
         parent::__construct();
         $this->migrator = new DataAppOrchestratorTaskMigrator();
+        $this->scheduleMigrator = new DataAppScheduleMigrator();
     }
 
     protected function configure(): void
     {
         $this
             ->setName('manage:migrate-data-apps-orchestrator-tasks')
-            ->setDescription('Migrate orchestration/flow tasks from keboola.data-apps to keboola.data-app-control')
+            ->setDescription('Migrate orchestration/flow tasks and direct schedules from keboola.data-apps to keboola.data-app-control')
             ->addArgument(self::ARG_TOKEN, InputArgument::REQUIRED, 'manage token')
             ->addArgument(self::ARG_URL, InputArgument::REQUIRED, 'Stack URL')
             ->addArgument(self::ARG_PROJECTS, InputArgument::REQUIRED, 'list of project IDs separated by comma or "all"')
-            ->addOption(self::OPT_FORCE, 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run');
+            ->addOption(self::OPT_FORCE, 'f', InputOption::VALUE_NONE, 'Will actually do the work, otherwise it\'s dry run')
+            ->addOption(self::OPT_SKIP_SCHEDULES, null, InputOption::VALUE_NONE, 'Do not migrate direct schedules of keboola.data-apps configurations, only orchestrator/flow tasks');
+    }
+
+    protected function createComponents(string $url, string $token): Components
+    {
+        return new Components(new StorageClient([
+            'url' => $url,
+            'token' => $token,
+        ]));
+    }
+
+    protected function createSchedulerClient(string $schedulerUrl, string $token): SchedulerClient
+    {
+        return new HttpSchedulerClient($schedulerUrl, $token);
     }
 
     protected function createManageClient(string $host, string $token): Client
@@ -70,8 +103,9 @@ class MigrateDataAppsOrchestratorTasks extends Command
         $helper = $this->getHelper('question');
         $question = new ConfirmationQuestion(
             sprintf(
-                'You are about to migrate keboola.data-apps orchestrator/flow tasks on ALL projects on "%s" with'
+                'You are about to migrate keboola.data-apps orchestrator/flow tasks%s on ALL projects on "%s" with'
                 . ' --force. Continue? (y/n) ',
+                $this->skipSchedules ? '' : ' and direct schedules',
                 $url
             ),
             false,
@@ -84,6 +118,7 @@ class MigrateDataAppsOrchestratorTasks extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $force = (bool) $input->getOption(self::OPT_FORCE);
+        $this->skipSchedules = (bool) $input->getOption(self::OPT_SKIP_SCHEDULES);
         $token = $input->getArgument(self::ARG_TOKEN);
         assert(is_string($token));
         $url = $input->getArgument(self::ARG_URL);
@@ -94,6 +129,19 @@ class MigrateDataAppsOrchestratorTasks extends Command
         $output->writeln($force
             ? 'Running in force mode. Configurations will be updated.'
             : 'Running in dry-run mode. No configurations will be updated. Use -f to enable force mode.');
+
+        if (!$this->skipSchedules) {
+            $this->schedulerUrl = HttpSchedulerClient::schedulerUrlFromConnectionUrl($url);
+            if ($this->schedulerUrl === null) {
+                $output->writeln(sprintf(
+                    'cannot derive the Scheduler URL from "%s" (expected a "connection." host); use --%s to'
+                    . ' migrate only orchestrator/flow tasks',
+                    $url,
+                    self::OPT_SKIP_SCHEDULES
+                ));
+                return 1;
+            }
+        }
 
         $checkAllProjects = strtolower($projectsOption) === 'all';
 
@@ -200,17 +248,19 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 'description' => 'AJDA-2445 data-apps orchestrator task migration',
                 'canManageBuckets' => false,
                 'canManageTokens' => false,
-                'expiresIn' => 300,
+                'expiresIn' => 1800,
                 // Without an explicit grant, projects that restrict component access by default
                 // return 403 "You don't have access to the resource." when listing configurations
                 // for these components - verified live against a North Europe project (AJDA-3010).
-                'componentAccess' => ['keboola.orchestrator', 'keboola.flow', 'keboola.data-apps'],
+                'componentAccess' => array_merge(
+                    ['keboola.orchestrator', 'keboola.flow', 'keboola.data-apps'],
+                    $this->skipSchedules ? [] : ['keboola.scheduler']
+                ),
             ]);
 
-            $components = new Components(new StorageClient([
-                'url' => $url,
-                'token' => $tokenInfo['token'],
-            ]));
+            $projectToken = $tokenInfo['token'];
+            assert(is_string($projectToken));
+            $components = $this->createComponents($url, $projectToken);
 
             $result = $this->migrator->migrateProject($components, $output, $projectId, $force);
 
@@ -219,12 +269,56 @@ class MigrateDataAppsOrchestratorTasks extends Command
             $this->tasksMigrated += $result['tasksMigrated'];
             $this->tasksSkippedUnsupported += $result['tasksSkippedUnsupported'];
             $this->tasksSkippedUnresolvable += $result['tasksSkippedUnresolvable'];
+            $this->tasksSkippedDisabledSource += $result['tasksSkippedDisabledSource'];
+            if (!$this->skipSchedules) {
+                $this->migrateProjectSchedules($project, $components, $output, $url, $projectToken, $projectId, $force);
+            }
             $this->projectsChecked++;
-        } catch (ManageClientException | StorageClientException $e) {
+        } catch (ManageClientException | StorageClientException | GuzzleException $e) {
             $output->writeln(sprintf(' - error while processing project "%s": %s', $projectId, $e->getMessage()));
             $this->projectsError++;
         }
         $output->write("\n");
+    }
+
+    /**
+     * @param array<string, mixed> $project
+     */
+    private function migrateProjectSchedules(
+        array $project,
+        Components $components,
+        OutputInterface $output,
+        string $url,
+        string $token,
+        string $projectId,
+        bool $force
+    ): void {
+        $features = $project['features'] ?? [];
+        if (is_array($features) && in_array(self::PROTECTED_DEFAULT_BRANCH_FEATURE, $features, true)) {
+            $output->writeln(' - project has a protected default branch, skipping direct schedules.');
+            $this->projectsSchedulesSkippedProtected++;
+            return;
+        }
+
+        assert($this->schedulerUrl !== null);
+
+        $result = $this->scheduleMigrator->migrateProject(
+            $components,
+            $this->createSchedulerClient($this->schedulerUrl, $token),
+            $output,
+            $projectId,
+            $force
+        );
+        $this->schedulesScanned += $result['schedulesScanned'];
+        $this->schedulesMigrated += $result['schedulesMigrated'];
+        $this->schedulesAlreadyMigrated += $result['schedulesAlreadyMigrated'];
+        $this->flowsCreated += $result['flowsCreated'];
+        $this->schedulesSkippedDisabledSource += $result['schedulesSkippedDisabledSource'];
+        $this->schedulesRetargetedWithoutLiveRow += $result['schedulesRetargetedWithoutLiveRow'];
+        $this->schedulesSkippedDiverged += $result['schedulesSkippedDiverged'];
+        $this->schedulesSkippedUnsupported += $result['schedulesSkippedUnsupported'];
+        $this->schedulesSkippedUnresolvable += $result['schedulesSkippedUnresolvable'];
+        $this->schedulesFailed += $result['schedulesFailed'];
     }
 
     private function printResult(OutputInterface $output, bool $checkAll, bool $force): void
@@ -248,7 +342,8 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 . '%d configurations ' . ($force ? 'updated' : 'would be updated in force mode') . "\n"
                 . '%d tasks ' . ($force ? 'migrated' : 'would be migrated in force mode') . "\n"
                 . "%d tasks skipped (unsupported shape - expected, no action needed)\n"
-                . "%d tasks skipped as UNRESOLVABLE (needs manual follow-up)\n",
+                . "%d tasks skipped as UNRESOLVABLE (needs manual follow-up)\n"
+                . "%d tasks skipped as DISABLED SOURCE (the referenced keboola.data-apps configuration is disabled, task left untouched)\n",
                 $totalProjectsChecked,
                 $this->projectsDisabled,
                 $this->projectsError,
@@ -256,8 +351,36 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 $this->configsTouched,
                 $this->tasksMigrated,
                 $this->tasksSkippedUnsupported,
-                $this->tasksSkippedUnresolvable
+                $this->tasksSkippedUnresolvable,
+                $this->tasksSkippedDisabledSource
             )
         );
+
+        if (!$this->skipSchedules) {
+            $output->writeln(sprintf(
+                "Scanned %d schedules\n"
+                . '%d schedules ' . ($force ? 'migrated' : 'would be migrated in force mode') . "\n"
+                . '%d schedules retargeted in Storage only (no live Scheduler row found, check them; ' . ($force ? '' : 'would be, in force mode; ') . "not counted as migrated)\n"
+                . '%d flows ' . ($force ? 'created' : 'would be created in force mode') . "\n"
+                . "%d schedules already migrated\n"
+                . "%d schedules skipped (unsupported target - expected, no action needed)\n"
+                . "%d schedules skipped as UNRESOLVABLE (needs manual follow-up)\n"
+                . "%d schedules skipped as DIVERGED (live Scheduler row differs from its configuration, needs manual follow-up)\n"
+                . "%d schedules skipped as DISABLED SOURCE (the keboola.data-apps configuration is disabled, schedule left untouched)\n"
+                . "%d schedules FAILED (see errors above, safe to re-run)\n"
+                . "%d projects skipped for schedules (protected default branch)\n",
+                $this->schedulesScanned,
+                $this->schedulesMigrated,
+                $this->schedulesRetargetedWithoutLiveRow,
+                $this->flowsCreated,
+                $this->schedulesAlreadyMigrated,
+                $this->schedulesSkippedUnsupported,
+                $this->schedulesSkippedUnresolvable,
+                $this->schedulesSkippedDiverged,
+                $this->schedulesSkippedDisabledSource,
+                $this->schedulesFailed,
+                $this->projectsSchedulesSkippedProtected
+            ));
+        }
     }
 }

@@ -37,7 +37,8 @@ class DataAppOrchestratorTaskMigrator
      *     configsTouched: int,
      *     tasksMigrated: int,
      *     tasksSkippedUnsupported: int,
-     *     tasksSkippedUnresolvable: int
+     *     tasksSkippedUnresolvable: int,
+     *     tasksSkippedDisabledSource: int
      * }
      */
     public function migrateProject(Components $components, OutputInterface $output, string $projectId, bool $isForce): array
@@ -48,6 +49,7 @@ class DataAppOrchestratorTaskMigrator
             'tasksMigrated' => 0,
             'tasksSkippedUnsupported' => 0,
             'tasksSkippedUnresolvable' => 0,
+            'tasksSkippedDisabledSource' => 0,
         ];
         // Keyed by keboola.data-apps configId, resolved {appId, reason} - scoped to a single project
         // (config IDs are only unique within a project) to avoid refetching the same referenced
@@ -67,9 +69,10 @@ class DataAppOrchestratorTaskMigrator
      *     configsTouched: int,
      *     tasksMigrated: int,
      *     tasksSkippedUnsupported: int,
-     *     tasksSkippedUnresolvable: int
+     *     tasksSkippedUnresolvable: int,
+     *     tasksSkippedDisabledSource: int
      * } $counts
-     * @param array<string, array{appId: ?string, reason: ?string}> $configIdCache
+     * @param array<string, array{appId: ?string, reason: ?string, disabledConfigId: ?string}> $configIdCache
      */
     private function migrateFlowComponentConfigs(
         Components $components,
@@ -132,6 +135,17 @@ class DataAppOrchestratorTaskMigrator
                 }
                 $appId = $resolution['appId'];
 
+                if ($resolution['disabledConfigId'] !== null) {
+                    $output->writeln(sprintf(
+                        '%sSkipping %s: keboola.data-apps configuration "%s" is disabled, the task is left as it is',
+                        $prefix,
+                        $taskLabel,
+                        $resolution['disabledConfigId']
+                    ));
+                    $counts['tasksSkippedDisabledSource']++;
+                    continue;
+                }
+
                 $output->writeln(sprintf(
                     '%sMigrating %s: %s -> %s (appId "%s")',
                     $prefix,
@@ -179,21 +193,31 @@ class DataAppOrchestratorTaskMigrator
 
     /**
      * @param array<string, mixed> $legacyTask
-     * @param array<string, array{appId: ?string, reason: ?string}> $configIdCache
-     * @return array{appId: ?string, reason: ?string}
+     * @param array<string, array{appId: ?string, reason: ?string, disabledConfigId: ?string}> $configIdCache
+     * @return array{appId: ?string, reason: ?string, disabledConfigId: ?string}
      */
     private function resolveAppId(Components $components, array $legacyTask, array &$configIdCache): array
     {
+        $configId = $legacyTask['configId'] ?? null;
+        $referenced = is_string($configId) && $configId !== ''
+            ? $this->resolveReferencedConfig($components, $configId, $configIdCache)
+            : null;
+
         $configData = $legacyTask['configData'] ?? null;
         if (is_array($configData) && is_array($configData['parameters'] ?? null)) {
-            return $this->extractAppId($configData['parameters']);
+            return $this->extractAppId($configData['parameters'])
+                + ['disabledConfigId' => $referenced['disabledConfigId'] ?? null];
         }
 
-        $configId = $legacyTask['configId'] ?? null;
-        if (!is_string($configId) || $configId === '') {
-            return ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
-        }
+        return $referenced ?? ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE, 'disabledConfigId' => null];
+    }
 
+    /**
+     * @param array<string, array{appId: ?string, reason: ?string, disabledConfigId: ?string}> $configIdCache
+     * @return array{appId: ?string, reason: ?string, disabledConfigId: ?string}
+     */
+    private function resolveReferencedConfig(Components $components, string $configId, array &$configIdCache): array
+    {
         if (array_key_exists($configId, $configIdCache)) {
             return $configIdCache[$configId];
         }
@@ -203,14 +227,15 @@ class DataAppOrchestratorTaskMigrator
         } catch (ClientException $e) {
             // Referenced config missing/inaccessible - skip just this task (flagged as unresolvable,
             // not "unsupported") rather than aborting the whole project's migration.
-            return $configIdCache[$configId] = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
+            return $configIdCache[$configId] = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE, 'disabledConfigId' => null];
         }
 
+        $disabledConfigId = is_array($sibling) && !empty($sibling['isDisabled']) ? $configId : null;
         $siblingConfiguration = is_array($sibling) ? ($sibling['configuration'] ?? null) : null;
         if (is_array($siblingConfiguration) && is_array($siblingConfiguration['parameters'] ?? null)) {
-            $result = $this->extractAppId($siblingConfiguration['parameters']);
+            $result = $this->extractAppId($siblingConfiguration['parameters']) + ['disabledConfigId' => $disabledConfigId];
         } else {
-            $result = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
+            $result = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE, 'disabledConfigId' => $disabledConfigId];
         }
 
         return $configIdCache[$configId] = $result;
