@@ -599,6 +599,8 @@ Direct schedules (second pass, skipped with `--skip-schedules`):
   configuration for which no live row is found (never activated, or the row targets something else) is retargeted in
   Storage, nothing is refreshed, and it is counted separately as "retargeted in Storage only" instead of "migrated", so
   that you can check it.
+  A re-run counts such a schedule as already migrated, because its Storage target is already the flow, so keep the
+  output of the first run.
 - A disabled `keboola.data-apps` configuration is not migrated. Its schedule is left as it is (no flow, no retarget) and
   counted as DISABLED SOURCE, with the project, schedule and data-apps configuration id in the output. The same holds
   for flow tasks: a task that references a disabled configuration by `configId` is left untouched and counted as
@@ -609,7 +611,8 @@ Direct schedules (second pass, skipped with `--skip-schedules`):
   and never creates a second one. If two flows carry the same marker, a warning is printed and the first one is used.
   A schedule whose Storage target is already such a flow is reported as already migrated. It is refreshed again only
   if the live row still targets `keboola.data-apps` and matches the configuration, which repairs a run that stopped
-  between the Storage update and the refresh.
+  between the Storage update and the refresh, unless the source configuration has been disabled in the meantime
+  (then it is counted as DISABLED SOURCE and not refreshed).
 - Order per schedule: read the live row, create or find the flow, update the schedule configuration, refresh the
   schedule. A failure is printed, counted as FAILED and the run goes on with the next schedule; re-running is safe.
 - Every forced change prints a `ROLLBACK:` line, after the Storage update succeeded, with the schedule configuration

@@ -278,6 +278,43 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
         $this->assertStringContainsString('0 schedules retargeted in Storage only (no live Scheduler row found', $display);
     }
 
+    public function testSummaryTotalsCountDisabledSourceTasksAndSchedulesWithoutLiveRow(): void
+    {
+        $components = $this->components();
+        $components->configs['keboola.data-apps']['app-cfg-2'] = [
+            'id' => 'app-cfg-2',
+            'name' => 'Disabled app',
+            'isDisabled' => true,
+            'configuration' => ['parameters' => ['id' => '555']],
+        ];
+        $components->configs['keboola.flow']['f1'] = [
+            'id' => 'f1',
+            'name' => 'My flow',
+            'configuration' => [
+                'phases' => [],
+                'tasks' => [[
+                    'id' => 't1',
+                    'name' => 't1',
+                    'phase' => 'p1',
+                    'enabled' => true,
+                    'task' => ['type' => 'job', 'componentId' => 'keboola.data-apps', 'mode' => 'run', 'configId' => 'app-cfg-2'],
+                ]],
+            ],
+        ];
+        $scheduler = new FakeSchedulerClient($components);
+        $scheduler->rows = [];
+        $tokenRequests = [];
+        $schedulerUrls = [];
+
+        $tester = $this->execute($this->command($components, $scheduler, [], $tokenRequests, $schedulerUrls), ['--force' => true]);
+
+        $display = $tester->getDisplay();
+        $this->assertStringContainsString('1 tasks skipped as DISABLED SOURCE', $display);
+        $this->assertStringContainsString('1 schedules retargeted in Storage only (no live Scheduler row found', $display);
+        $this->assertStringContainsString('0 schedules migrated', $display);
+        $this->assertSame([], $scheduler->refreshed);
+    }
+
     #[DataProvider('provideConnectionUrls')]
     public function testSchedulerUrlIsDerivedFromConnectionUrl(string $connectionUrl, ?string $expected): void
     {

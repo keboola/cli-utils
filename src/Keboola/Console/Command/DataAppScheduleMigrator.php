@@ -90,7 +90,22 @@ class DataAppScheduleMigrator
 
             if ($targetComponentId === self::FLOW_COMPONENT_ID && isset($dataAppsConfigIdsByFlowId[$targetConfigurationId])) {
                 try {
-                    $liveRow = $this->findLiveRow($scheduler, $dataAppsConfigIdsByFlowId[$targetConfigurationId], $scheduleId, $liveRowsCache);
+                    $sourceConfigId = $dataAppsConfigIdsByFlowId[$targetConfigurationId];
+                    $liveRow = $this->findLiveRow($scheduler, $sourceConfigId, $scheduleId, $liveRowsCache);
+                    if ($liveRow !== null) {
+                        $source = $dataAppsConfigCache[$sourceConfigId] ??= $this->resolveDataApp($components, $sourceConfigId);
+                        if ($source['isDisabled']) {
+                            $output->writeln(sprintf(
+                                '%sSkipping %s: keboola.data-apps configuration "%s" is disabled, the live Scheduler row'
+                                . ' is left as it is',
+                                $prefix,
+                                $label,
+                                $sourceConfigId
+                            ));
+                            $counts['schedulesSkippedDisabledSource']++;
+                            continue;
+                        }
+                    }
                     $divergence = $liveRow === null ? null : $this->describeDivergence($configuration, $liveRow);
                     if ($divergence !== null) {
                         $output->writeln(sprintf(

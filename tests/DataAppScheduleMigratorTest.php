@@ -684,4 +684,38 @@ class DataAppScheduleMigratorTest extends TestCase
         $this->assertSame('f1', $components->configs['keboola.scheduler']['s1']['configuration']['target']['configurationId']);
         $this->assertStringContainsString('Warning: flows "f1" and "f2" both carry the marker', $output->fetch());
     }
+
+    public function testRepairRefreshIsSkippedWhenTheSourceWasDisabledAfterTheFailedRefresh(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $scheduler = new FakeSchedulerClient($components);
+        $scheduler->failRefreshFor = ['s1'];
+        $this->migrate($components, $scheduler, true);
+        $scheduler->failRefreshFor = [];
+        $components->configs['keboola.data-apps']['app-cfg-1']['isDisabled'] = true;
+        $output = new BufferedOutput();
+
+        $result = $this->migrate($components, $scheduler, true, $output);
+
+        $this->assertEquals(
+            ['schedulesScanned' => 1, 'schedulesSkippedDisabledSource' => 1] + self::EMPTY_RESULT,
+            $result
+        );
+        $this->assertSame([], $scheduler->refreshed);
+        $this->assertSame('keboola.data-apps', $scheduler->rows['s1']['target']['componentId']);
+        $this->assertStringContainsString('keboola.data-apps configuration "app-cfg-1" is disabled', $output->fetch());
+    }
+
+    public function testRepairRefreshStillRunsWhenTheSourceIsEnabled(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $scheduler = new FakeSchedulerClient($components);
+        $scheduler->failRefreshFor = ['s1'];
+        $this->migrate($components, $scheduler, true);
+        $scheduler->failRefreshFor = [];
+
+        $this->migrate($components, $scheduler, true);
+
+        $this->assertSame(['s1'], $scheduler->refreshed);
+    }
 }
