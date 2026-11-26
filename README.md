@@ -549,14 +549,15 @@ Behavior:
 - A failed file write aborts the run (an incomplete audit must not look complete); the temporary storage
   token is dropped in every case, including on error.
 
-### Migrate data-apps orchestrator/flow tasks to data-app-control
+### Migrate data-apps orchestrator/flow tasks and schedules to data-app-control
 Migrate orchestration/flow tasks that start a data app via the legacy `keboola.data-apps` component so they use
 `keboola.data-app-control` instead (see [AJDA-2445](https://linear.app/keboola/issue/AJDA-2445)). Skips tasks whose
 `keboola.data-apps` parameters look unlike the "start app" shape used in practice (e.g. `create`/`delete`/`terminate`),
-so those are never silently mistransformed. Safe to re-run: already-migrated tasks are skipped.
+so those are never silently mistransformed. Also migrates direct schedules of `keboola.data-apps` configurations (see
+[AJDA-3868](https://linear.app/keboola/issue/AJDA-3868)). Safe to re-run: already-migrated tasks and schedules are skipped.
 
 ```
-php cli.php manage:migrate-data-apps-orchestrator-tasks [-f|--force] <token> <url> <projects>
+php cli.php manage:migrate-data-apps-orchestrator-tasks [-f|--force] [--skip-schedules] <token> <url> <projects>
 ```
 Arguments:
 - `token` (required): Manage API token.
@@ -565,6 +566,7 @@ Arguments:
 
 Options:
 - `--force` / `-f`: Actually perform the migration. Without this flag, the command only reports what would change (dry-run).
+- `--skip-schedules`: Only migrate orchestrator/flow tasks, leave direct schedules alone.
 
 Behavior:
 - For each target project, creates a temporary Storage API token via the Manage API and lists all configurations of
@@ -582,7 +584,30 @@ Behavior:
 - Running with `<projects>` set to `all` together with `--force` asks for interactive confirmation first, as a
   safety net against an accidental stack-wide mutation.
 - Prints a summary: projects checked/disabled/errored, configurations scanned/touched, tasks migrated/skipped
-  (unsupported vs. unresolvable).
+  (unsupported vs. unresolvable), then the schedule counters described below.
+
+Direct schedules (second pass, skipped with `--skip-schedules`):
+- A Scheduler target cannot carry `configData`, so a schedule cannot start `keboola.data-app-control` directly. For each
+  `keboola.scheduler` configuration whose target is a `keboola.data-apps` configuration, the command creates one
+  `keboola.flow` per data-apps configuration (named `<app name> - start app`, a single `keboola.data-app-control` task
+  with `parameters.appId`), changes the schedule configuration's target to that flow (id, cron, timezone, state and
+  token stay as they were) and calls `POST /schedules/migrate` on the Scheduler service to refresh the schedule.
+  Several schedules of one app share one flow.
+- The flow is found again by a `[migrated-from-data-apps:<configId>]` marker in its description, so a re-run reuses it
+  and never creates a second one. Schedules already pointing at such a flow are reported as already migrated and
+  refreshed again, which also repairs a run that stopped between the Storage update and the refresh.
+- Order per schedule: create or find the flow, update the schedule configuration, refresh the schedule. A failure is
+  printed, counted as FAILED and the run goes on with the next schedule; re-running is safe.
+- Every forced change prints a `ROLLBACK:` line with the schedule configuration id, its old target and the new flow id.
+  To roll back, write the old target into the schedule configuration, call `POST /schedules/migrate` for it and delete
+  the flow.
+- Skipped, with a line in the output: a data-apps configuration with no `parameters.id` (draft) or a missing one
+  (UNRESOLVABLE, needs manual follow-up), a target with `configurationRowIds`, a `tag` or a mode other than `run`, and
+  a data-apps configuration with an unsupported legacy task (UNSUPPORTED).
+- Works on the default branch only. Projects with the `protected-default-branch` feature are skipped for schedules,
+  because their tokens cannot modify schedules.
+- The temporary project token additionally gets access to `keboola.scheduler`. The Scheduler URL is the stack URL with
+  `connection.` replaced by `scheduler.`.
 
 ### Migrate keboola.orchestrator configurations to keboola.flow
 Batch driver for the automated `keboola.orchestrator` → `keboola.flow` migration
