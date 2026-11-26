@@ -585,4 +585,47 @@ class DataAppScheduleMigratorTest extends TestCase
         $this->assertSame(1, $result['schedulesAlreadyMigrated']);
         $this->assertSame(['s1'], $scheduler->refreshed);
     }
+
+    public function testFlowCommittedByAFailedCreateIsReusedByTheNextScheduleOfTheSameApp(): void
+    {
+        $components = $this->components([$this->schedule('s1'), $this->schedule('s2')]);
+        $components->commitThenFailCreate = true;
+
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true);
+
+        $this->assertEquals(
+            ['schedulesScanned' => 2, 'schedulesMigrated' => 1, 'schedulesFailed' => 1] + self::EMPTY_RESULT,
+            $result
+        );
+        $this->assertCount(1, $components->configs['keboola.flow']);
+        $this->assertSame('new-1', $components->configs['keboola.scheduler']['s2']['configuration']['target']['configurationId']);
+    }
+
+    public function testDuplicateMarkersWarnAndTheFirstFlowIsUsed(): void
+    {
+        $flow = static fn (string $id): array => [
+            'id' => $id,
+            'name' => 'copy ' . $id,
+            'description' => 'x [migrated-from-data-apps:app-cfg-1]',
+            'configuration' => [],
+        ];
+        $components = new StatefulFakeComponents([
+            'keboola.scheduler' => [
+                $this->schedule('s1'),
+                $this->schedule('s2', ['componentId' => 'keboola.flow', 'configurationId' => 'f2']),
+            ],
+            'keboola.data-apps' => [$this->dataAppsConfig('app-cfg-1')],
+            'keboola.flow' => [$flow('f1'), $flow('f2')],
+        ]);
+        $output = new BufferedOutput();
+
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true, $output);
+
+        $this->assertEquals(
+            ['schedulesScanned' => 2, 'schedulesMigrated' => 1, 'schedulesAlreadyMigrated' => 1] + self::EMPTY_RESULT,
+            $result
+        );
+        $this->assertSame('f1', $components->configs['keboola.scheduler']['s1']['configuration']['target']['configurationId']);
+        $this->assertStringContainsString('Warning: flows "f1" and "f2" both carry the marker', $output->fetch());
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace Keboola\Console\Command;
 
+use GuzzleHttp\Exception\GuzzleException;
 use Keboola\ManageApi\Client;
 use Keboola\ManageApi\ClientException as ManageClientException;
 use Keboola\StorageApi\Client as StorageClient;
@@ -38,11 +39,14 @@ class MigrateDataAppsOrchestratorTasks extends Command
     protected int $schedulesMigrated = 0;
     protected int $schedulesAlreadyMigrated = 0;
     protected int $flowsCreated = 0;
+    protected int $flowsCreatedDisabled = 0;
+    protected int $schedulesSkippedDiverged = 0;
     protected int $schedulesSkippedUnsupported = 0;
     protected int $schedulesSkippedUnresolvable = 0;
     protected int $schedulesFailed = 0;
     protected int $projectsSchedulesSkippedProtected = 0;
     protected bool $skipSchedules = false;
+    protected ?string $schedulerUrl = null;
 
     private DataAppOrchestratorTaskMigrator $migrator;
     private DataAppScheduleMigrator $scheduleMigrator;
@@ -123,6 +127,19 @@ class MigrateDataAppsOrchestratorTasks extends Command
         $output->writeln($force
             ? 'Running in force mode. Configurations will be updated.'
             : 'Running in dry-run mode. No configurations will be updated. Use -f to enable force mode.');
+
+        if (!$this->skipSchedules) {
+            $this->schedulerUrl = HttpSchedulerClient::schedulerUrlFromConnectionUrl($url);
+            if ($this->schedulerUrl === null) {
+                $output->writeln(sprintf(
+                    'cannot derive the Scheduler URL from "%s" (expected a "connection." host); use --%s to'
+                    . ' migrate only orchestrator/flow tasks',
+                    $url,
+                    self::OPT_SKIP_SCHEDULES
+                ));
+                return 1;
+            }
+        }
 
         $checkAllProjects = strtolower($projectsOption) === 'all';
 
@@ -229,7 +246,7 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 'description' => 'AJDA-2445 data-apps orchestrator task migration',
                 'canManageBuckets' => false,
                 'canManageTokens' => false,
-                'expiresIn' => 300,
+                'expiresIn' => 1800,
                 // Without an explicit grant, projects that restrict component access by default
                 // return 403 "You don't have access to the resource." when listing configurations
                 // for these components - verified live against a North Europe project (AJDA-3010).
@@ -254,7 +271,7 @@ class MigrateDataAppsOrchestratorTasks extends Command
                 $this->migrateProjectSchedules($project, $components, $output, $url, $projectToken, $projectId, $force);
             }
             $this->projectsChecked++;
-        } catch (ManageClientException | StorageClientException $e) {
+        } catch (ManageClientException | StorageClientException | GuzzleException $e) {
             $output->writeln(sprintf(' - error while processing project "%s": %s', $projectId, $e->getMessage()));
             $this->projectsError++;
         }
@@ -280,17 +297,11 @@ class MigrateDataAppsOrchestratorTasks extends Command
             return;
         }
 
-        $schedulerUrl = HttpSchedulerClient::schedulerUrlFromConnectionUrl($url);
-        if ($schedulerUrl === null) {
-            throw new StorageClientException(sprintf(
-                'cannot derive the Scheduler URL from "%s" (expected a "connection." host)',
-                $url
-            ));
-        }
+        assert($this->schedulerUrl !== null);
 
         $result = $this->scheduleMigrator->migrateProject(
             $components,
-            $this->createSchedulerClient($schedulerUrl, $token),
+            $this->createSchedulerClient($this->schedulerUrl, $token),
             $output,
             $projectId,
             $force
@@ -299,6 +310,8 @@ class MigrateDataAppsOrchestratorTasks extends Command
         $this->schedulesMigrated += $result['schedulesMigrated'];
         $this->schedulesAlreadyMigrated += $result['schedulesAlreadyMigrated'];
         $this->flowsCreated += $result['flowsCreated'];
+        $this->flowsCreatedDisabled += $result['flowsCreatedDisabled'];
+        $this->schedulesSkippedDiverged += $result['schedulesSkippedDiverged'];
         $this->schedulesSkippedUnsupported += $result['schedulesSkippedUnsupported'];
         $this->schedulesSkippedUnresolvable += $result['schedulesSkippedUnresolvable'];
         $this->schedulesFailed += $result['schedulesFailed'];
@@ -341,18 +354,21 @@ class MigrateDataAppsOrchestratorTasks extends Command
             $output->writeln(sprintf(
                 "Scanned %d schedules\n"
                 . '%d schedules ' . ($force ? 'migrated' : 'would be migrated in force mode') . "\n"
-                . '%d flows ' . ($force ? 'created' : 'would be created in force mode') . "\n"
+                . '%d flows ' . ($force ? 'created' : 'would be created in force mode') . " (%d of them disabled, as their source configuration is disabled)\n"
                 . "%d schedules already migrated\n"
                 . "%d schedules skipped (unsupported target - expected, no action needed)\n"
                 . "%d schedules skipped as UNRESOLVABLE (needs manual follow-up)\n"
+                . "%d schedules skipped as DIVERGED (live Scheduler row differs from its configuration, needs manual follow-up)\n"
                 . "%d schedules FAILED (see errors above, safe to re-run)\n"
                 . "%d projects skipped for schedules (protected default branch)\n",
                 $this->schedulesScanned,
                 $this->schedulesMigrated,
                 $this->flowsCreated,
+                $this->flowsCreatedDisabled,
                 $this->schedulesAlreadyMigrated,
                 $this->schedulesSkippedUnsupported,
                 $this->schedulesSkippedUnresolvable,
+                $this->schedulesSkippedDiverged,
                 $this->schedulesFailed,
                 $this->projectsSchedulesSkippedProtected
             ));

@@ -593,23 +593,33 @@ Direct schedules (second pass, skipped with `--skip-schedules`):
   with `parameters.appId`), changes the schedule configuration's target to that flow (id, cron, timezone, state and
   token stay as they were) and calls `POST /schedules/migrate` on the Scheduler service to refresh the schedule.
   Several schedules of one app share one flow.
+- The live Scheduler row is read first (`GET /schedules?componentId=keboola.data-apps&configurationId=<id>`). If its
+  state, cron or timezone differs from the Storage configuration, the schedule is skipped and counted as DIVERGED
+  (needs manual follow-up), because the refresh would copy the configuration values over the live ones. A
+  configuration without a live row (never activated) is retargeted in Storage and nothing is refreshed.
+- A disabled `keboola.data-apps` configuration gets a disabled flow, so the schedule keeps firing into a rejected job
+  as before and the app is not started. The same applies to flow tasks: a task that referenced a disabled data-apps
+  configuration by `configId` is migrated with `enabled: false`, because the job queue only rejects disabled
+  configurations that are referenced by `configId`.
 - The flow is found again by a `[migrated-from-data-apps:<configId>]` marker in its description, so a re-run reuses it
-  and never creates a second one. Schedules already pointing at such a flow are reported as already migrated and
-  refreshed again, which also repairs a run that stopped between the Storage update and the refresh.
-- Order per schedule: create or find the flow, update the schedule configuration, refresh the schedule. A failure is
-  printed, counted as FAILED and the run goes on with the next schedule; re-running is safe.
-- A schedule configuration that was never activated has no Scheduler row. Its Storage target is still changed, the
-  refresh is skipped because the Scheduler answers that no schedule exists, and it is not counted as failed.
-- Every forced change prints a `ROLLBACK:` line with the schedule configuration id, its old target and the new flow id.
-  To roll back, write the old target into the schedule configuration, call `POST /schedules/migrate` for it and delete
-  the flow.
+  and never creates a second one. If two flows carry the same marker, a warning is printed and the first one is used.
+  A schedule whose Storage target is already such a flow is reported as already migrated. It is refreshed again only
+  if the live row still targets `keboola.data-apps` and matches the configuration, which repairs a run that stopped
+  between the Storage update and the refresh.
+- Order per schedule: read the live row, create or find the flow, update the schedule configuration, refresh the
+  schedule. A failure is printed, counted as FAILED and the run goes on with the next schedule; re-running is safe.
+- Every forced change prints a `ROLLBACK:` line, after the Storage update succeeded, with the schedule configuration
+  id, its old target, its live row (cron, timezone, state) and the new flow id. To roll back, write the old target
+  into the schedule configuration and call `POST /schedules/migrate` for it. Delete the flow only after all schedules
+  that point to it are rolled back; several schedules of one app share one flow.
 - Skipped, with a line in the output: a data-apps configuration with no `parameters.id` (draft) or a missing one
   (UNRESOLVABLE, needs manual follow-up), a target with `configurationRowIds`, a `tag` or a mode other than `run`, and
   a data-apps configuration with an unsupported legacy task (UNSUPPORTED).
 - Works on the default branch only. Projects with the `protected-default-branch` feature are skipped for schedules,
   because their tokens cannot modify schedules.
-- The temporary project token additionally gets access to `keboola.scheduler`. The Scheduler URL is the stack URL with
-  `connection.` replaced by `scheduler.`.
+- The temporary project token (valid for 30 minutes) additionally gets access to `keboola.scheduler`. The Scheduler URL
+  is the stack URL with `connection.` replaced by `scheduler.`; the command exits with an error before touching any
+  project if that is not possible, unless `--skip-schedules` is set.
 
 ### Migrate keboola.orchestrator configurations to keboola.flow
 Batch driver for the automated `keboola.orchestrator` → `keboola.flow` migration

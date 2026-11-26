@@ -2,6 +2,8 @@
 
 namespace Keboola\Console\Tests;
 
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Psr7\Request;
 use Keboola\Console\Command\HttpSchedulerClient;
 use Keboola\Console\Command\MigrateDataAppsOrchestratorTasks;
 use Keboola\Console\Command\SchedulerClient;
@@ -54,26 +56,33 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
     /**
      * @param array<int, string> $features
      * @param array<int, array<string, mixed>> $tokenRequests
+     * @param array<int, string> $schedulerUrls
+     * @param array<int, StatefulFakeComponents> $componentsQueue
      */
     private function command(
         StatefulFakeComponents $components,
         FakeSchedulerClient $scheduler,
         array $features,
         array &$tokenRequests,
-        array &$schedulerUrls
+        array &$schedulerUrls,
+        array $componentsQueue = []
     ): MigrateDataAppsOrchestratorTasks {
         $manage = $this->manageClient($features, $tokenRequests);
+        $componentsQueue = $componentsQueue ?: [$components];
 
-        return new class ($manage, $components, $scheduler, $schedulerUrls) extends MigrateDataAppsOrchestratorTasks {
+        return new class ($manage, $componentsQueue, $scheduler, $schedulerUrls) extends MigrateDataAppsOrchestratorTasks {
             /** @var array<int, string> */
             private array $schedulerUrls;
 
             /**
              * @param array<int, string> $schedulerUrls
              */
+            /**
+             * @param array<int, StatefulFakeComponents> $componentsQueue
+             */
             public function __construct(
                 private Client $manage,
-                private StatefulFakeComponents $components,
+                private array $componentsQueue,
                 private FakeSchedulerClient $scheduler,
                 array &$schedulerUrls
             ) {
@@ -88,7 +97,7 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
 
             protected function createComponents(string $url, string $token): Components
             {
-                return $this->components;
+                return count($this->componentsQueue) > 1 ? array_shift($this->componentsQueue) : $this->componentsQueue[0];
             }
 
             protected function createSchedulerClient(string $schedulerUrl, string $token): SchedulerClient
@@ -196,21 +205,74 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
         $this->assertStringContainsString('1 projects skipped for schedules (protected default branch)', $tester->getDisplay());
     }
 
-    public function testUrlWithoutConnectionHostIsReportedAsProjectError(): void
+    public function testUrlWithoutConnectionHostFailsBeforeAnyProjectIsTouched(): void
+    {
+        $components = $this->components();
+        $tokenRequests = [];
+        $schedulerUrls = [];
+        $command = $this->command($components, new FakeSchedulerClient($components), [], $tokenRequests, $schedulerUrls);
+
+        $tester = $this->execute($command, ['--force' => true], 'https://example.com');
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertSame([], $tokenRequests);
+        $this->assertSame([], $components->createCalls);
+        $this->assertStringContainsString('cannot derive the Scheduler URL', $tester->getDisplay());
+    }
+
+    public function testUrlWithoutConnectionHostIsAcceptedWhenSchedulesAreSkipped(): void
+    {
+        $components = $this->components();
+        $tokenRequests = [];
+        $schedulerUrls = [];
+        $command = $this->command($components, new FakeSchedulerClient($components), [], $tokenRequests, $schedulerUrls);
+
+        $tester = $this->execute($command, ['--force' => true, '--skip-schedules' => true], 'https://example.com');
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertCount(1, $tokenRequests);
+    }
+
+    public function testTemporaryTokenLivesLongEnoughForBothPasses(): void
     {
         $components = $this->components();
         $tokenRequests = [];
         $schedulerUrls = [];
 
-        $tester = $this->execute(
-            $this->command($components, new FakeSchedulerClient($components), [], $tokenRequests, $schedulerUrls),
-            ['--force' => true],
-            'https://example.com'
-        );
+        $this->execute($this->command($components, new FakeSchedulerClient($components), [], $tokenRequests, $schedulerUrls));
 
-        $this->assertSame([], $components->createCalls);
-        $this->assertStringContainsString('cannot derive the Scheduler URL', $tester->getDisplay());
+        $this->assertSame(1800, $tokenRequests[0]['expiresIn']);
+    }
+
+    public function testTransportErrorInOneProjectDoesNotAbortTheRun(): void
+    {
+        $broken = new StatefulFakeComponents();
+        $broken->failListWith = new ConnectException('Connection refused', new Request('GET', 'https://connection.keboola.com'));
+        $healthy = $this->components();
+        $scheduler = new FakeSchedulerClient($healthy);
+        $tokenRequests = [];
+        $schedulerUrls = [];
+        $command = $this->command($broken, $scheduler, [], $tokenRequests, $schedulerUrls, [$broken, $healthy]);
+
+        $tester = new CommandTester($command);
+        $tester->execute(['token' => 'manage', 'url' => 'https://connection.keboola.com', 'projects' => '500,501', '--force' => true]);
+
+        $this->assertSame(0, $tester->getStatusCode());
         $this->assertStringContainsString('1 projects had errors', $tester->getDisplay());
+        $this->assertSame(['s1'], $scheduler->refreshed);
+    }
+
+    public function testSummaryShowsDisabledFlowsAndDivergedSchedules(): void
+    {
+        $components = $this->components();
+        $components->configs['keboola.data-apps']['app-cfg-1']['isDisabled'] = true;
+        $tokenRequests = [];
+        $schedulerUrls = [];
+
+        $tester = $this->execute($this->command($components, new FakeSchedulerClient($components), [], $tokenRequests, $schedulerUrls));
+
+        $this->assertStringContainsString('1 flows would be created in force mode (1 of them disabled', $tester->getDisplay());
+        $this->assertStringContainsString('0 schedules skipped as DIVERGED', $tester->getDisplay());
     }
 
     #[DataProvider('provideConnectionUrls')]

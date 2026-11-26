@@ -29,6 +29,10 @@ class StatefulFakeComponents extends Components
 
     public ?\Throwable $failCreateWith = null;
 
+    public bool $commitThenFailCreate = false;
+
+    public ?\Throwable $failListWith = null;
+
     private int $nextId = 1;
 
     /**
@@ -45,6 +49,9 @@ class StatefulFakeComponents extends Components
 
     public function listComponentConfigurations(ListComponentConfigurationsOptions $options)
     {
+        if ($this->failListWith !== null) {
+            throw $this->failListWith;
+        }
         return array_values($this->configs[$options->getComponentId()] ?? []);
     }
 
@@ -74,6 +81,10 @@ class StatefulFakeComponents extends Components
             'isDisabled' => (bool) $options->getIsDisabled(),
         ];
         $this->configs[$options->getComponentId()][$id] = $data;
+        if ($this->commitThenFailCreate) {
+            $this->commitThenFailCreate = false;
+            throw new ClientException('Gateway timeout');
+        }
         $this->createCalls[] = ['componentId' => $options->getComponentId(), 'changeDescription' => $options->getChangeDescription()] + $data;
 
         return $data;
