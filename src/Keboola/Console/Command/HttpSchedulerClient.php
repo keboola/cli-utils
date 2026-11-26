@@ -27,6 +27,39 @@ class HttpSchedulerClient implements SchedulerClient
         return $schedulerUrl !== null && $schedulerUrl !== rtrim($connectionUrl, '/') ? $schedulerUrl : null;
     }
 
+    public function listSchedulesByTarget(string $componentId, string $configurationId): array
+    {
+        try {
+            $response = $this->client->get('/schedules', [
+                'query' => ['componentId' => $componentId, 'configurationId' => $configurationId],
+            ]);
+        } catch (GuzzleException $e) {
+            throw new SchedulerClientException($e->getMessage(), (int) $e->getCode(), $e);
+        }
+
+        $rows = json_decode((string) $response->getBody(), true);
+        if (!is_array($rows)) {
+            throw new SchedulerClientException('Unexpected response of the Scheduler schedule list');
+        }
+        $result = [];
+        foreach ($rows as $row) {
+            $isValid = is_array($row)
+                && is_scalar($row['configurationId'] ?? null)
+                && is_array($row['schedule'] ?? null)
+                && is_array($row['target'] ?? null);
+            if (!$isValid) {
+                throw new SchedulerClientException('Unexpected row in the Scheduler schedule list');
+            }
+            $result[] = [
+                'configurationId' => (string) $row['configurationId'],
+                'schedule' => $row['schedule'],
+                'target' => $row['target'],
+            ];
+        }
+
+        return $result;
+    }
+
     public function refreshSchedule(string $configurationId): void
     {
         try {

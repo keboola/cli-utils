@@ -71,6 +71,7 @@ class StatefulFakeComponents extends Components
             'name' => $options->getName(),
             'description' => $options->getDescription(),
             'configuration' => $options->getConfiguration(),
+            'isDisabled' => (bool) $options->getIsDisabled(),
         ];
         $this->configs[$options->getComponentId()][$id] = $data;
         $this->createCalls[] = ['componentId' => $options->getComponentId(), 'changeDescription' => $options->getChangeDescription()] + $data;

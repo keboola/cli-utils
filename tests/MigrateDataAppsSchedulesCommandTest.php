@@ -134,7 +134,7 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
     public function testForceMigratesSchedulesAndRequestsSchedulerAccess(): void
     {
         $components = $this->components();
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $tokenRequests = [];
         $schedulerUrls = [];
 
@@ -149,7 +149,7 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
     public function testDryRunWritesNothingAndSaysWouldBeMigrated(): void
     {
         $components = $this->components();
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $tokenRequests = [];
         $schedulerUrls = [];
 
@@ -163,7 +163,7 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
     public function testSkipSchedulesOptionLeavesSchedulesAlone(): void
     {
         $components = $this->components();
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $tokenRequests = [];
         $schedulerUrls = [];
 
@@ -182,7 +182,7 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
     public function testProjectWithProtectedDefaultBranchIsSkippedForSchedules(): void
     {
         $components = $this->components();
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $tokenRequests = [];
         $schedulerUrls = [];
 
@@ -203,7 +203,7 @@ class MigrateDataAppsSchedulesCommandTest extends TestCase
         $schedulerUrls = [];
 
         $tester = $this->execute(
-            $this->command($components, new FakeSchedulerClient(), [], $tokenRequests, $schedulerUrls),
+            $this->command($components, new FakeSchedulerClient($components), [], $tokenRequests, $schedulerUrls),
             ['--force' => true],
             'https://example.com'
         );

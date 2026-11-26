@@ -27,8 +27,10 @@ class DataAppScheduleMigrator
      *     schedulesMigrated: int,
      *     schedulesAlreadyMigrated: int,
      *     flowsCreated: int,
+     *     flowsCreatedDisabled: int,
      *     schedulesSkippedUnsupported: int,
      *     schedulesSkippedUnresolvable: int,
+     *     schedulesSkippedDiverged: int,
      *     schedulesFailed: int
      * }
      */
@@ -44,16 +46,21 @@ class DataAppScheduleMigrator
             'schedulesMigrated' => 0,
             'schedulesAlreadyMigrated' => 0,
             'flowsCreated' => 0,
+            'flowsCreatedDisabled' => 0,
             'schedulesSkippedUnsupported' => 0,
             'schedulesSkippedUnresolvable' => 0,
+            'schedulesSkippedDiverged' => 0,
             'schedulesFailed' => 0,
         ];
         $prefix = $isForce ? 'FORCE: ' : 'DRY-RUN: ';
 
-        $flowIdsByDataAppsConfigId = $this->indexMigratedFlows($components);
-        $migratedFlowIds = array_flip($flowIdsByDataAppsConfigId);
-        /** @var array<string, array{appId: ?string, name: string, reason: ?string}> $dataAppsConfigCache */
+        $flowIndex = $this->indexMigratedFlows($components, $output, $prefix, true);
+        $flowIdsByDataAppsConfigId = $flowIndex['byDataAppsConfigId'];
+        $dataAppsConfigIdsByFlowId = $flowIndex['byFlowId'];
+        /** @var array<string, array{appId: ?string, name: string, reason: ?string, isDisabled: bool}> $dataAppsConfigCache */
         $dataAppsConfigCache = [];
+        /** @var array<string, array<int, array{configurationId: string, schedule: array<string, mixed>, target: array<string, mixed>}>> $liveRowsCache */
+        $liveRowsCache = [];
 
         $schedules = $components->listComponentConfigurations(
             (new ListComponentConfigurationsOptions())
@@ -79,16 +86,39 @@ class DataAppScheduleMigrator
             $targetComponentId = $target['componentId'] ?? null;
             $targetConfigurationId = (string) ($target['configurationId'] ?? '');
 
-            if ($targetComponentId === self::FLOW_COMPONENT_ID && isset($migratedFlowIds[$targetConfigurationId])) {
-                $output->writeln(sprintf('%sSkipping %s: already migrated to flow "%s"', $prefix, $label, $targetConfigurationId));
+            if ($targetComponentId === self::FLOW_COMPONENT_ID && isset($dataAppsConfigIdsByFlowId[$targetConfigurationId])) {
                 try {
-                    if ($isForce) {
-                        $scheduler->refreshSchedule($scheduleId);
+                    $liveRow = $this->findLiveRow($scheduler, $dataAppsConfigIdsByFlowId[$targetConfigurationId], $scheduleId, $liveRowsCache);
+                    $divergence = $liveRow === null ? null : $this->describeDivergence($configuration, $liveRow);
+                    if ($divergence !== null) {
+                        $output->writeln(sprintf(
+                            '%sSkipping %s: already migrated in Storage but the live Scheduler row still targets'
+                            . ' keboola.data-apps and differs from its configuration (%s) - needs manual follow-up',
+                            $prefix,
+                            $label,
+                            $divergence
+                        ));
+                        $counts['schedulesSkippedDiverged']++;
+                        continue;
+                    }
+                    if ($liveRow === null) {
+                        $output->writeln(sprintf('%sSkipping %s: already migrated to flow "%s"', $prefix, $label, $targetConfigurationId));
+                    } else {
+                        $output->writeln(sprintf(
+                            '%sRefreshing %s: Storage already targets flow "%s" but the live Scheduler row still targets'
+                            . ' keboola.data-apps',
+                            $prefix,
+                            $label,
+                            $targetConfigurationId
+                        ));
+                        if ($isForce) {
+                            $scheduler->refreshSchedule($scheduleId);
+                        }
                     }
                     $counts['schedulesAlreadyMigrated']++;
                 } catch (SchedulerClientException $e) {
                     $counts['schedulesFailed']++;
-                    $output->writeln(sprintf(' - error while refreshing schedule config "%s": %s', $scheduleId, $e->getMessage()));
+                    $output->writeln(sprintf(' - error while checking schedule config "%s": %s', $scheduleId, $e->getMessage()));
                 }
                 continue;
             }
@@ -127,6 +157,20 @@ class DataAppScheduleMigrator
             }
 
             try {
+                $liveRow = $this->findLiveRow($scheduler, $targetConfigurationId, $scheduleId, $liveRowsCache);
+                $divergence = $liveRow === null ? null : $this->describeDivergence($configuration, $liveRow);
+                if ($divergence !== null) {
+                    $output->writeln(sprintf(
+                        '%sSkipping %s: the live Scheduler row differs from its Storage configuration (%s) - needs'
+                        . ' manual follow-up',
+                        $prefix,
+                        $label,
+                        $divergence
+                    ));
+                    $counts['schedulesSkippedDiverged']++;
+                    continue;
+                }
+
                 $flowId = $flowIdsByDataAppsConfigId[$targetConfigurationId] ?? null;
                 $flowMessage = $flowId === null ? 'new flow' : sprintf('flow "%s"', $flowId);
                 $output->writeln(sprintf(
@@ -141,35 +185,61 @@ class DataAppScheduleMigrator
                 ));
 
                 if ($flowId === null) {
+                    if ($dataApp['isDisabled']) {
+                        $output->writeln(sprintf(
+                            '%sNote for %s: source configuration is disabled, the flow is created disabled',
+                            $prefix,
+                            $label
+                        ));
+                    }
                     if ($isForce) {
-                        $flowId = $this->createFlow($components, $targetConfigurationId, $dataApp['name'], $dataApp['appId']);
-                        $migratedFlowIds[$flowId] = $targetConfigurationId;
+                        try {
+                            $flowId = $this->createFlow(
+                                $components,
+                                $targetConfigurationId,
+                                $dataApp['name'],
+                                $dataApp['appId'],
+                                $dataApp['isDisabled']
+                            );
+                        } catch (ClientException | GuzzleException $e) {
+                            $flowIndex = $this->indexMigratedFlows($components, $output, $prefix, false);
+                            $flowIdsByDataAppsConfigId = $flowIndex['byDataAppsConfigId'];
+                            $dataAppsConfigIdsByFlowId = $flowIndex['byFlowId'];
+                            throw $e;
+                        }
                     } else {
                         $flowId = 'dry-run-' . $targetConfigurationId;
                     }
                     $counts['flowsCreated']++;
+                    if ($dataApp['isDisabled']) {
+                        $counts['flowsCreatedDisabled']++;
+                    }
                     $flowIdsByDataAppsConfigId[$targetConfigurationId] = $flowId;
                 }
 
                 if ($isForce) {
-                    $output->writeln(sprintf(
-                        'ROLLBACK: %s, old target %s, new flow "%s"',
-                        $label,
-                        json_encode($target),
-                        $flowId
-                    ));
                     $newTarget = $target;
                     $newTarget['componentId'] = self::FLOW_COMPONENT_ID;
                     $newTarget['configurationId'] = $flowId;
-                    $configuration['target'] = $newTarget;
+                    $newConfiguration = $configuration;
+                    $newConfiguration['target'] = $newTarget;
                     $components->updateConfiguration(
                         (new Configuration())
                             ->setComponentId(self::SCHEDULER_COMPONENT_ID)
                             ->setConfigurationId($scheduleId)
-                            ->setConfiguration($configuration)
+                            ->setConfiguration($newConfiguration)
                             ->setChangeDescription(self::CHANGE_DESCRIPTION)
                     );
-                    $scheduler->refreshSchedule($scheduleId);
+                    $output->writeln(sprintf(
+                        'ROLLBACK: %s, old target %s, live row %s, new flow "%s"',
+                        $label,
+                        json_encode($target),
+                        $liveRow === null ? 'none' : json_encode($this->liveScheduleSummary($liveRow)),
+                        $flowId
+                    ));
+                    if ($liveRow !== null) {
+                        $scheduler->refreshSchedule($scheduleId);
+                    }
                 }
                 $counts['schedulesMigrated']++;
             } catch (ClientException | SchedulerClientException | GuzzleException $e) {
@@ -182,11 +252,12 @@ class DataAppScheduleMigrator
     }
 
     /**
-     * @return array<string, string> keboola.data-apps configuration id => id of the flow created for it
+     * @return array{byDataAppsConfigId: array<string, string>, byFlowId: array<string, string>}
      */
-    private function indexMigratedFlows(Components $components): array
+    private function indexMigratedFlows(Components $components, OutputInterface $output, string $prefix, bool $warn): array
     {
-        $index = [];
+        $byDataAppsConfigId = [];
+        $byFlowId = [];
         $flows = $components->listComponentConfigurations(
             (new ListComponentConfigurationsOptions())
                 ->setComponentId(self::FLOW_COMPONENT_ID)
@@ -194,40 +265,114 @@ class DataAppScheduleMigrator
         );
         foreach ($flows as $flow) {
             $description = $flow['description'] ?? '';
-            if (is_string($description) && preg_match(self::MARKER_PATTERN, $description, $matches) === 1) {
-                $index[$matches[1]] = (string) $flow['id'];
+            if (!is_string($description) || preg_match(self::MARKER_PATTERN, $description, $matches) !== 1) {
+                continue;
             }
+            $flowId = (string) $flow['id'];
+            $byFlowId[$flowId] = $matches[1];
+            if (isset($byDataAppsConfigId[$matches[1]])) {
+                if ($warn) {
+                    $output->writeln(sprintf(
+                        '%sWarning: flows "%s" and "%s" both carry the marker of keboola.data-apps configuration "%s",'
+                        . ' using "%s"',
+                        $prefix,
+                        $byDataAppsConfigId[$matches[1]],
+                        $flowId,
+                        $matches[1],
+                        $byDataAppsConfigId[$matches[1]]
+                    ));
+                }
+                continue;
+            }
+            $byDataAppsConfigId[$matches[1]] = $flowId;
         }
 
-        return $index;
+        return ['byDataAppsConfigId' => $byDataAppsConfigId, 'byFlowId' => $byFlowId];
     }
 
     /**
-     * @return array{appId: ?string, name: string, reason: ?string}
+     * @param array<mixed, mixed> $configuration
+     * @param array<string, mixed> $liveRow
+     */
+    private function describeDivergence(array $configuration, array $liveRow): ?string
+    {
+        $schedule = is_array($configuration['schedule'] ?? null) ? $configuration['schedule'] : [];
+        $expected = [
+            'cronTab' => $schedule['cronTab'] ?? null,
+            'timezone' => $schedule['timezone'] ?? null,
+            'state' => $schedule['state'] ?? 'enabled',
+        ];
+        $live = $this->liveScheduleSummary($liveRow);
+        if ($expected == $live) {
+            return null;
+        }
+
+        return sprintf('live row %s, configuration %s', json_encode($live), json_encode($expected));
+    }
+
+    /**
+     * @param array<string, mixed> $liveRow
+     * @return array{cronTab: mixed, timezone: mixed, state: mixed}
+     */
+    private function liveScheduleSummary(array $liveRow): array
+    {
+        $schedule = is_array($liveRow['schedule'] ?? null) ? $liveRow['schedule'] : [];
+
+        return [
+            'cronTab' => $schedule['cronTab'] ?? null,
+            'timezone' => $schedule['timezone'] ?? null,
+            'state' => $schedule['state'] ?? null,
+        ];
+    }
+
+    /**
+     * @param array<string, array<int, array{configurationId: string, schedule: array<string, mixed>, target: array<string, mixed>}>> $cache
+     * @return array{configurationId: string, schedule: array<string, mixed>, target: array<string, mixed>}|null
+     */
+    private function findLiveRow(SchedulerClient $scheduler, string $dataAppsConfigurationId, string $scheduleId, array &$cache): ?array
+    {
+        $rows = $cache[$dataAppsConfigurationId] ??= $scheduler->listSchedulesByTarget(self::LEGACY_COMPONENT_ID, $dataAppsConfigurationId);
+        foreach ($rows as $row) {
+            if ($row['configurationId'] === $scheduleId) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{appId: ?string, name: string, reason: ?string, isDisabled: bool}
      */
     private function resolveDataApp(Components $components, string $configurationId): array
     {
         try {
             $dataApp = $components->getConfiguration(self::LEGACY_COMPONENT_ID, $configurationId);
         } catch (ClientException $e) {
-            return ['appId' => null, 'name' => '', 'reason' => 'unresolvable'];
+            return ['appId' => null, 'name' => '', 'reason' => 'unresolvable', 'isDisabled' => false];
         }
 
         $name = is_array($dataApp) && is_string($dataApp['name'] ?? null) ? $dataApp['name'] : $configurationId;
+        $isDisabled = is_array($dataApp) && !empty($dataApp['isDisabled']);
         $configuration = is_array($dataApp) ? ($dataApp['configuration'] ?? null) : null;
         $parameters = is_array($configuration) ? ($configuration['parameters'] ?? null) : null;
         if (!is_array($parameters) || !is_scalar($parameters['id'] ?? null) || (string) $parameters['id'] === '') {
-            return ['appId' => null, 'name' => $name, 'reason' => 'unresolvable'];
+            return ['appId' => null, 'name' => $name, 'reason' => 'unresolvable', 'isDisabled' => $isDisabled];
         }
         if (!in_array($parameters['task'] ?? null, self::SUPPORTED_LEGACY_TASK_VALUES, true)) {
-            return ['appId' => null, 'name' => $name, 'reason' => 'unsupported-task'];
+            return ['appId' => null, 'name' => $name, 'reason' => 'unsupported-task', 'isDisabled' => $isDisabled];
         }
 
-        return ['appId' => (string) $parameters['id'], 'name' => $name, 'reason' => null];
+        return ['appId' => (string) $parameters['id'], 'name' => $name, 'reason' => null, 'isDisabled' => $isDisabled];
     }
 
-    private function createFlow(Components $components, string $dataAppsConfigurationId, string $dataAppName, string $appId): string
-    {
+    private function createFlow(
+        Components $components,
+        string $dataAppsConfigurationId,
+        string $dataAppName,
+        string $appId,
+        bool $isDisabled
+    ): string {
         $created = $components->addConfiguration(
             (new Configuration())
                 ->setComponentId(self::FLOW_COMPONENT_ID)
@@ -254,6 +399,7 @@ class DataAppScheduleMigrator
                         'enabled' => true,
                     ]],
                 ])
+                ->setIsDisabled($isDisabled)
                 ->setChangeDescription(self::CHANGE_DESCRIPTION)
         );
 

@@ -16,8 +16,10 @@ class DataAppScheduleMigratorTest extends TestCase
         'schedulesMigrated' => 0,
         'schedulesAlreadyMigrated' => 0,
         'flowsCreated' => 0,
+        'flowsCreatedDisabled' => 0,
         'schedulesSkippedUnsupported' => 0,
         'schedulesSkippedUnresolvable' => 0,
+        'schedulesSkippedDiverged' => 0,
         'schedulesFailed' => 0,
     ];
 
@@ -88,7 +90,7 @@ class DataAppScheduleMigratorTest extends TestCase
     public function testDryRunReportsWithoutWriting(): void
     {
         $components = $this->components([$this->schedule('s1')]);
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $output = new BufferedOutput();
 
         $result = $this->migrate($components, $scheduler, false, $output);
@@ -106,7 +108,7 @@ class DataAppScheduleMigratorTest extends TestCase
     public function testForceCreatesFlowRetargetsScheduleAndRefreshesIt(): void
     {
         $components = $this->components([$this->schedule('s1')]);
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $output = new BufferedOutput();
 
         $result = $this->migrate($components, $scheduler, true, $output);
@@ -153,7 +155,7 @@ class DataAppScheduleMigratorTest extends TestCase
         $log = $output->fetch();
         $this->assertStringContainsString('FORCE: Migrating', $log);
         $this->assertStringContainsString(
-            'ROLLBACK: project "500", schedule config "s1" ("Schedule s1"), old target {"componentId":"keboola.data-apps","configurationId":"app-cfg-1","mode":"run","configurationRowIds":[]}, new flow "new-1"',
+            'ROLLBACK: project "500", schedule config "s1" ("Schedule s1"), old target {"componentId":"keboola.data-apps","configurationId":"app-cfg-1","mode":"run","configurationRowIds":[]}, live row {"cronTab":"0 6 * * *","timezone":"Europe\\/Prague","state":"enabled"}, new flow "new-1"',
             $log
         );
     }
@@ -161,7 +163,7 @@ class DataAppScheduleMigratorTest extends TestCase
     public function testSecondRunDoesNotCreateAnythingAgain(): void
     {
         $components = $this->components([$this->schedule('s1')]);
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $this->migrate($components, $scheduler, true);
 
         $result = $this->migrate($components, $scheduler, true);
@@ -174,20 +176,20 @@ class DataAppScheduleMigratorTest extends TestCase
         $this->assertCount(1, $components->updateCalls);
     }
 
-    public function testSecondRunReRefreshesTheMigratedSchedule(): void
+    public function testSecondRunDoesNotWriteToTheScheduler(): void
     {
         $components = $this->components([$this->schedule('s1')]);
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $this->migrate($components, $scheduler, true);
         $this->migrate($components, $scheduler, true);
 
-        $this->assertSame(['s1', 's1'], $scheduler->refreshed);
+        $this->assertSame(['s1'], $scheduler->refreshed);
     }
 
     public function testSecondDryRunDoesNotRefresh(): void
     {
         $components = $this->components([$this->schedule('s1')]);
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $this->migrate($components, $scheduler, true);
         $this->migrate($components, $scheduler, false);
 
@@ -197,7 +199,7 @@ class DataAppScheduleMigratorTest extends TestCase
     public function testTwoSchedulesOfOneAppShareOneFlow(): void
     {
         $components = $this->components([$this->schedule('s1'), $this->schedule('s2')]);
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
 
         $result = $this->migrate($components, $scheduler, true);
 
@@ -216,7 +218,7 @@ class DataAppScheduleMigratorTest extends TestCase
     {
         $components = $this->components([$this->schedule('s1'), $this->schedule('s2')]);
 
-        $result = $this->migrate($components, new FakeSchedulerClient(), false);
+        $result = $this->migrate($components, new FakeSchedulerClient($components), false);
 
         $this->assertSame(1, $result['flowsCreated']);
         $this->assertSame(2, $result['schedulesMigrated']);
@@ -228,7 +230,7 @@ class DataAppScheduleMigratorTest extends TestCase
             [$this->schedule('s1')],
             [$this->dataAppsConfig('app-cfg-1', ['task' => 'start'])]
         );
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $output = new BufferedOutput();
 
         $result = $this->migrate($components, $scheduler, true, $output);
@@ -250,7 +252,7 @@ class DataAppScheduleMigratorTest extends TestCase
             [$this->dataAppsConfig('other')]
         );
 
-        $result = $this->migrate($components, new FakeSchedulerClient(), true);
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true);
 
         $this->assertSame(1, $result['schedulesSkippedUnresolvable']);
         $this->assertSame([], $components->createCalls);
@@ -265,7 +267,7 @@ class DataAppScheduleMigratorTest extends TestCase
         $components = $this->components([$this->schedule('s1', $target)]);
         $output = new BufferedOutput();
 
-        $result = $this->migrate($components, new FakeSchedulerClient(), true, $output);
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true, $output);
 
         $this->assertEquals(
             ['schedulesScanned' => 1, 'schedulesSkippedUnsupported' => 1] + self::EMPTY_RESULT,
@@ -293,7 +295,7 @@ class DataAppScheduleMigratorTest extends TestCase
             [$this->dataAppsConfig('app-cfg-1', ['id' => '987', 'task' => 'delete'])]
         );
 
-        $result = $this->migrate($components, new FakeSchedulerClient(), true);
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true);
 
         $this->assertSame(1, $result['schedulesSkippedUnsupported']);
         $this->assertSame([], $components->createCalls);
@@ -305,7 +307,7 @@ class DataAppScheduleMigratorTest extends TestCase
             $this->schedule('s1', ['componentId' => 'keboola.orchestrator', 'configurationId' => 'o1']),
             $this->schedule('s2', ['componentId' => 'keboola.flow', 'configurationId' => 'unrelated-flow']),
         ]);
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
 
         $result = $this->migrate($components, $scheduler, true);
 
@@ -324,7 +326,7 @@ class DataAppScheduleMigratorTest extends TestCase
             $this->dataAppsConfig('app-cfg-2', ['id' => '222']),
         ]);
         $components->failUpdateFor = ['keboola.scheduler/s1'];
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $output = new BufferedOutput();
 
         $result = $this->migrate($components, $scheduler, true, $output);
@@ -342,7 +344,7 @@ class DataAppScheduleMigratorTest extends TestCase
     {
         $components = $this->components([$this->schedule('s1')]);
         $components->failUpdateFor = ['keboola.scheduler/s1'];
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $this->migrate($components, $scheduler, true);
         $components->failUpdateFor = [];
 
@@ -359,7 +361,7 @@ class DataAppScheduleMigratorTest extends TestCase
     public function testFailedRefreshIsCountedAndRetriedOnNextRun(): void
     {
         $components = $this->components([$this->schedule('s1')]);
-        $scheduler = new FakeSchedulerClient();
+        $scheduler = new FakeSchedulerClient($components);
         $scheduler->failRefreshFor = ['s1'];
         $output = new BufferedOutput();
 
@@ -371,10 +373,12 @@ class DataAppScheduleMigratorTest extends TestCase
         $this->assertStringContainsString('error while migrating schedule config "s1"', $output->fetch());
 
         $scheduler->failRefreshFor = [];
+        $this->assertSame('keboola.data-apps', $scheduler->rows['s1']['target']['componentId']);
         $second = $this->migrate($components, $scheduler, true);
 
         $this->assertSame(1, $second['schedulesAlreadyMigrated']);
         $this->assertSame(['s1'], $scheduler->refreshed);
+        $this->assertSame('keboola.flow', $scheduler->rows['s1']['target']['componentId']);
         $this->assertCount(1, $components->createCalls);
     }
 
@@ -382,7 +386,7 @@ class DataAppScheduleMigratorTest extends TestCase
     {
         $components = $this->components([$this->schedule('s1', [], 'disabled')]);
 
-        $this->migrate($components, new FakeSchedulerClient(), true);
+        $this->migrate($components, new FakeSchedulerClient($components), true);
 
         $this->assertSame('disabled', $components->updateCalls[0]['configuration']['schedule']['state']);
     }
@@ -392,7 +396,7 @@ class DataAppScheduleMigratorTest extends TestCase
         $components = $this->components([$this->schedule('s1')]);
         $components->failCreate = true;
 
-        $result = $this->migrate($components, new FakeSchedulerClient(), true);
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true);
 
         $this->assertEquals(
             ['schedulesScanned' => 1, 'schedulesFailed' => 1] + self::EMPTY_RESULT,
@@ -401,12 +405,12 @@ class DataAppScheduleMigratorTest extends TestCase
         $this->assertSame([], $components->updateCalls);
     }
 
-    public function testFailedRefreshOfAlreadyMigratedScheduleIsCountedOnlyAsFailed(): void
+    public function testFailedRepairRefreshOfAlreadyMigratedScheduleIsCountedOnlyAsFailed(): void
     {
         $components = $this->components([$this->schedule('s1')]);
-        $scheduler = new FakeSchedulerClient();
-        $this->migrate($components, $scheduler, true);
+        $scheduler = new FakeSchedulerClient($components);
         $scheduler->failRefreshFor = ['s1'];
+        $this->migrate($components, $scheduler, true);
 
         $result = $this->migrate($components, $scheduler, true);
 
@@ -421,8 +425,164 @@ class DataAppScheduleMigratorTest extends TestCase
         $components = $this->components([$this->schedule('s1')]);
         $components->failCreateWith = new ConnectException('Connection refused', new Request('POST', 'https://connection.keboola.com'));
 
-        $result = $this->migrate($components, new FakeSchedulerClient(), true);
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true);
 
         $this->assertSame(1, $result['schedulesFailed']);
+    }
+
+    public function testDisabledDataAppsConfigIsMigratedToADisabledFlow(): void
+    {
+        $components = $this->components(
+            [$this->schedule('s1')],
+            [['isDisabled' => true] + $this->dataAppsConfig('app-cfg-1')]
+        );
+        $output = new BufferedOutput();
+
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true, $output);
+
+        $this->assertEquals(
+            ['schedulesScanned' => 1, 'schedulesMigrated' => 1, 'flowsCreated' => 1, 'flowsCreatedDisabled' => 1] + self::EMPTY_RESULT,
+            $result
+        );
+        $this->assertTrue($components->createCalls[0]['isDisabled']);
+        $this->assertStringContainsString('source configuration is disabled', $output->fetch());
+    }
+
+    public function testEnabledDataAppsConfigIsMigratedToAnEnabledFlow(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+
+        $this->migrate($components, new FakeSchedulerClient($components), true);
+
+        $this->assertFalse($components->createCalls[0]['isDisabled']);
+    }
+
+    public function testDryRunCountsDisabledFlow(): void
+    {
+        $components = $this->components(
+            [$this->schedule('s1')],
+            [['isDisabled' => true] + $this->dataAppsConfig('app-cfg-1')]
+        );
+
+        $result = $this->migrate($components, new FakeSchedulerClient($components), false);
+
+        $this->assertSame(1, $result['flowsCreatedDisabled']);
+        $this->assertSame([], $components->createCalls);
+    }
+
+    /**
+     * @param array<string, string> $liveSchedule
+     */
+    #[DataProvider('provideDivergedLiveRows')]
+    public function testLiveRowThatDiffersFromTheConfigurationIsSkippedAndReported(array $liveSchedule): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $scheduler = new FakeSchedulerClient($components);
+        $scheduler->rows['s1']['schedule'] = $liveSchedule + $scheduler->rows['s1']['schedule'];
+        $output = new BufferedOutput();
+
+        $result = $this->migrate($components, $scheduler, true, $output);
+
+        $this->assertEquals(
+            ['schedulesScanned' => 1, 'schedulesSkippedDiverged' => 1] + self::EMPTY_RESULT,
+            $result
+        );
+        $this->assertSame([], $components->createCalls);
+        $this->assertSame([], $components->updateCalls);
+        $this->assertSame([], $scheduler->refreshed);
+        $log = $output->fetch();
+        $this->assertStringContainsString('needs manual follow-up', $log);
+        $this->assertStringContainsString('live row', $log);
+    }
+
+    /**
+     * @return iterable<string, array{0: array<string, string>}>
+     */
+    public static function provideDivergedLiveRows(): iterable
+    {
+        yield 'state' => [['state' => 'disabled']];
+        yield 'cron' => [['cronTab' => '0 7 * * *']];
+        yield 'timezone' => [['timezone' => 'UTC']];
+    }
+
+    public function testConfigurationWithoutStateMatchesAnEnabledLiveRow(): void
+    {
+        $schedule = $this->schedule('s1');
+        unset($schedule['configuration']['schedule']['state']);
+        $components = $this->components([$schedule]);
+
+        $result = $this->migrate($components, new FakeSchedulerClient($components), true);
+
+        $this->assertSame(1, $result['schedulesMigrated']);
+    }
+
+    public function testScheduleWithoutLiveRowIsRetargetedWithoutRefreshCall(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $scheduler = new FakeSchedulerClient($components);
+        $scheduler->rows = [];
+
+        $result = $this->migrate($components, $scheduler, true);
+
+        $this->assertEquals(
+            ['schedulesScanned' => 1, 'schedulesMigrated' => 1, 'flowsCreated' => 1] + self::EMPTY_RESULT,
+            $result
+        );
+        $this->assertCount(1, $components->updateCalls);
+        $this->assertSame([], $scheduler->refreshed);
+    }
+
+    public function testRollbackLineContainsTheLiveState(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $output = new BufferedOutput();
+
+        $this->migrate($components, new FakeSchedulerClient($components), true, $output);
+
+        $this->assertStringContainsString(
+            'live row {"cronTab":"0 6 * * *","timezone":"Europe\\/Prague","state":"enabled"}',
+            $output->fetch()
+        );
+    }
+
+    public function testOnlyTheRowOfTheSameScheduleIsCompared(): void
+    {
+        $components = $this->components([$this->schedule('s1'), $this->schedule('s2')]);
+        $scheduler = new FakeSchedulerClient($components);
+        $scheduler->rows['s2']['schedule']['state'] = 'disabled';
+
+        $result = $this->migrate($components, $scheduler, true);
+
+        $this->assertSame(1, $result['schedulesMigrated']);
+        $this->assertSame(1, $result['schedulesSkippedDiverged']);
+        $this->assertSame(['s1'], $scheduler->refreshed);
+    }
+
+    public function testAlreadyMigratedScheduleWithDivergedLiveRowOnOldTargetIsNotRefreshed(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $scheduler = new FakeSchedulerClient($components);
+        $scheduler->failRefreshFor = ['s1'];
+        $this->migrate($components, $scheduler, true);
+        $scheduler->failRefreshFor = [];
+        $scheduler->rows['s1']['schedule']['state'] = 'disabled';
+
+        $result = $this->migrate($components, $scheduler, true);
+
+        $this->assertSame(1, $result['schedulesSkippedDiverged']);
+        $this->assertSame([], $scheduler->refreshed);
+    }
+
+    public function testAlreadyMigratedScheduleThatCustomerAddedToTheFlowIsNotTouched(): void
+    {
+        $components = $this->components([$this->schedule('s1')]);
+        $scheduler = new FakeSchedulerClient($components);
+        $this->migrate($components, $scheduler, true);
+        $scheduler->rows['s1']['schedule']['state'] = 'disabled';
+
+        $result = $this->migrate($components, $scheduler, true);
+
+        $this->assertSame(1, $result['schedulesAlreadyMigrated']);
+        $this->assertSame(['s1'], $scheduler->refreshed);
     }
 }

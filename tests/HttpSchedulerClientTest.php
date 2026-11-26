@@ -58,4 +58,37 @@ class HttpSchedulerClientTest extends TestCase
 
         $this->client([new Response(500, [], '{}')])->refreshSchedule('s1');
     }
+
+    public function testListsLiveSchedulesOfATarget(): void
+    {
+        $history = [];
+        $rows = [[
+            'configurationId' => 's1',
+            'schedule' => ['cronTab' => '0 6 * * *', 'timezone' => 'UTC', 'state' => 'enabled', 'humanCron' => 'x'],
+            'target' => ['componentId' => 'keboola.data-apps', 'configurationId' => 'c1'],
+        ]];
+
+        $result = $this->client([new Response(200, [], (string) json_encode($rows))], $history)
+            ->listSchedulesByTarget('keboola.data-apps', 'c1');
+
+        $this->assertSame($rows, $result);
+        $uri = $history[0]['request']->getUri();
+        $this->assertSame('GET', $history[0]['request']->getMethod());
+        $this->assertSame('/schedules', $uri->getPath());
+        $this->assertSame('componentId=keboola.data-apps&configurationId=c1', $uri->getQuery());
+    }
+
+    public function testListFailureIsASchedulerClientException(): void
+    {
+        $this->expectException(SchedulerClientException::class);
+
+        $this->client([new Response(500, [], '{}')])->listSchedulesByTarget('keboola.data-apps', 'c1');
+    }
+
+    public function testListOfAnUnexpectedBodyIsASchedulerClientException(): void
+    {
+        $this->expectException(SchedulerClientException::class);
+
+        $this->client([new Response(200, [], '"nope"')])->listSchedulesByTarget('keboola.data-apps', 'c1');
+    }
 }

@@ -69,7 +69,7 @@ class DataAppOrchestratorTaskMigrator
      *     tasksSkippedUnsupported: int,
      *     tasksSkippedUnresolvable: int
      * } $counts
-     * @param array<string, array{appId: ?string, reason: ?string}> $configIdCache
+     * @param array<string, array{appId: ?string, reason: ?string, isDisabled: bool}> $configIdCache
      */
     private function migrateFlowComponentConfigs(
         Components $components,
@@ -154,6 +154,16 @@ class DataAppOrchestratorTaskMigrator
                 unset($newTask['configId']);
                 $newTask['configData'] = ['parameters' => ['appId' => $appId]];
                 $tasks[$taskKey]['task'] = $newTask;
+                // The legacy task referenced the config by configId, and the job queue rejects a disabled
+                // configuration only in that case. configData has no such check, so the task has to stay off.
+                if ($resolution['isDisabled']) {
+                    $tasks[$taskKey]['enabled'] = false;
+                    $output->writeln(sprintf(
+                        '%sNote for %s: source configuration is disabled, the migrated task is set to enabled: false',
+                        $prefix,
+                        $taskLabel
+                    ));
+                }
                 $configTouched = true;
                 $counts['tasksMigrated']++;
             }
@@ -179,19 +189,19 @@ class DataAppOrchestratorTaskMigrator
 
     /**
      * @param array<string, mixed> $legacyTask
-     * @param array<string, array{appId: ?string, reason: ?string}> $configIdCache
-     * @return array{appId: ?string, reason: ?string}
+     * @param array<string, array{appId: ?string, reason: ?string, isDisabled: bool}> $configIdCache
+     * @return array{appId: ?string, reason: ?string, isDisabled: bool}
      */
     private function resolveAppId(Components $components, array $legacyTask, array &$configIdCache): array
     {
         $configData = $legacyTask['configData'] ?? null;
         if (is_array($configData) && is_array($configData['parameters'] ?? null)) {
-            return $this->extractAppId($configData['parameters']);
+            return $this->extractAppId($configData['parameters']) + ['isDisabled' => false];
         }
 
         $configId = $legacyTask['configId'] ?? null;
         if (!is_string($configId) || $configId === '') {
-            return ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
+            return ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE, 'isDisabled' => false];
         }
 
         if (array_key_exists($configId, $configIdCache)) {
@@ -203,14 +213,14 @@ class DataAppOrchestratorTaskMigrator
         } catch (ClientException $e) {
             // Referenced config missing/inaccessible - skip just this task (flagged as unresolvable,
             // not "unsupported") rather than aborting the whole project's migration.
-            return $configIdCache[$configId] = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
+            return $configIdCache[$configId] = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE, 'isDisabled' => false];
         }
 
         $siblingConfiguration = is_array($sibling) ? ($sibling['configuration'] ?? null) : null;
         if (is_array($siblingConfiguration) && is_array($siblingConfiguration['parameters'] ?? null)) {
-            $result = $this->extractAppId($siblingConfiguration['parameters']);
+            $result = $this->extractAppId($siblingConfiguration['parameters']) + ['isDisabled' => !empty($sibling['isDisabled'])];
         } else {
-            $result = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE];
+            $result = ['appId' => null, 'reason' => self::REASON_UNRESOLVABLE, 'isDisabled' => false];
         }
 
         return $configIdCache[$configId] = $result;
